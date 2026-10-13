@@ -42,6 +42,7 @@ export interface FunctionInfo {
 export interface FileAnalysis {
   path: string;
   name: string;
+  sourceCode: string;
   imports: ImportInfo[];
   functions: FunctionInfo[];
 }

@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { discoverRepositoryFeatures, traverseRepositoryFeature } from "@/lib/features/featureDiscovery";
+import { buildRepositoryOverview, findOverviewFeature } from "@/lib/graph/repositoryOverview";
 import { buildLearningStages, buildRepositoryLearningGraph, selectLearningStageGraph, traverseLearningGraph } from "@/lib/learning/learningGraphBuilder";
 import type { RepositoryAnalysis } from "@/types/analysis";
 import { GET } from "./route";
@@ -65,4 +66,19 @@ integrationTest("collects and analyzes a real public GitHub repository through t
   const policeHandlers = policeLearning.nodes.filter((node) => /^(?:handle|on)[A-Z]/.test(node.technicalName ?? ""));
   expect(policeHandlers.length).toBeGreaterThan(1);
   expect(new Set(policeHandlers.map((node) => node.title)).size).toBe(policeHandlers.length);
+
+  const overview = buildRepositoryOverview(payload as RepositoryAnalysis);
+  expect(overview.nodes[0]).toMatchObject({ type: "project", name: "team-mallang/likelion-hackathon" });
+  expect(overview.nodes.some((node) => node.type === "file" || node.type === "symbol")).toBe(false);
+  expect(overview.nodes.length).toBeLessThanOrEqual(25);
+  const nearbyModule = overview.nodes.find((node) => node.type === "module" && node.subtitle.endsWith("features/nearby-agencies"));
+  expect(nearbyModule).toBeDefined();
+  const nearbyFiles = buildRepositoryOverview(payload as RepositoryAnalysis, new Set([nearbyModule!.id]));
+  const nearbyFile = nearbyFiles.nodes.find((node) => node.filePath?.endsWith("NearbyAgenciesScreen.tsx"));
+  expect(nearbyFile).toMatchObject({ type: "file", codeNodeId: expect.stringContaining("NearbyAgenciesScreen.tsx") });
+  const nearbySymbols = buildRepositoryOverview(payload as RepositoryAnalysis, new Set([nearbyModule!.id, nearbyFile!.id]));
+  expect(nearbySymbols.nodes).toEqual(expect.arrayContaining([
+    expect.objectContaining({ type: "symbol", name: "NearbyAgenciesScreen" }),
+  ]));
+  expect(findOverviewFeature(nearbyFile, [...features.primary, ...features.limited])).toBeDefined();
 });

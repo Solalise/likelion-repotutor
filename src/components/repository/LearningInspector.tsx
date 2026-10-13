@@ -1,17 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { ArrowRight, BookOpen, Code2, FileCode2, Lightbulb, LocateFixed, Sparkles } from "lucide-react";
 import type { LearningNode } from "@/types/learning";
+import { SourceCodeViewer } from "./SourceCodeViewer";
 
 interface LearningInspectorProps {
   node?: LearningNode;
 }
 
 export function LearningInspector({ node }: LearningInspectorProps) {
-  const [expandedCode, setExpandedCode] = useState(false);
-  const codeLines = useMemo(() => node?.codeSnippet?.split("\n") ?? [], [node?.codeSnippet]);
-  const visibleCodeLines = expandedCode ? codeLines : codeLines.slice(0, 12);
   if (!node) {
     return (
       <div className="empty-inspector">
@@ -53,13 +50,7 @@ export function LearningInspector({ node }: LearningInspectorProps) {
       {node.codeSnippet && (
         <section className="code-section">
           <h3><Code2 size={14} /> 핵심 소스 코드</h3>
-          <div className="learning-code-block">
-            {visibleCodeLines.map((line, index) => {
-              const lineNumber = (node.line ?? 1) + index;
-              return <div key={`${lineNumber}:${line}`} className={index === 0 ? "highlight" : ""}><span>{lineNumber}</span><code>{line || " "}</code></div>;
-            })}
-          </div>
-          {codeLines.length > 12 && <button className="code-expand-button" onClick={() => setExpandedCode((value) => !value)}>{expandedCode ? "핵심 부분만 보기" : `코드 더 보기 (${codeLines.length - 12}줄)`}</button>}
+          <SourceCodeViewer sourceCode={node.codeSnippet} startLine={node.line} highlightLine={node.line} />
         </section>
       )}
       {!node.codeSnippet && <div className="code-unavailable">이 노드에서 표시할 함수 또는 컴포넌트 본문을 확보하지 못했습니다.</div>}

@@ -66,11 +66,12 @@ function graphPositions(items: LearningNode[], edges: LearningEdge[]): Map<strin
   return positions;
 }
 
-function createNodes(items: LearningNode[], edges: LearningEdge[]): LearningFlowNode[] {
+function createNodes(items: LearningNode[], edges: LearningEdge[], selectedId?: string): LearningFlowNode[] {
   const positions = graphPositions(items, edges);
   return items.map((item, index) => ({
     id: item.id,
     type: "learning",
+    selected: item.id === selectedId,
     position: positions.get(item.id) ?? { x: 300, y: index * 165 },
     data: { learning: item },
   }));
@@ -104,10 +105,11 @@ interface LearningFlowProps {
   learningNodes: LearningNode[];
   learningEdges: LearningEdge[];
   onSelect: (nodeId: string) => void;
+  selectedId?: string;
 }
 
-export function LearningFlow({ learningNodes, learningEdges, onSelect }: LearningFlowProps) {
-  const initialNodes = useMemo(() => createNodes(learningNodes, learningEdges), [learningEdges, learningNodes]);
+export function LearningFlow({ learningNodes, learningEdges, onSelect, selectedId }: LearningFlowProps) {
+  const initialNodes = useMemo(() => createNodes(learningNodes, learningEdges, selectedId), [learningEdges, learningNodes, selectedId]);
   const initialEdges = useMemo(() => createEdges(learningEdges), [learningEdges]);
   const [nodes, setNodes, onNodesChange] = useNodesState<LearningFlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);

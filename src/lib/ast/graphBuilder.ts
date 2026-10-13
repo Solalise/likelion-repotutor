@@ -54,7 +54,7 @@ export function buildGraph(files: FileAnalysis[]): { nodes: CodeNode[]; edges: C
   const functions = files.flatMap((file) => file.functions);
   const functionById = new Map(functions.map((item) => [item.id, item]));
   const nodes: CodeNode[] = [
-    ...files.map((file) => ({ id: fileNodeId(file.path), type: "file" as const, name: file.name, filePath: file.path })),
+    ...files.map((file) => ({ id: fileNodeId(file.path), type: "file" as const, name: file.name, filePath: file.path, sourceCode: file.sourceCode, line: 1, endLine: file.sourceCode.split("\n").length })),
     ...functions.map(toNode),
   ];
   const edges: CodeEdge[] = [];

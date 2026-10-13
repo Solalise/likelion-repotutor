@@ -197,8 +197,23 @@ export function buildRepositoryLearningGraph(
       const target = codeNodeMap.get(item.target);
       return target ? [`이 코드가 ${target.name}에 ${relationLabel(item.relation)} 관계로 연결됩니다.`] : [];
     });
+    const base = fromCodeNode(node);
+    const outgoingNames = edges.filter((item) => item.source === node.id).flatMap((item) => {
+      const target = codeNodeMap.get(item.target);
+      return target ? [target.name] : [];
+    });
+    const incomingNames = edges.filter((item) => item.target === node.id).flatMap((item) => {
+      const source = codeNodeMap.get(item.source);
+      return source ? [source.name] : [];
+    });
     return {
-      ...fromCodeNode(node),
+      ...base,
+      description: outgoingNames.length > 0
+        ? `${base.description} AST에서는 ${[...new Set(outgoingNames)].slice(0, 3).join(", ")} 코드와 직접 연결됩니다.`
+        : base.description,
+      purpose: incomingNames.length > 0
+        ? `${[...new Set(incomingNames)].slice(0, 3).join(", ")} 코드가 이 코드를 참조하거나 호출하므로 현재 기능의 연결 지점으로 필요합니다.`
+        : base.purpose,
       relatedFiles: [...new Set(relatedFiles)],
       connectionReason: relationNames.length > 0
         ? [...incomingRelations, ...outgoingRelations].slice(0, 3).join(" ")
@@ -209,6 +224,20 @@ export function buildRepositoryLearningGraph(
     };
   });
   return { nodes, edges };
+}
+
+export function summarizeLearningFeature(featureTitle: string, graph: LearningGraph): string {
+  const screens = graph.nodes.filter((node) => node.category === "start" || node.category === "ui-action").slice(0, 2);
+  const actions = graph.nodes.filter((node) => /^(?:handle|on)[A-Z]/.test(node.technicalName ?? "")).slice(0, 2);
+  const services = graph.nodes.filter((node) => node.category === "service" || node.category === "api").slice(0, 2);
+  const parts = [
+    screens.length > 0 ? `${screens.map((node) => node.technicalName).join(", ")} 화면 코드` : undefined,
+    actions.length > 0 ? `${actions.map((node) => node.technicalName).join(", ")} 사용자 동작 코드` : undefined,
+    services.length > 0 ? `${services.map((node) => node.technicalName).join(", ")} 서비스·API 코드` : undefined,
+  ].filter(Boolean);
+  return parts.length > 0
+    ? `${featureTitle} 기능에서 AST로 확인된 ${parts.join("와 ")}를 단계별로 살펴봅니다.`
+    : `${featureTitle} 기능에서 정적 분석으로 확인된 코드 관계를 살펴봅니다.`;
 }
 
 function uniqueNodeIds(nodes: LearningNode[]): string[] {

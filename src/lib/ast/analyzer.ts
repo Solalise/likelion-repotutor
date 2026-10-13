@@ -121,6 +121,7 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
   const files: FileAnalysis[] = sourceFiles.map(({ path: filePath, sourceFile }) => ({
     path: filePath,
     name: path.posix.basename(filePath),
+    sourceCode: sourceFile.getFullText(),
     imports: sourceFile.getImportDeclarations().map(analyzeImport),
     functions: analyzeFunctions(sourceFile, filePath),
   }));
