@@ -1,5 +1,6 @@
 export type CodeNodeType = "file" | "function" | "api" | "component";
 export type CodeRelation = "import" | "call" | "component" | "reference" | "api";
+export type RelationConfidence = "confirmed" | "inferred";
 
 export interface CodeNode {
   id: string;
@@ -16,11 +17,34 @@ export interface CodeEdge {
   source: string;
   target: string;
   relation: CodeRelation;
+  line?: number;
+  evidence?: string;
+  confidence?: RelationConfidence;
+  occurrences?: CodeEdgeOccurrence[];
+}
+
+export interface CodeEdgeOccurrence {
+  edgeId: string;
+  line?: number;
+  evidence?: string;
+  confidence?: RelationConfidence;
+}
+
+export interface FunctionRelation {
+  relation: Exclude<CodeRelation, "import">;
+  name: string;
+  targetId?: string;
+  line: number;
+  evidence: string;
+  confidence: RelationConfidence;
+  requestPath?: string;
+  requestMethod?: string;
 }
 
 export interface ImportInfo {
   source: string;
   symbols: string[];
+  bindings?: Array<{ local: string; imported: string }>;
   line: number;
 }
 
@@ -37,6 +61,7 @@ export interface FunctionInfo {
   sourceCode: string;
   endLine: number;
   parentId?: string;
+  relations?: FunctionRelation[];
 }
 
 export interface FileAnalysis {
@@ -51,6 +76,8 @@ export interface AnalysisStats {
   files: number;
   functions: number;
   relations: number;
+  unresolvedRelations?: number;
+  unmatchedApiRequests?: number;
 }
 
 export type AnalysisSource = "sample" | "github";
@@ -69,6 +96,10 @@ export interface RepositoryCollection {
   archiveBytes?: number;
   cached?: boolean;
   apiRequestCount?: number;
+  indexedFiles?: number;
+  dependencyFiles?: number;
+  skippedByFileLimit?: number;
+  skippedByByteLimit?: number;
   notice?: string;
 }
 
@@ -90,6 +121,10 @@ export interface SourceInput {
 export interface TraversalResult {
   nodes: CodeNode[];
   edges: CodeEdge[];
+  deferredNodeIds?: string[];
+  hiddenNodeCount?: number;
+  hiddenEdgeCount?: number;
+  traversalStates?: Record<string, "New" | "Tracing" | "Used">;
 }
 
 export interface RepositoryFeature {

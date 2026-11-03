@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RepositoryVisibility {
+  PUBLIC
+  PRIVATE
+  INTERNAL
+}
+
+enum RepositoryPermission {
+  READ
+  WRITE
+  ADMIN
+}
+
+enum AnalysisStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum AnalysisSource {
+  PUBLIC_URL
+  CONNECTED_REPOSITORY
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String?  @unique
+  emailVerified DateTime?
+  image         String?
+  githubUserId  String?  @unique @map("github_user_id")
+  githubLogin   String?  @map("github_login")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  accounts       Account[]
+  sessions       Session[]
+  installations  GitHubInstallation[]
+  repositories   UserRepository[]
+  analysisRuns   AnalysisRun[]
+  learningRecords LearningRecord[]
+
+  @@map("users")
+}
+
+model Account {
+  id                     String  @id @default(cuid())
+  userId                 String  @map("user_id")
+  type                   String
+  provider               String
+  providerAccountId      String  @map("provider_account_id")
+  refresh_token          String? @db.Text
+  access_token           String? @db.Text
+  expires_at             Int?
+  refresh_token_expires_at Int?
+  token_type             String?
+  scope                  String?
+  id_token               String? @db.Text
+  session_state          String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model GitHubInstallation {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  installationId  String   @map("installation_id")
+  accountId       String   @map("account_id")
+  accountLogin    String   @map("account_login")
+  accountType     String   @map("account_type")
+  repositorySelection String @map("repository_selection")
+  permissions     Json
+  suspendedAt     DateTime? @map("suspended_at")
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  etag            String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositories UserRepository[]
+
+  @@unique([userId, installationId])
+  @@index([installationId])
+  @@map("github_installations")
+}
+
+model Repository {
+  id                 String   @id @default(cuid())
+  githubRepositoryId String   @unique @map("github_repository_id")
+  owner              String
+  name               String
+  fullName           String   @unique @map("full_name")
+  htmlUrl            String   @map("html_url")
+  defaultBranch      String   @map("default_branch")
+  visibility         RepositoryVisibility
+  isPrivate          Boolean  @map("is_private")
+  isArchived         Boolean  @default(false) @map("is_archived")
+  lastGithubSyncAt   DateTime @map("last_github_sync_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  users        UserRepository[]
+  analysisRuns AnalysisRun[]
+  learningRecords LearningRecord[]
+
+  @@index([owner, name])
+  @@map("repositories")
+}
+
+model UserRepository {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  repositoryId   String   @map("repository_id")
+  installationId String   @map("installation_id")
+  permission     RepositoryPermission
+  active         Boolean  @default(true)
+  connectedAt    DateTime @default(now()) @map("connected_at")
+  lastAccessedAt DateTime? @map("last_accessed_at")
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository   Repository         @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  installation GitHubInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, repositoryId])
+  @@index([userId, active])
+  @@index([installationId])
+  @@map("user_repositories")
+}
+
+model AnalysisRun {
+  id                String         @id @default(cuid())
+  repositoryId      String?        @map("repository_id")
+  requestedByUserId String?        @map("requested_by_user_id")
+  repositoryFullName String        @map("repository_full_name")
+  commitSha         String?        @map("commit_sha")
+  source            AnalysisSource
+  status            AnalysisStatus
+  stats             Json?
+  errorCode         String?        @map("error_code")
+  errorMessage      String?        @db.Text @map("error_message")
+  startedAt         DateTime       @default(now()) @map("started_at")
+  completedAt       DateTime?      @map("completed_at")
+
+  repository      Repository? @relation(fields: [repositoryId], references: [id], onDelete: SetNull)
+  requestedByUser User?       @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([repositoryId, commitSha])
+  @@index([requestedByUserId, startedAt])
+  @@map("analysis_runs")
+}
+
+model LearningRecord {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  repositoryId String   @map("repository_id")
+  commitSha    String   @map("commit_sha")
+  selectionType String  @map("selection_type")
+  selectionId  String   @map("selection_id")
+  selectionName String  @map("selection_name")
+  promptVersion String  @map("prompt_version")
+  model        String
+  cacheKey     String   @map("cache_key")
+  result       Json
+  inputTokens  Int?     @map("input_tokens")
+  outputTokens Int?     @map("output_tokens")
+  totalTokens  Int?     @map("total_tokens")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cacheKey])
+  @@index([userId, createdAt])
+  @@index([repositoryId, commitSha])
+  @@map("learning_records")
+}

@@ -119,7 +119,7 @@ export function LearningFlow({ learningNodes, learningEdges, onSelect, selectedI
   useEffect(() => setEdges(initialEdges), [initialEdges, setEdges]);
   useEffect(() => {
     if (!instance || initialNodes.length === 0) return;
-    const frame = requestAnimationFrame(() => void instance.fitView({ padding: 0.28, duration: 250 }));
+    const frame = requestAnimationFrame(() => void instance.fitView({ padding: 0.12, minZoom: 0.55, maxZoom: 1.05, duration: 250 }));
     return () => cancelAnimationFrame(frame);
   }, [initialNodes, instance]);
 
@@ -134,10 +134,13 @@ export function LearningFlow({ learningNodes, learningEdges, onSelect, selectedI
       onNodeClick={handleClick}
       onInit={setInstance}
       fitView
-      fitViewOptions={{ padding: 0.28 }}
+      fitViewOptions={{ padding: 0.12, minZoom: 0.55, maxZoom: 1.05 }}
       minZoom={0.35}
       maxZoom={1.5}
       nodesDraggable
+      zoomOnScroll={false}
+      panOnScroll={false}
+      preventScrolling={false}
       proOptions={{ hideAttribution: true }}
     >
       <Background color="#dfe7e3" gap={26} size={1} />

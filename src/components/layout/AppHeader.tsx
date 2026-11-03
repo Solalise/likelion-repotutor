@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { Github } from "lucide-react";
+import { auth } from "@/auth";
+import { SignInButton, SignOutButton } from "@/components/auth/AuthButtons";
 import { Brand } from "./Brand";
 
-export function AppHeader() {
+export async function AppHeader() {
+  const session = await auth();
   return (
     <header className="app-header">
       <Brand />
       <nav className="header-nav" aria-label="주 메뉴">
         <Link href="/dashboard">Dashboard</Link>
         <Link href="/repository">Code map</Link>
-        <button className="github-button" disabled title="다음 개발 단계에서 연결됩니다">
-          <Github size={16} /> GitHub 연결 예정
-        </button>
+        {session?.user ? <><Link href="/repositories">Repositories</Link><SignOutButton /></> : <SignInButton />}
       </nav>
     </header>
   );

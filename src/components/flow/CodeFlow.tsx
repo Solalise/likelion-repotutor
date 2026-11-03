@@ -1,103 +1,136 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Background,
   Controls,
   MarkerType,
   MiniMap,
   ReactFlow,
+  ViewportPortal,
   useEdgesState,
   useNodesState,
   type Edge,
-  type Node,
   type NodeMouseHandler,
+  type NodeTypes,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { CodeEdge, CodeNode } from "@/types/analysis";
+import { CodeNodeCard, type CodeFlowNode } from "./CodeNodeCard";
+import { buildCodeFlowLayout, CODE_NODE_WIDTH } from "@/lib/graph/codeFlowLayout";
+import type { CodeEdge, CodeNode, CodeRelation } from "@/types/analysis";
 
-const NODE_COLORS: Record<CodeNode["type"], string> = {
-  file: "#607086",
-  function: "#19a974",
-  component: "#5965d8",
-  api: "#e99237",
+const nodeTypes: NodeTypes = { code: CodeNodeCard };
+const RELATION_COLORS: Record<CodeRelation, string> = {
+  import: "#8793a3",
+  call: "#15966a",
+  component: "#655fd2",
+  reference: "#3184a5",
+  api: "#d47a24",
 };
 
-function layoutNodes(nodes: CodeNode[]): Node[] {
-  const grouped = nodes.reduce<Record<CodeNode["type"], CodeNode[]>>(
-    (result, node) => ({ ...result, [node.type]: [...result[node.type], node] }),
-    { file: [], component: [], function: [], api: [] },
-  );
-  const order: CodeNode["type"][] = ["file", "component", "function", "api"];
-  const positions = new Map<string, { x: number; y: number }>();
-  order.forEach((type, column) => grouped[type].forEach((node, row) => positions.set(node.id, { x: column * 255, y: row * 118 })));
-
-  return nodes.map((node) => ({
-    id: node.id,
-    position: positions.get(node.id) ?? { x: 0, y: 0 },
-    data: { label: node.name },
-    style: {
-      background: "#fff",
-      border: `1.5px solid ${NODE_COLORS[node.type]}`,
-      borderLeft: `5px solid ${NODE_COLORS[node.type]}`,
-      borderRadius: 12,
-      boxShadow: "0 8px 24px rgba(19, 32, 48, .08)",
-      color: "#172234",
-      fontSize: 13,
-      fontWeight: 650,
-      padding: "13px 16px",
-      width: 190,
-    },
-  }));
+function edgeLabel(edge: CodeEdge): string {
+  const count = edge.occurrences?.length ?? 1;
+  const suffix = count > 1 ? ` ×${count}` : "";
+  if (edge.relation === "call") return `Direct call${suffix}`;
+  if (edge.relation === "component") return `Component${suffix}`;
+  if (edge.relation === "api") return `API request${suffix}`;
+  if (edge.relation === "import") return `Import${suffix}`;
+  if (/\bon[A-Z]\w*\s*=/.test(edge.evidence ?? "")) return `React event${suffix}`;
+  if (/nested declaration/i.test(edge.evidence ?? "")) return `Nested function${suffix}`;
+  return `Callback / reference${suffix}`;
 }
 
 function layoutEdges(edges: CodeEdge[]): Edge[] {
-  const relationLabels: Record<CodeEdge["relation"], string> = {
-    import: "불러오기", call: "함수 호출", component: "컴포넌트 표시", reference: "콜백 연결", api: "API 요청",
-  };
-  return edges.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    label: relationLabels[edge.relation],
-    markerEnd: { type: MarkerType.ArrowClosed, color: edge.relation === "call" ? "#19a974" : "#94a0b2" },
-    style: { stroke: edge.relation === "call" ? "#19a974" : "#94a0b2", strokeWidth: 1.5 },
-    labelStyle: { fill: "#6e7a8a", fontSize: 10 },
-  }));
+  return edges.map((edge) => {
+    const color = RELATION_COLORS[edge.relation];
+    return {
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      label: edgeLabel(edge),
+      type: "smoothstep",
+      markerEnd: { type: MarkerType.ArrowClosed, color, width: 16, height: 16 },
+      pathOptions: { borderRadius: 12, offset: 18 },
+      style: {
+        stroke: color,
+        strokeWidth: edge.relation === "api" ? 2.4 : 1.8,
+        strokeDasharray: edge.relation === "import" ? "3 5" : edge.relation === "reference" || edge.confidence === "inferred" ? "7 4" : undefined,
+      },
+      labelStyle: { fill: color, fontSize: 10, fontWeight: 700 },
+      labelBgStyle: { fill: "#fff", fillOpacity: 0.94 },
+      labelBgPadding: [5, 3] as [number, number],
+      labelBgBorderRadius: 5,
+      zIndex: 2,
+    };
+  });
 }
 
 interface CodeFlowProps {
   codeNodes: CodeNode[];
   codeEdges: CodeEdge[];
+  selectedId?: string;
   onSelect: (nodeId: string) => void;
 }
 
-export function CodeFlow({ codeNodes, codeEdges, onSelect }: CodeFlowProps) {
-  const initialNodes = useMemo(() => layoutNodes(codeNodes), [codeNodes]);
+export function CodeFlow({ codeNodes, codeEdges, selectedId, onSelect }: CodeFlowProps) {
+  const layout = useMemo(() => buildCodeFlowLayout(codeNodes, codeEdges), [codeNodes, codeEdges]);
+  const initialNodes = useMemo<CodeFlowNode[]>(() => layout.nodes.map(({ node, position, layer, role }) => ({
+    id: node.id,
+    type: "code",
+    position,
+    selected: node.id === selectedId,
+    width: CODE_NODE_WIDTH,
+    data: {
+      codeNode: node,
+      layer,
+      role,
+      relations: [...new Set(codeEdges.filter((edge) => edge.source === node.id || edge.target === node.id).map((edge) => edge.relation))],
+    },
+  })), [codeEdges, layout.nodes, selectedId]);
   const initialEdges = useMemo(() => layoutEdges(codeEdges), [codeEdges]);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<CodeFlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [instance, setInstance] = useState<ReactFlowInstance<CodeFlowNode>>();
+  const fitMaxZoom = codeNodes.length <= 5 ? 1.12 : codeNodes.length <= 20 ? 0.98 : 0.82;
 
   useEffect(() => setNodes(initialNodes), [initialNodes, setNodes]);
   useEffect(() => setEdges(initialEdges), [initialEdges, setEdges]);
+  useEffect(() => {
+    if (!instance || nodes.length === 0) return;
+    const frame = requestAnimationFrame(() => void instance.fitView({ padding: 0.12, minZoom: 0.28, maxZoom: fitMaxZoom, duration: 280 }));
+    return () => cancelAnimationFrame(frame);
+  }, [fitMaxZoom, instance, nodes.length, layout.width, layout.height]);
 
-  const handleNodeClick: NodeMouseHandler = (_, node) => onSelect(node.id);
+  const handleNodeClick: NodeMouseHandler<CodeFlowNode> = (_, node) => onSelect(node.id);
 
   return (
-    <ReactFlow
+    <ReactFlow<CodeFlowNode>
       nodes={nodes}
       edges={edges}
+      nodeTypes={nodeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={handleNodeClick}
+      onInit={setInstance}
+      nodesDraggable={false}
       fitView
-      fitViewOptions={{ padding: 0.22 }}
-      minZoom={0.25}
-      maxZoom={1.8}
+      fitViewOptions={{ padding: 0.12, minZoom: 0.28, maxZoom: fitMaxZoom }}
+      minZoom={0.18}
+      maxZoom={1.65}
       proOptions={{ hideAttribution: true }}
     >
-      <Background color="#d8dee8" gap={24} size={1} />
-      <MiniMap pannable zoomable nodeColor={(node) => String(node.style?.borderColor ?? "#8390a2")} />
+      <ViewportPortal>
+        <div className="code-layer-regions" style={{ width: layout.width, height: layout.height }}>
+          {layout.lanes.map((lane) => (
+            <div key={lane.layer} className={`code-layer-region layer-${lane.layer}`} style={{ top: lane.y, width: layout.width, height: lane.height }}>
+              <span>{lane.label}</span>
+            </div>
+          ))}
+        </div>
+      </ViewportPortal>
+      <Background color="#d7dfe8" gap={24} size={1} />
+      <MiniMap<CodeFlowNode> pannable zoomable nodeColor={(node) => RELATION_COLORS[node.data.relations[0] ?? "call"]} />
       <Controls showInteractive={false} />
     </ReactFlow>
   );

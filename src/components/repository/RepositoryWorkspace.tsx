@@ -5,22 +5,31 @@ import { AlertCircle, ArrowLeft, ArrowRight, Braces, ChevronDown, Github, Gradua
 import { CodeFlow } from "@/components/flow/CodeFlow";
 import { LearningFlow } from "@/components/flow/LearningFlow";
 import { RepositoryOverviewFlow } from "@/components/flow/RepositoryOverviewFlow";
-import { traverseGraph } from "@/lib/graph/dfs";
+import { traceDisplayGraph } from "@/lib/graph/dfs";
 import { buildRepositoryOverview, findOverviewFeature } from "@/lib/graph/repositoryOverview";
 import { discoverRepositoryFeatures, traverseRepositoryFeature } from "@/lib/features/featureDiscovery";
-import { buildLearningGraph, buildLearningStages, buildRepositoryLearningGraph, selectLearningStageGraph, summarizeLearningFeature, traverseLearningGraph } from "@/lib/learning/learningGraphBuilder";
+import { buildLearningGraph, buildLearningStages, buildRepositoryLearningGraph, selectLearningStageGraph, traverseLearningGraph } from "@/lib/learning/learningGraphBuilder";
 import type { RepositoryAnalysis, RepositoryFeature } from "@/types/analysis";
 import { FeaturePicker } from "./FeaturePicker";
 import { LearningInspector } from "./LearningInspector";
 import { NodeInspector } from "./NodeInspector";
 import { RepositoryTree } from "./RepositoryTree";
 import { RepositoryOverviewInspector } from "./RepositoryOverviewInspector";
+import { AiLearningPanel } from "./AiLearningPanel";
 
 type ViewMode = "learning" | "developer";
 type DeveloperMode = "overview" | "feature";
-type AnalysisRequest = { source: "sample" } | { source: "github"; url: string };
+type AnalysisRequest = { source: "sample" } | { source: "github"; url: string } | { source: "connected"; connectionId: string };
 
 async function fetchAnalysis(request: AnalysisRequest): Promise<RepositoryAnalysis> {
+  if (request.source === "connected") {
+    const response = await fetch(`/api/repositories/${encodeURIComponent(request.connectionId)}/analyze`, { cache: "no-store" });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as { message?: string } | null;
+      throw new Error(payload?.message ?? "연결 저장소를 분석하지 못했습니다.");
+    }
+    return response.json() as Promise<RepositoryAnalysis>;
+  }
   const params = new URLSearchParams({ source: request.source });
   if (request.source === "github") params.set("url", request.url);
   const response = await fetch(`/api/analyze?${params}`, { cache: "no-store" });
@@ -37,7 +46,7 @@ function preferredNodeId(result: RepositoryAnalysis): string {
     ?? "";
 }
 
-export function RepositoryWorkspace() {
+export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialConnectedRepositoryId?: string }) {
   const [analysis, setAnalysis] = useState<RepositoryAnalysis>();
   const [viewMode, setViewMode] = useState<ViewMode>("learning");
   const [selectedId, setSelectedId] = useState<string>();
@@ -47,12 +56,15 @@ export function RepositoryWorkspace() {
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [githubUrl, setGithubUrl] = useState("");
-  const [lastRequest, setLastRequest] = useState<AnalysisRequest>({ source: "sample" });
+  const [lastRequest, setLastRequest] = useState<AnalysisRequest>(() => initialConnectedRepositoryId
+    ? { source: "connected", connectionId: initialConnectedRepositoryId }
+    : { source: "sample" });
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
   const [learningStageIndex, setLearningStageIndex] = useState(0);
   const [learningExpanded, setLearningExpanded] = useState(false);
   const [developerMode, setDeveloperMode] = useState<DeveloperMode>("overview");
   const [expandedOverviewIds, setExpandedOverviewIds] = useState<Set<string>>(() => new Set());
+  const [expandedCodeNodeIds, setExpandedCodeNodeIds] = useState<Set<string>>(() => new Set());
   const [selectedOverviewId, setSelectedOverviewId] = useState<string>();
 
   function applyAnalysis(result: RepositoryAnalysis): void {
@@ -69,6 +81,7 @@ export function RepositoryWorkspace() {
     setLearningExpanded(false);
     setDeveloperMode("overview");
     setExpandedOverviewIds(new Set());
+    setExpandedCodeNodeIds(new Set());
     setSelectedOverviewId(undefined);
   }
 
@@ -87,19 +100,26 @@ export function RepositoryWorkspace() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchAnalysis({ source: "sample" })
+    const request: AnalysisRequest = initialConnectedRepositoryId
+      ? { source: "connected", connectionId: initialConnectedRepositoryId }
+      : { source: "sample" };
+    fetchAnalysis(request)
       .then((result) => {
         if (cancelled) return;
+        setLastRequest(request);
         applyAnalysis(result);
       })
       .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : "분석 중 오류가 발생했습니다.");
+        if (!cancelled) {
+          setLastRequest(request);
+          setError(reason instanceof Error ? reason.message : "분석 중 오류가 발생했습니다.");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [initialConnectedRepositoryId]);
 
   const isGithub = analysis?.source === "github";
   const featureDiscovery = useMemo(() => analysis && analysis.source === "github"
@@ -118,18 +138,18 @@ export function RepositoryWorkspace() {
   }, [analysis, selectedFeature]);
   const learningStages = useMemo(() => buildLearningStages(learningGraph, selectedFeature?.entryNodeId ?? focusId), [focusId, learningGraph, selectedFeature]);
   const currentLearningStage = learningStages[Math.min(learningStageIndex, Math.max(0, learningStages.length - 1))];
-  const learningFeatureSummary = selectedFeature ? summarizeLearningFeature(selectedFeature.title, learningGraph) : undefined;
   const overviewGraph = useMemo(() => analysis && analysis.source === "github"
     ? buildRepositoryOverview(analysis, expandedOverviewIds)
     : { nodes: [], edges: [], truncated: false, hiddenNodeCount: 0 }, [analysis, expandedOverviewIds]);
   const selectedOverviewNode = overviewGraph.nodes.find((node) => node.id === selectedOverviewId);
   const technicalGraph = useMemo(() => {
-    if (!analysis) return { nodes: [], edges: [] };
-    if (analysis.source === "github" && focused && selectedFeature) {
-      return traverseRepositoryFeature(analysis, selectedFeature, depth);
+    if (!analysis) return { nodes: [], edges: [], hiddenNodeCount: 0, hiddenEdgeCount: 0 };
+    if (analysis.source === "github" && selectedFeature) {
+      return traverseRepositoryFeature(analysis, selectedFeature, depth, expandedCodeNodeIds);
     }
-    return focused && focusId ? traverseGraph(focusId, analysis.nodes, analysis.edges, depth) : { nodes: analysis.nodes, edges: analysis.edges };
-  }, [analysis, depth, focusId, focused, selectedFeature]);
+    const startNodeId = focusId || selectedId || preferredNodeId(analysis);
+    return traceDisplayGraph(startNodeId, analysis.nodes, analysis.edges, { maxDepth: depth, expandedNodeIds: expandedCodeNodeIds });
+  }, [analysis, depth, expandedCodeNodeIds, focusId, selectedFeature, selectedId]);
   const visibleLearningGraph = useMemo(() => {
     if (isGithub && currentLearningStage) return selectLearningStageGraph(learningGraph, currentLearningStage, learningExpanded, depth);
     if (!focusId) return learningGraph;
@@ -161,6 +181,7 @@ export function RepositoryWorkspace() {
     setFocused(true);
     setLearningStageIndex(0);
     setLearningExpanded(false);
+    setExpandedCodeNodeIds(new Set());
     if (viewMode === "developer") setDeveloperMode("feature");
   }
 
@@ -188,6 +209,13 @@ export function RepositoryWorkspace() {
     setSelectedId(overviewFeature.entryNodeId);
     setFocused(true);
     setDeveloperMode("feature");
+    setExpandedCodeNodeIds(new Set());
+  }
+
+  function expandSelectedCodeNode(): void {
+    if (!selectedId) return;
+    setExpandedCodeNodeIds((current) => new Set(current).add(selectedId));
+    setFocused(true);
   }
 
   function selectLearningStage(index: number): void {
@@ -228,7 +256,7 @@ export function RepositoryWorkspace() {
   );
 
   if (!analysis) return (
-    <main className="repository-workspace">
+    <main className={`repository-workspace ${viewMode}-view ${isGithub ? "github-repository" : ""}`}>
       {repositoryForm}
       <div className={`workspace-state ${error ? "error" : ""}`}>
         {error ? <AlertCircle /> : <LoaderCircle className="spin" />}
@@ -243,18 +271,23 @@ export function RepositoryWorkspace() {
   const visibleEdgeCount = viewMode === "learning" ? visibleLearningGraph.edges.length : showingOverview ? overviewGraph.edges.length : technicalGraph.edges.length;
 
   return (
-    <main className="repository-workspace">
+    <main className={`repository-workspace ${viewMode}-view ${isGithub ? "github-repository" : ""}`}>
       {repositoryForm}
       {error && <div className="analysis-alert error"><AlertCircle size={15} /><span>{error}</span><button onClick={() => setError(undefined)}>닫기</button></div>}
-      {analysis.collection?.partial && <div className="analysis-alert warning"><AlertCircle size={15} /><span>일부 파일만 분석했습니다. {analysis.collection.notice}</span></div>}
+      {analysis.collection?.partial && <div className="analysis-alert warning"><AlertCircle size={15} /><span>
+        일부 파일만 분석했습니다. 경량 인덱스 {analysis.collection.indexedFiles ?? analysis.collection.discoveredFiles}개 중 {analysis.collection.collectedFiles}개 분석
+        {analysis.collection.dependencyFiles !== undefined ? ` · import/API 의존 파일 ${analysis.collection.dependencyFiles}개 우선 포함` : ""}
+        {analysis.collection.skippedByFileLimit ? ` · 파일 제한 ${analysis.collection.skippedByFileLimit}개 제외` : ""}
+        {analysis.collection.skippedByByteLimit ? ` · 용량 제한 ${analysis.collection.skippedByByteLimit}개 제외` : ""}
+      </span></div>}
       <section className="repository-feature-header">
         <div className="feature-title-block">
           <span className="eyebrow">{isGithub ? "GITHUB REPOSITORY" : "LOGIN FEATURE"} · {analysis.repository}</span>
-          <h1>{isGithub ? "저장소 코드 구조" : "로그인 기능 흐름"}</h1>
-          <p>{isGithub ? `기본 브랜치 ${analysis.collection?.defaultBranch ?? "-"}의 실제 소스코드를 AST로 분석했습니다.` : "사용자가 로그인 버튼을 클릭했을 때 어떤 코드가 실행되는지 단계별로 살펴보세요."}</p>
+          <h1>{isGithub && viewMode === "learning" ? "AI 코드 학습" : isGithub ? "저장소 코드 구조" : "로그인 기능 흐름"}</h1>
+          <p>{isGithub && viewMode === "learning" ? "기능을 고르고 AI 설명부터 코드 흐름까지 순서대로 학습하세요." : isGithub ? `기본 브랜치 ${analysis.collection?.defaultBranch ?? "-"}의 실제 소스코드를 AST로 분석했습니다.` : "사용자가 로그인 버튼을 클릭했을 때 어떤 코드가 실행되는지 단계별로 살펴보세요."}</p>
         </div>
         <div className="header-actions">
-          <div className="analysis-status"><span /> AST 분석 완료 · 파일 {analysis.stats.files} · 함수 {analysis.stats.functions}{analysis.collection?.cached ? " · 캐시 결과" : ""}</div>
+          {viewMode === "developer" && <div className="analysis-status" title={analysis.stats.unresolvedRelations ? `대상 심벌을 확정하지 못한 관계 ${analysis.stats.unresolvedRelations}개 · 일치 Route가 없는 API 요청 ${analysis.stats.unmatchedApiRequests ?? 0}개` : undefined}><span /> AST 분석 완료 · 파일 {analysis.stats.files}{analysis.collection?.indexedFiles ? `/${analysis.collection.indexedFiles}` : ""} · 함수 {analysis.stats.functions} · 관계 {analysis.stats.relations}{analysis.stats.unresolvedRelations ? ` · 미해결 ${analysis.stats.unresolvedRelations}` : ""}{analysis.collection?.cached ? " · 캐시 결과" : ""}</div>}
           <div className="view-toggle" role="group" aria-label="그래프 보기 방식">
             <button className={viewMode === "learning" ? "active" : ""} onClick={() => changeView("learning")}><GraduationCap size={15} /> 학습용 보기</button>
             <button className={viewMode === "developer" ? "active" : ""} onClick={() => changeView("developer")}><Braces size={15} /> 개발자 보기</button>
@@ -262,9 +295,8 @@ export function RepositoryWorkspace() {
         </div>
       </section>
 
-      {isGithub && viewMode === "learning" && <div className="learning-unavailable"><GraduationCap size={14} /> 실제 AST에서 확인된 관계만 쉬운 역할명으로 바꿔 표시합니다. 실행 순서나 조건은 임의로 만들지 않습니다.</div>}
-
       <section className="workspace-toolbar">
+        {viewMode === "learning" && isGithub && <div className="learning-step-title"><span>1</span><div><strong>학습할 기능 선택</strong><small>먼저 알고 싶은 기능을 하나 골라주세요.</small></div></div>}
         <div className="current-view-copy">
           <strong>{showingOverview ? "저장소 전체 구조" : selectedFeature?.title ?? (viewMode === "learning" ? "코드 흐름을 쉬운 말로 읽어보세요" : "AST가 추출한 기술 관계를 확인하세요")}</strong>
           <span>{visibleNodeCount}개 단계 · {visibleEdgeCount}개 연결</span>
@@ -289,16 +321,29 @@ export function RepositoryWorkspace() {
           {showingOverview ? null : viewMode === "learning" && isGithub
             ? <button className="focus-button" onClick={() => setLearningExpanded((value) => !value)} disabled={!currentLearningStage}><Maximize2 size={14} /> {learningExpanded ? "핵심만 보기" : "전체 관계 확장"}</button>
             : <button className="focus-button" onClick={() => setFocused(true)} disabled={isGithub && !selectedFeature}><Play size={14} fill="currentColor" /> 흐름 추적</button>}
-          {focused && !showingOverview && !(viewMode === "learning" && isGithub) && <button className="icon-button" onClick={() => setFocused(false)} title="전체 흐름 보기"><RefreshCw size={15} /></button>}
+          {!showingOverview && viewMode === "developer" && Boolean(technicalGraph.hiddenNodeCount || technicalGraph.hiddenEdgeCount) && <button className="focus-button" onClick={expandSelectedCodeNode} disabled={!selectedId || expandedCodeNodeIds.has(selectedId)}><Maximize2 size={14} /> 선택 노드 확장</button>}
+          {focused && !showingOverview && !(viewMode === "learning" && isGithub) && <button className="icon-button" onClick={() => isGithub ? setDeveloperMode("overview") : setFocused(false)} title={isGithub ? "전체 구조 보기" : "핵심 흐름 보기"}><RefreshCw size={15} /></button>}
         </div>
       </section>
 
+      {viewMode === "learning" && isGithub && initialConnectedRepositoryId && (
+        <AiLearningPanel
+          connectionId={initialConnectedRepositoryId}
+          feature={selectedFeature}
+          selectedFunction={selectedCodeNode && selectedCodeNode.type !== "file" ? {
+            id: selectedCodeNode.id,
+            name: selectedCodeNode.name,
+            filePath: selectedCodeNode.filePath,
+            line: selectedCodeNode.line,
+          } : undefined}
+        />
+      )}
+
       {viewMode === "learning" && isGithub && currentLearningStage && (
         <section className="learning-journey" aria-label="기능 학습 단계">
-          <div className="learning-journey-intro">
-            <span>선택한 기능</span>
-            <strong>{selectedFeature?.title ?? "저장소 기능"}</strong>
-            <p>{learningFeatureSummary ?? "실제 AST 관계를 단계별로 살펴봅니다."}</p>
+          <div className="learning-journey-intro learning-step-title">
+            <span>3</span>
+            <div><strong>코드 흐름 확인</strong><small>AI 설명과 실제 코드 연결을 단계별로 확인하세요.</small></div>
           </div>
           <div className="learning-stage-track">
             {learningStages.map((stage, index) => (
@@ -315,17 +360,17 @@ export function RepositoryWorkspace() {
         </section>
       )}
 
-      <section className="workspace-grid">
-        <aside className="tree-panel">
+      <section className={`workspace-grid ${viewMode === "learning" && isGithub ? "learning-workspace" : ""}`}>
+        {(viewMode === "developer" || !isGithub) && <aside className="tree-panel">
           <div className="panel-heading"><span>저장소 파일</span><small>{analysis.stats.files}</small></div>
           <RepositoryTree files={analysis.files} selectedPath={selectedPath} rootName={analysis.repository} />
           <div className="tree-tip"><GraduationCap size={14} /><p>{isGithub ? "GitHub에서 수집한 파일 중 AST 분석 대상만 표시합니다." : "학습용 보기는 실제 코드 관계에 설명용 단계를 더해 흐름을 쉽게 보여줍니다."}</p></div>
-        </aside>
-        <div className={`flow-panel ${viewMode}`}>
-          <div className="flow-caption">
-            <div><strong>{showingOverview ? "프로젝트 → 모듈 → 파일 → 함수" : focused ? selectedFeature?.title ?? "선택한 단계부터 흐름 추적" : viewMode === "learning" ? (isGithub ? "핵심 학습 흐름" : "로그인 학습 흐름") : "기술 코드 그래프"}</strong><span>{showingOverview ? "점선은 폴더·파일 포함 관계이고, 실선은 AST에서 확인된 코드 의존 관계입니다." : selectedFeature?.limited ? "정적 분석에서 연결을 찾지 못해 시작 노드만 표시합니다. 실제 런타임 연결이 있을 수 있습니다." : selectedFeature?.description ?? "카드를 선택하면 오른쪽에서 자세히 설명해 드려요."}</span></div>
-            {showingOverview ? overviewGraph.truncated && <span className="filter-chip">요약됨 · {overviewGraph.hiddenNodeCount}개 숨김</span> : focused && <span className="filter-chip">탐색 범위 {depth}단계</span>}
-          </div>
+        </aside>}
+        <div className={`flow-panel ${viewMode} ${viewMode === "learning" && visibleLearningGraph.nodes.length <= 2 ? "compact" : viewMode === "learning" && visibleLearningGraph.nodes.length <= 4 ? "medium" : ""}`}>
+          {viewMode === "developer" && <div className="flow-caption">
+            <div><strong>{showingOverview ? "프로젝트 → 모듈 → 파일 → 함수" : focused ? selectedFeature?.title ?? "선택한 단계부터 흐름 추적" : "기술 코드 그래프"}</strong><span>{showingOverview ? "점선은 폴더·파일 포함 관계이고, 실선은 AST에서 확인된 코드 의존 관계입니다." : selectedFeature?.limited ? "정적 분석에서 연결을 찾지 못해 시작 노드만 표시합니다. 실제 런타임 연결이 있을 수 있습니다." : selectedFeature?.description ?? "카드를 선택하면 오른쪽에서 자세히 설명해 드려요."}</span></div>
+            {showingOverview ? overviewGraph.truncated && <span className="filter-chip">요약됨 · {overviewGraph.hiddenNodeCount}개 숨김</span> : <span className="filter-chip">탐색 {depth}단계{technicalGraph.hiddenNodeCount || technicalGraph.hiddenEdgeCount ? ` · 노드 ${technicalGraph.hiddenNodeCount ?? 0}개/연결 ${technicalGraph.hiddenEdgeCount ?? 0}개 접힘` : ""}</span>}
+          </div>}
           {viewMode === "learning" ? (
             visibleLearningGraph.nodes.length > 0
               ? <LearningFlow learningNodes={visibleLearningGraph.nodes} learningEdges={visibleLearningGraph.edges} selectedId={selectedId} onSelect={setSelectedId} />
@@ -334,11 +379,19 @@ export function RepositoryWorkspace() {
             showingOverview
               ? <RepositoryOverviewFlow overviewNodes={overviewGraph.nodes} overviewEdges={overviewGraph.edges} selectedId={selectedOverviewId} onSelect={selectOverviewNode} />
               : technicalGraph.nodes.length > 0
-              ? <CodeFlow codeNodes={technicalGraph.nodes} codeEdges={technicalGraph.edges} onSelect={setSelectedId} />
+              ? <CodeFlow codeNodes={technicalGraph.nodes} codeEdges={technicalGraph.edges} selectedId={selectedId} onSelect={setSelectedId} />
               : <div className="flow-empty"><AlertCircle size={22} /><strong>표시할 기술 노드가 없습니다.</strong><span>선택한 기능에서 AST 관계를 찾지 못했습니다.</span></div>
           )}
         </div>
-        <aside className="inspector-panel">
+        {viewMode === "learning" && isGithub ? (
+          <details className="learning-code-details">
+            <summary><span><Braces size={15} /> 상세 코드 보기</span><small>선택한 단계의 코드와 파일 목록을 확인합니다.</small><ChevronDown size={15} /></summary>
+            <div className="learning-detail-grid">
+              <div className="learning-detail-tree"><div className="panel-heading"><span>저장소 파일</span><small>{analysis.stats.files}</small></div><RepositoryTree files={analysis.files} selectedPath={selectedPath} rootName={analysis.repository} /></div>
+              <div className="learning-detail-inspector"><LearningInspector key={selectedLearningNode?.id ?? "empty"} node={selectedLearningNode} /></div>
+            </div>
+          </details>
+        ) : <aside className="inspector-panel">
           <div className="panel-heading"><span>{viewMode === "learning" ? "단계 상세 설명" : showingOverview ? "구조 탐색 정보" : "개발자 정보"}</span></div>
           {viewMode === "learning" ? (
             <LearningInspector key={selectedLearningNode?.id ?? "empty"} node={selectedLearningNode} />
@@ -347,7 +400,7 @@ export function RepositoryWorkspace() {
           ) : (
             <NodeInspector node={selectedCodeNode} edges={analysis.edges} allNodes={analysis.nodes} />
           )}
-        </aside>
+        </aside>}
       </section>
     </main>
   );

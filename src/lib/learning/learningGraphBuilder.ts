@@ -184,20 +184,34 @@ export function buildRepositoryLearningGraph(
     }];
   });
   const edges = [...directEdges, ...importEdges];
+  const baseById = new Map(codeNodes.map((node) => [node.id, fromCodeNode(node)]));
+  const roleOf = (nodeId: string): string => {
+    const category = baseById.get(nodeId)?.category;
+    if (/^(?:handle|on)[A-Z]/.test(codeNodeMap.get(nodeId)?.name ?? "")) return "이벤트 핸들러";
+    if (category === "start") return "화면 진입점";
+    if (category === "ui-action") return "UI/이벤트 처리";
+    if (category === "service") return "서비스 로직";
+    if (category === "api") return "API 처리";
+    if (category === "database") return "데이터 접근";
+    return "함수";
+  };
+  const relationPriority: Record<LearningEdge["relation"], number> = {
+    request: 0, call: 1, reference: 2, component: 3, query: 4, import: 5, execute: 6, return: 7, branch: 8,
+  };
   const nodes = codeNodes.map((node) => {
     const related = edges.filter((item) => item.source === node.id || item.target === node.id);
     const relatedNodeIds = new Set(related.flatMap((item) => [item.source, item.target]).filter((id) => id !== node.id));
     const relatedFiles = [...relatedNodeIds].flatMap((id) => codeNodeMap.has(id) ? [codeNodeMap.get(id)!.filePath] : []);
     const relationNames = [...new Set(related.map((item) => relationLabel(item.relation)))];
-    const incomingRelations = edges.filter((item) => item.target === node.id).flatMap((item) => {
+    const incomingRelations = [...new Set(edges.filter((item) => item.target === node.id).sort((a, b) => relationPriority[a.relation] - relationPriority[b.relation]).flatMap((item) => {
       const source = codeNodeMap.get(item.source);
-      return source ? [`${source.name}에서 ${relationLabel(item.relation)} 관계로 이 코드에 연결됩니다.`] : [];
-    });
-    const outgoingRelations = edges.filter((item) => item.source === node.id).flatMap((item) => {
+      return source ? [`${source.name} (${roleOf(source.id)}) → ${node.name} (${roleOf(node.id)}) · ${relationLabel(item.relation)}`] : [];
+    }))];
+    const outgoingRelations = [...new Set(edges.filter((item) => item.source === node.id).sort((a, b) => relationPriority[a.relation] - relationPriority[b.relation]).flatMap((item) => {
       const target = codeNodeMap.get(item.target);
-      return target ? [`이 코드가 ${target.name}에 ${relationLabel(item.relation)} 관계로 연결됩니다.`] : [];
-    });
-    const base = fromCodeNode(node);
+      return target ? [`${node.name} (${roleOf(node.id)}) → ${target.name} (${roleOf(target.id)}) · ${relationLabel(item.relation)}`] : [];
+    }))];
+    const base = baseById.get(node.id)!;
     const outgoingNames = edges.filter((item) => item.source === node.id).flatMap((item) => {
       const target = codeNodeMap.get(item.target);
       return target ? [target.name] : [];
@@ -216,7 +230,7 @@ export function buildRepositoryLearningGraph(
         : base.purpose,
       relatedFiles: [...new Set(relatedFiles)],
       connectionReason: relationNames.length > 0
-        ? [...incomingRelations, ...outgoingRelations].slice(0, 3).join(" ")
+        ? [...incomingRelations, ...outgoingRelations].slice(0, 2).join(" ")
         : "정적 분석에서 이 코드와 직접 연결된 관계를 찾지 못했습니다.",
       incomingRelations,
       outgoingRelations,

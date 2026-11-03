@@ -92,11 +92,51 @@ describe("loadGithubRepository", () => {
     const result = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher(files, calls));
 
     expect(result.sources).toHaveLength(GITHUB_COLLECTION_LIMITS.maxFiles);
-    expect(result.collection).toMatchObject({ commitSha: SHA, discoveredFiles: 43, collectedFiles: 40, partial: true, cached: false, apiRequestCount: 2 });
-    expect(result.collection.notice).toContain("43개 중 40개");
+    expect(result.collection).toMatchObject({
+      commitSha: SHA,
+      discoveredFiles: GITHUB_COLLECTION_LIMITS.maxFiles + 3,
+      indexedFiles: GITHUB_COLLECTION_LIMITS.maxFiles + 3,
+      collectedFiles: GITHUB_COLLECTION_LIMITS.maxFiles,
+      skippedByFileLimit: 3,
+      partial: true,
+      cached: false,
+      apiRequestCount: 2,
+    });
+    expect(result.collection.notice).toContain(`${GITHUB_COLLECTION_LIMITS.maxFiles + 3}개 중 ${GITHUB_COLLECTION_LIMITS.maxFiles}개`);
     expect(calls.filter((url) => url.startsWith("https://api.github.com/"))).toHaveLength(2);
     expect(calls.some((url) => url.includes("/git/blobs/") || url.includes("/git/trees/"))).toBe(false);
     expect(calls).toHaveLength(3);
+  });
+
+  it("indexes the archive and includes transitive imports and matching API routes before filler files", async () => {
+    const filler = Array.from({ length: 70 }, (_, index) => ({
+      path: `apps/mobile/app/filler-${String(index).padStart(2, "0")}/page.tsx`,
+      content: `export function Filler${index}() { return null; }`,
+    }));
+    const files = [
+      ...filler,
+      {
+        path: "apps/mobile/src/screens/Lookup.tsx",
+        content: `import { service } from "@/z/service"; export function LookupScreen() { return service.lookup(); }`,
+      },
+      {
+        path: "apps/mobile/src/z/service.ts",
+        content: `export const service = { lookup() { return fetch("/api/cases/auth", { method: "POST" }); } };`,
+      },
+      {
+        path: "apps/web/src/app/api/cases/auth/route.ts",
+        content: `export async function POST() { return Response.json({ ok: true }); }`,
+      },
+    ];
+    const result = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher(files, []));
+    const selectedPaths = result.sources.map((source) => source.path);
+    expect(selectedPaths).toEqual(expect.arrayContaining([
+      "apps/mobile/src/screens/Lookup.tsx",
+      "apps/mobile/src/z/service.ts",
+      "apps/web/src/app/api/cases/auth/route.ts",
+    ]));
+    expect(result.collection).toMatchObject({ indexedFiles: files.length, dependencyFiles: expect.any(Number) });
+    expect(result.collection.dependencyFiles).toBeGreaterThanOrEqual(2);
   });
 
   it("reuses the same commit without another GitHub request", async () => {
@@ -107,6 +147,17 @@ describe("loadGithubRepository", () => {
     expect(first.collection.cached).toBe(false);
     expect(second.collection).toMatchObject({ cached: true, apiRequestCount: 0, commitSha: SHA });
     expect(calls).toHaveLength(3);
+  });
+
+  it("isolates source and in-flight caches by authentication namespace", async () => {
+    const publicCalls: string[] = [];
+    const privateCalls: string[] = [];
+    const files = [{ path: "src/index.ts", content: "export const x = 1;" }];
+    await loadGithubRepository("https://github.com/acme/project", repositoryFetcher(files, publicCalls), "public");
+    const connected = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher(files, privateCalls), "installation:123");
+    expect(connected.collection.cached).toBe(false);
+    expect(publicCalls).toHaveLength(3);
+    expect(privateCalls).toHaveLength(3);
   });
 
   it("revalidates the commit after the freshness window but reuses unchanged sources", async () => {

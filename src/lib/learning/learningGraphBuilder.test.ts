@@ -111,4 +111,21 @@ describe("buildLearningGraph", () => {
     expect(stages.map((stage) => stage.title)).toEqual(["기능 개요", "화면 구성", "사용자 동작", "데이터 처리"]);
     expect(selectLearningStageGraph(graph, stages[1]).nodes.length).toBeLessThanOrEqual(4);
   });
+
+  it("groups duplicate relationship explanations and shows explicit endpoints with roles", () => {
+    const screen = codeNode("LookupScreen", "component", "src/features/case/screens/LookupScreen.tsx");
+    const handler = codeNode("handleSubmit", "function", screen.filePath);
+    const graph = buildRepositoryLearningGraph({
+      repository: "test", source: "github", files: [], nodes: [screen, handler],
+      edges: [
+        { id: "event-1", source: screen.id, target: handler.id, relation: "reference" },
+        { id: "event-2", source: screen.id, target: handler.id, relation: "reference" },
+      ],
+      stats: { files: 1, functions: 2, relations: 2 },
+    });
+    const explanation = graph.nodes.find((node) => node.id === handler.id)!;
+    expect(explanation.incomingRelations).toEqual([
+      "LookupScreen (UI/이벤트 처리) → handleSubmit (이벤트 핸들러) · 콜백 연결",
+    ]);
+  });
 });

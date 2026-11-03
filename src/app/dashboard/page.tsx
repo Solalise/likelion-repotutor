@@ -19,7 +19,7 @@ export default function DashboardPage() {
           <div className="metric-grid">{metrics.map(({ icon: Icon, label, value, note }) => <article key={label}><Icon size={19} /><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div></article>)}</div>
           <div className="repo-route"><div><span>주요 학습 흐름</span><strong>로그인 버튼 클릭 <i>→</i> API 요청 <i>→</i> 사용자 조회</strong></div><Link href="/repository">학습 흐름에서 탐색 <ArrowRight size={15} /></Link></div>
         </section>
-        <section className="coming-next"><span>NEXT MILESTONE</span><h2>실제 GitHub Repository로 확장</h2><p>GitHub App과 Octokit을 연결해 사용자의 소스 파일을 수집하고, 현재 구현된 분석 파이프라인에 그대로 전달할 예정입니다.</p><div><span>GitHub App</span><span>인증</span><span>AI 코드 설명</span><span>분석 기록</span></div></section>
+        <section className="coming-next"><span>GITHUB FOUNDATION</span><h2>사용자 저장소 연결</h2><p>GitHub 로그인과 저장소 설치 권한을 분리해, 사용자가 명시적으로 허용한 저장소만 분석 파이프라인에 연결합니다.</p><div><span>GitHub App</span><span>DB 세션</span><span>저장소 권한</span><span>분석 기록</span></div></section>
       </main>
     </div>
   );

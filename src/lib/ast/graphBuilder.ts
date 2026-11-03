@@ -68,33 +68,69 @@ export function buildGraph(files: FileAnalysis[]): { nodes: CodeNode[]; edges: C
         source: fileNodeId(file.path),
         target: fileNodeId(targetPath),
         relation: "import",
+        line: imported.line,
+        evidence: `import from ${JSON.stringify(imported.source)}`,
+        confidence: "confirmed",
       });
     }
 
-    const imports = new Map<string, string>();
+    const imports = new Map<string, { path: string; imported: string }>();
     for (const imported of file.imports) {
       const targetPath = resolveImportPath(file.path, imported.source, knownPaths);
       if (!targetPath) continue;
-      for (const symbol of imported.symbols) imports.set(symbol, targetPath);
+      for (const binding of imported.bindings ?? imported.symbols.map((symbol) => ({ local: symbol, imported: symbol }))) {
+        imports.set(binding.local, { path: targetPath, imported: binding.imported });
+      }
     }
 
     for (const fn of file.functions) {
-      if (fn.parentId && functionById.has(fn.parentId)) {
+      const parentHasExplicitReference = fn.parentId && functionById.get(fn.parentId)?.relations?.some(
+        (relation) => relation.relation === "reference" && relation.targetId === fn.id,
+      );
+      if (fn.parentId && functionById.has(fn.parentId) && !parentHasExplicitReference) {
         edges.push({
           id: `reference:${fn.parentId}->${fn.id}`,
           source: fn.parentId,
           target: fn.id,
           relation: "reference",
+          line: fn.line,
+          evidence: `nested declaration: ${fn.name}`,
+          confidence: "confirmed",
         });
+      }
+      if (fn.relations) {
+        for (const relation of fn.relations) {
+          let resolvedTarget = relation.targetId;
+          if (!resolvedTarget) {
+            const localId = symbolNodeId(file.path, relation.name);
+            const [owner, ...members] = relation.name.split(".");
+            const imported = imports.get(owner);
+            resolvedTarget = functionById.has(localId) ? localId
+              : imported && imported.imported !== "*"
+                ? symbolNodeId(imported.path, [imported.imported, ...members].join("."))
+                : undefined;
+          }
+          if (!resolvedTarget || !functionById.has(resolvedTarget)) continue;
+          edges.push({
+            id: `${relation.relation}:${fn.id}->${resolvedTarget}:${relation.line}`,
+            source: fn.id,
+            target: resolvedTarget,
+            relation: relation.relation,
+            line: relation.line,
+            evidence: relation.evidence,
+            confidence: relation.confidence,
+          });
+        }
+        continue;
       }
       const addRelations = (names: string[], relation: CodeEdge["relation"]): void => {
         for (const calledName of names) {
           const localId = symbolNodeId(file.path, calledName);
-          const importedPath = imports.get(calledName);
+          const imported = imports.get(calledName);
           const targetId = functionById.has(localId)
             ? localId
-            : importedPath
-              ? symbolNodeId(importedPath, calledName)
+            : imported
+              ? symbolNodeId(imported.path, imported.imported)
               : undefined;
           if (!targetId || !functionById.has(targetId)) continue;
           edges.push({

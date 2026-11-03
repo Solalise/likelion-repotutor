@@ -4,6 +4,10 @@ const CACHE_TTL_MS = 30 * 60_000;
 const MAX_ENTRIES = 8;
 const cache = new Map<string, { value: RepositoryAnalysis; storedAt: number }>();
 
+export function githubAnalysisCacheKey(namespace: string, repository: string, commitSha: string): string {
+  return `${namespace}:${repository.toLowerCase()}@${commitSha}`;
+}
+
 export function getGithubAnalysisCache(key: string): RepositoryAnalysis | undefined {
   const entry = cache.get(key);
   if (!entry) return undefined;

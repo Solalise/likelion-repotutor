@@ -49,10 +49,43 @@ describe("discoverRepositoryFeatures", () => {
     ]));
   });
 
-  it("returns only real analyzed edges while traversing in both directions", () => {
+  it("returns only real analyzed edges in call direction", () => {
     const feature = discoverRepositoryFeatures(analysis).primary[0];
     const graph = traverseRepositoryFeature(analysis, feature, 2);
     expect(graph.nodes.map((item) => item.id)).toEqual([documentRoute.id, documentScreen.id, button.id]);
-    expect(graph.edges.map((edge) => edge.id)).toEqual(["route-screen", "screen-button"]);
+    expect(graph.edges).toEqual([
+      expect.objectContaining({ source: documentRoute.id, target: documentScreen.id, relation: "call", occurrences: [expect.objectContaining({ edgeId: "route-screen" })] }),
+      expect.objectContaining({ source: documentScreen.id, target: button.id, relation: "call", occurrences: [expect.objectContaining({ edgeId: "screen-button" })] }),
+    ]);
+  });
+
+  it("keeps HTTP handlers, providers and mocks out of the top-level feature list", () => {
+    const screen = node("CaseSearchScreen", "component", "apps/mobile/src/features/case-search/screens/CaseSearchScreen.tsx");
+    const handler = node("handleSearch", "function", "apps/mobile/src/features/case-search/screens/CaseSearchScreen.tsx");
+    const post = node("POST", "api", "apps/web/src/app/api/cases/search/route.ts");
+    const provider = node("CaseProvider", "component", "apps/mobile/src/features/case/context/CaseContext.tsx");
+    const mock = node("searchWithMock", "function", "packages/search/src/mock.ts");
+    const result = discoverRepositoryFeatures({
+      ...analysis,
+      nodes: [screen, handler, post, provider, mock],
+      edges: [
+        { id: "screen-handler", source: screen.id, target: handler.id, relation: "reference" },
+        { id: "handler-post", source: handler.id, target: post.id, relation: "api" },
+        { id: "screen-provider", source: screen.id, target: provider.id, relation: "reference" },
+      ],
+    });
+    expect([...result.primary, ...result.limited].map((feature) => feature.technicalName)).toEqual(["CaseSearchScreen"]);
+    expect(result.primary[0].nodeIds).toEqual(expect.arrayContaining([screen.id, handler.id, post.id, provider.id]));
+    expect(result.hidden.map((feature) => feature.technicalName)).toEqual(expect.arrayContaining(["CaseProvider", "searchWithMock"]));
+  });
+
+  it("supports an optional mapping using analyzed node IDs only", () => {
+    const entry = node("CustomFlow", "function", "src/domain/custom.ts");
+    const internal = node("runCustomFlow", "function", "src/domain/custom.ts");
+    const result = discoverRepositoryFeatures({ ...analysis, nodes: [entry, internal], edges: [] }, {
+      mappings: [{ entryNodeId: entry.id, title: "사용자 지정 흐름", includeNodeIds: [internal.id, "missing"] }],
+    });
+    expect(result.limited[0]).toMatchObject({ title: "사용자 지정 흐름", technicalName: "CustomFlow" });
+    expect(result.limited[0].nodeIds).toEqual([entry.id, internal.id]);
   });
 });

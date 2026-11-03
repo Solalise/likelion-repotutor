@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { traverseGraph } from "@/lib/graph/dfs";
+import type { RepositoryAnalysis } from "@/types/analysis";
 
 const { loadGithubRepositoryMock, analyzeSourceFilesMock } = vi.hoisted(() => ({
   loadGithubRepositoryMock: vi.fn(),
@@ -36,6 +38,15 @@ describe("GET /api/analyze", () => {
       stats: { files: 4, functions: 5 },
       collection: { partial: false, collectedFiles: 4 },
     });
+    const analysis = payload as RepositoryAnalysis;
+    const loginPage = analysis.nodes.find((node) => node.name === "LoginPage")!;
+    const loginFlow = traverseGraph(loginPage.id, analysis.nodes, analysis.edges, 8);
+    expect(loginFlow.nodes.map((node) => node.name)).toEqual(["LoginPage", "handleLogin", "login"]);
+    expect(loginFlow.edges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: loginPage.id, target: expect.stringContaining("#handleLogin"), relation: "reference", evidence: "onClick={handleLogin}" }),
+      expect.objectContaining({ source: expect.stringContaining("#handleLogin"), target: expect.stringContaining("#login"), relation: "call" }),
+    ]));
+    expect(loginFlow.edges).toHaveLength(2);
   });
 
   it("loads GitHub sources and passes them to the existing analyzer", async () => {

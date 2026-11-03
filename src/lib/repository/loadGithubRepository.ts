@@ -1,4 +1,5 @@
 import { gunzipSync } from "node:zlib";
+import path from "node:path";
 import type { SourceInput } from "@/types/analysis";
 
 const GITHUB_API_ORIGIN = "https://api.github.com";
@@ -9,7 +10,7 @@ const GENERATED_FILE = /(?:\.d\.ts|\.min\.[cm]?[jt]sx?|(?:^|[._-])(?:generated|g
 const COMMIT_SHA = /^[0-9a-f]{40}$/i;
 
 export const GITHUB_COLLECTION_LIMITS = {
-  maxFiles: 40, maxFileBytes: 256 * 1024, maxTotalBytes: 2 * 1024 * 1024,
+  initialFiles: 40, maxFiles: 200, maxFileBytes: 256 * 1024, maxTotalBytes: 8 * 1024 * 1024,
   maxArchiveBytes: 15 * 1024 * 1024, maxExtractedBytes: 50 * 1024 * 1024,
   timeoutMs: 20_000, freshnessTtlMs: 60_000, cacheTtlMs: 30 * 60_000, maxCacheEntries: 8,
 } as const;
@@ -19,6 +20,7 @@ export interface GithubCollectionInfo {
   repositoryUrl: string; defaultBranch: string; commitSha: string;
   discoveredFiles: number; collectedFiles: number; totalBytes: number; archiveBytes: number;
   durationMs: number; partial: boolean; treeTruncated: boolean; cached: boolean; apiRequestCount: number;
+  indexedFiles: number; dependencyFiles: number; skippedByFileLimit: number; skippedByByteLimit: number;
   notice?: string;
 }
 export interface GithubRepositoryLoadResult { repository: string; sources: SourceInput[]; collection: GithubCollectionInfo }
@@ -191,7 +193,65 @@ function diversifyFeatures(items: ArchiveFile[]): ArchiveFile[] {
   return result;
 }
 
-function selectWithinLimits(items: ArchiveFile[]): ArchiveFile[] {
+interface SelectionResult {
+  files: ArchiveFile[];
+  dependencyFiles: number;
+  skippedByFileLimit: number;
+  skippedByByteLimit: number;
+}
+
+function withoutExtension(filePath: string): string {
+  return filePath.replace(/\.(?:[cm]?[jt]sx?)$/i, "");
+}
+
+function resolveIndexedImport(currentFile: string, specifier: string, paths: string[]): string | undefined {
+  if (!specifier.startsWith(".") && !specifier.startsWith("@/")) return undefined;
+  const bases: string[] = [];
+  if (specifier.startsWith("@/")) {
+    const aliasPath = specifier.slice(2);
+    const srcMarker = currentFile.indexOf("/src/");
+    const appMarker = currentFile.indexOf("/app/");
+    const roots = new Set<string>([""]);
+    if (srcMarker >= 0) roots.add(currentFile.slice(0, srcMarker));
+    if (appMarker >= 0) roots.add(currentFile.slice(0, appMarker));
+    for (const root of roots) bases.push(path.posix.join(root, "src", aliasPath), path.posix.join(root, aliasPath));
+  } else bases.push(path.posix.join(path.posix.dirname(currentFile), specifier));
+  for (const base of bases) {
+    const normalizedBase = withoutExtension(base).replace(/\/index$/, "");
+    const match = paths.find((candidate) => {
+      const normalizedCandidate = withoutExtension(candidate);
+      return normalizedCandidate === normalizedBase || normalizedCandidate === `${normalizedBase}/index`;
+    });
+    if (match) return match;
+  }
+  return undefined;
+}
+
+function importSpecifiers(content: string): string[] {
+  const matches = [
+    ...content.matchAll(/\b(?:import|export)\s+(?:type\s+)?[\s\S]{0,500}?\sfrom\s*["']([^"']+)["']/g),
+    ...content.matchAll(/\bimport\s*["']([^"']+)["']/g),
+  ];
+  return [...new Set(matches.map((match) => match[1]))];
+}
+
+function requestPaths(content: string): string[] {
+  return [...new Set([...content.matchAll(/["'`](\/api\/[^"'`\s]*)/g)].map((match) =>
+    match[1].replace(/\$\{[^}]+\}/g, "__DYNAMIC__").split(/[?#]/, 1)[0],
+  ))];
+}
+
+function routeMatcher(filePath: string): RegExp | undefined {
+  const parts = filePath.split("/");
+  const appIndex = parts.lastIndexOf("app");
+  if (appIndex < 0 || !/^route\.[cm]?[jt]sx?$/i.test(parts.at(-1) ?? "")) return undefined;
+  const routeParts = parts.slice(appIndex + 1, -1).filter((part) => !/^\(.*\)$/.test(part) && !part.startsWith("@"));
+  if (routeParts[0] !== "api") return undefined;
+  const pattern = routeParts.map((part) => /^\[/.test(part) ? "[^/]+" : part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("/");
+  return new RegExp(`^/${pattern}/?$`);
+}
+
+function selectWithinLimits(items: ArchiveFile[]): SelectionResult {
   const sorted = [...items].sort((a, b) => sourcePriority(a.path) - sourcePriority(b.path) || a.path.localeCompare(b.path));
   const buckets = new Map<string, ArchiveFile[]>();
   for (const item of sorted) { const bucket = collectionBucket(item.path); buckets.set(bucket, [...(buckets.get(bucket) ?? []), item]); }
@@ -203,13 +263,54 @@ function selectWithinLimits(items: ArchiveFile[]): ArchiveFile[] {
   const reservedPaths = new Set(reserved.map((item) => item.path));
   const ordered = [...reserved, ...sorted.filter((item) => !reservedPaths.has(item.path))];
   const selected: ArchiveFile[] = [];
+  const selectedPaths = new Set<string>();
+  const byteLimitedPaths = new Set<string>();
   let totalBytes = 0;
-  for (const item of ordered) {
-    if (selected.length >= GITHUB_COLLECTION_LIMITS.maxFiles) break;
-    if (totalBytes + item.size > GITHUB_COLLECTION_LIMITS.maxTotalBytes) continue;
-    selected.push(item); totalBytes += item.size;
+  const add = (item: ArchiveFile): boolean => {
+    if (selectedPaths.has(item.path) || byteLimitedPaths.has(item.path) || selected.length >= GITHUB_COLLECTION_LIMITS.maxFiles) return false;
+    if (totalBytes + item.size > GITHUB_COLLECTION_LIMITS.maxTotalBytes) { byteLimitedPaths.add(item.path); return false; }
+    selected.push(item); selectedPaths.add(item.path); totalBytes += item.size;
+    return true;
+  };
+  for (const item of ordered.slice(0, GITHUB_COLLECTION_LIMITS.initialFiles)) add(item);
+
+  const byPath = new Map(items.map((item) => [item.path, item]));
+  const paths = [...byPath.keys()];
+  const routes = items.flatMap((item) => {
+    const pattern = routeMatcher(item.path);
+    return pattern ? [{ item, pattern }] : [];
+  });
+  let dependencyFiles = 0;
+  for (let cursor = 0; cursor < selected.length && selected.length < GITHUB_COLLECTION_LIMITS.maxFiles; cursor += 1) {
+    const current = selected[cursor];
+    const content = current.content.toString("utf8");
+    const dependencies = importSpecifiers(content).flatMap((specifier) => {
+      const resolved = resolveIndexedImport(current.path, specifier, paths);
+      return resolved && byPath.has(resolved) ? [byPath.get(resolved)!] : [];
+    });
+    const apiRoutes = requestPaths(content).flatMap((requestPath) => routes.filter((route) => route.pattern.test(requestPath)).map((route) => route.item));
+    for (const dependency of [...dependencies, ...apiRoutes]) if (add(dependency)) dependencyFiles += 1;
   }
-  return selected;
+
+  const workspaceGroups = new Map<string, ArchiveFile[]>();
+  for (const item of ordered) {
+    const match = item.path.match(/^(apps\/[^/]+|packages\/[^/]+)/i);
+    const workspace = match?.[1] ?? item.path.split("/", 1)[0];
+    workspaceGroups.set(workspace, [...(workspaceGroups.get(workspace) ?? []), item]);
+  }
+  let workspaceIndex = 0;
+  while (selected.length < GITHUB_COLLECTION_LIMITS.maxFiles) {
+    let added = false;
+    for (const group of workspaceGroups.values()) {
+      const item = group[workspaceIndex];
+      if (item && add(item)) added = true;
+    }
+    if (!added && [...workspaceGroups.values()].every((group) => workspaceIndex >= group.length - 1)) break;
+    workspaceIndex += 1;
+  }
+  const skippedByByteLimit = byteLimitedPaths.size;
+  const skippedByFileLimit = Math.max(0, items.length - selected.length - skippedByByteLimit);
+  return { files: selected, dependencyFiles, skippedByFileLimit, skippedByByteLimit };
 }
 
 function tarString(buffer: Buffer, start: number, length: number): string {
@@ -308,15 +409,16 @@ async function downloadArchive(coordinates: GithubRepositoryCoordinates, sha: st
   } finally { clearTimeout(timeout); }
 }
 
-async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordinates, fetcher: typeof fetch): Promise<GithubRepositoryLoadResult> {
+async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordinates, fetcher: typeof fetch, cacheNamespace: string): Promise<GithubRepositoryLoadResult> {
   const startedAt = Date.now();
   const deadline = startedAt + GITHUB_COLLECTION_LIMITS.timeoutMs;
   const now = Date.now();
-  let metadata = repositoryCache.get(coordinates.fullName);
+  const repositoryCacheKey = `${cacheNamespace}:${coordinates.fullName}`;
+  let metadata = repositoryCache.get(repositoryCacheKey);
   let apiRequestCount = 0;
   let archiveHeadSha: string | undefined;
   if (metadata && now - metadata.checkedAt < GITHUB_COLLECTION_LIMITS.freshnessTtlMs) {
-    const cached = getCachedSources(`${coordinates.fullName}@${metadata.commitSha}`, now);
+    const cached = getCachedSources(`${repositoryCacheKey}@${metadata.commitSha}`, now);
     if (cached) return cachedResult(cached, startedAt, 0);
   }
   if (!metadata || now - metadata.metadataAt >= GITHUB_COLLECTION_LIMITS.cacheTtlMs) {
@@ -341,15 +443,15 @@ async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordin
   }
   if (!COMMIT_SHA.test(commit.sha)) throw new GithubRepositoryError("GitHub가 올바르지 않은 커밋 정보를 반환했습니다.", 502);
   metadata = { ...metadata, commitSha: commit.sha, checkedAt: now };
-  setBounded(repositoryCache, coordinates.fullName, metadata, GITHUB_COLLECTION_LIMITS.maxCacheEntries * 2);
-  const cacheKey = `${coordinates.fullName}@${commit.sha}`;
+  setBounded(repositoryCache, repositoryCacheKey, metadata, GITHUB_COLLECTION_LIMITS.maxCacheEntries * 2);
+  const cacheKey = `${repositoryCacheKey}@${commit.sha}`;
   const cached = getCachedSources(cacheKey, now);
   if (cached) return cachedResult(cached, startedAt, apiRequestCount);
   const archive = await downloadArchive(coordinates, commit.sha, deadline, fetcher);
   const eligible = archive.files.sort((a, b) => a.path.localeCompare(b.path));
   if (eligible.length === 0) throw new GithubRepositoryError("분석할 수 있는 JavaScript 또는 TypeScript 소스 파일이 없습니다.", 422);
-  const selected = selectWithinLimits(eligible);
-  const sources = selected.map((file) => ({ path: file.path, content: file.content.toString("utf8") }));
+  const selection = selectWithinLimits(eligible);
+  const sources = selection.files.map((file) => ({ path: file.path, content: file.content.toString("utf8") }));
   const totalBytes = sources.reduce((sum, source) => sum + Buffer.byteLength(source.content, "utf8"), 0);
   const partial = sources.length < eligible.length;
   const result: GithubRepositoryLoadResult = {
@@ -359,6 +461,8 @@ async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordin
       repositoryUrl: coordinates.url, defaultBranch: metadata.defaultBranch, commitSha: commit.sha,
       discoveredFiles: eligible.length, collectedFiles: sources.length, totalBytes, archiveBytes: archive.archiveBytes,
       durationMs: Date.now() - startedAt, partial, treeTruncated: false, cached: false, apiRequestCount,
+      indexedFiles: eligible.length, dependencyFiles: selection.dependencyFiles,
+      skippedByFileLimit: selection.skippedByFileLimit, skippedByByteLimit: selection.skippedByByteLimit,
       notice: partial ? `수집 제한으로 ${eligible.length}개 중 ${sources.length}개 파일 분석` : undefined,
     },
   };
@@ -366,14 +470,15 @@ async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordin
   return result;
 }
 
-export async function loadGithubRepository(repositoryUrl: string, fetcher: typeof fetch = fetch): Promise<GithubRepositoryLoadResult> {
+export async function loadGithubRepository(repositoryUrl: string, fetcher: typeof fetch = fetch, cacheNamespace = "public"): Promise<GithubRepositoryLoadResult> {
   const coordinates = parseGithubRepositoryUrl(repositoryUrl);
-  const existing = inFlight.get(coordinates.fullName);
+  const inFlightKey = `${cacheNamespace}:${coordinates.fullName}`;
+  const existing = inFlight.get(inFlightKey);
   if (existing) return cachedResult(await existing, Date.now(), 0);
-  const pending = loadGithubRepositoryUncached(coordinates, fetcher);
-  inFlight.set(coordinates.fullName, pending);
+  const pending = loadGithubRepositoryUncached(coordinates, fetcher, cacheNamespace);
+  inFlight.set(inFlightKey, pending);
   try { return await pending; }
-  finally { if (inFlight.get(coordinates.fullName) === pending) inFlight.delete(coordinates.fullName); }
+  finally { if (inFlight.get(inFlightKey) === pending) inFlight.delete(inFlightKey); }
 }
 
 export function clearGithubRepositoryCachesForTests(): void {

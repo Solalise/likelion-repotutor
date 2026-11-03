@@ -14,14 +14,13 @@ export default function HomePage() {
       <AppHeader />
       <main>
         <section className="hero-section">
-          <div className="hero-orb orb-one" /><div className="hero-orb orb-two" />
           <div className="hero-copy">
             <div className="hero-pill"><Sparkles size={14} /> 개발자를 위한 코드 러닝 맵</div>
             <h1>읽기 어려운 코드도,<br /><em>흐름을 보면 이해됩니다.</em></h1>
             <p>RepoTutor는 Repository를 분석해 코드의 구조와 호출 관계를<br className="desktop-only" /> 하나의 지도처럼 보여주는 코드 학습 도구입니다.</p>
             <div className="hero-actions">
               <Link href="/repository" className="primary-action">Demo repository 분석 <ArrowRight size={17} /></Link>
-              <button className="secondary-action" disabled><Github size={17} /> GitHub 연결 <span>SOON</span></button>
+              <Link className="secondary-action github-login-action" href="/login"><Github size={17} /> GitHub 로그인</Link>
             </div>
             <small>회원가입 없이 샘플 프로젝트를 바로 탐색할 수 있어요.</small>
           </div>

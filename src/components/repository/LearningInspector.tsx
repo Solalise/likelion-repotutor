@@ -42,8 +42,8 @@ export function LearningInspector({ node }: LearningInspectorProps) {
       </section>
       {(node.incomingRelations.length > 0 || node.outgoingRelations.length > 0) && (
         <section className="relation-detail-section">
-          {node.incomingRelations.length > 0 && <div><strong>이 코드를 참조하는 코드</strong>{node.incomingRelations.map((item) => <p key={item}>{item}</p>)}</div>}
-          {node.outgoingRelations.length > 0 && <div><strong>이 코드가 연결하는 코드</strong>{node.outgoingRelations.map((item) => <p key={item}>{item}</p>)}</div>}
+          {node.incomingRelations.length > 0 && <RelationGroup title="이 함수로 들어오는 연결" relations={node.incomingRelations} />}
+          {node.outgoingRelations.length > 0 && <RelationGroup title="이 함수에서 나가는 연결" relations={node.outgoingRelations} />}
           <small>화살표는 AST 관계 방향이며 실제 실행 순서를 보장하지 않습니다.</small>
         </section>
       )}
@@ -77,4 +77,14 @@ export function LearningInspector({ node }: LearningInspectorProps) {
       {node.source === "ast" && <p className="interpretation-note">함수명·파일 경로를 바탕으로 만든 한국어 역할 설명은 학습을 위한 해석이며, 코드 관계와 경로는 실제 AST에서 확인된 사실입니다.</p>}
     </div>
   );
+}
+
+function RelationGroup({ title, relations }: { title: string; relations: string[] }) {
+  const visible = relations.slice(0, 3);
+  const remaining = relations.slice(3);
+  return <div>
+    <strong>{title}</strong>
+    {visible.map((item) => <p key={item}>{item}</p>)}
+    {remaining.length > 0 && <details><summary>나머지 관계 {remaining.length}개</summary>{remaining.map((item) => <p key={item}>{item}</p>)}</details>}
+  </div>;
 }
