@@ -35,7 +35,7 @@ describe("GET /api/analyze", () => {
     expect(payload).toMatchObject({
       repository: "sample-repository",
       source: "sample",
-      stats: { files: 4, functions: 5 },
+      stats: { files: 4, functions: 6 },
       collection: { partial: false, collectedFiles: 4 },
     });
     const analysis = payload as RepositoryAnalysis;

@@ -1,3 +1,5 @@
+import type { CodeEdgeOccurrence, RelationConfidence } from "./analysis";
+
 export type LearningCategory =
   | "start"
   | "ui-action"
@@ -14,6 +16,9 @@ export type LearningRelation = "execute" | "call" | "component" | "reference" | 
 export interface LearningNode {
   id: string;
   technicalName?: string;
+  roleConfidence?: "confirmed" | "inferred" | "unknown";
+  facts?: string[];
+  roleBasis?: string;
   title: string;
   description: string;
   purpose: string;
@@ -47,6 +52,8 @@ export interface LearningEdge {
   target: string;
   relation: LearningRelation;
   label?: string;
+  confidence?: RelationConfidence;
+  occurrences?: CodeEdgeOccurrence[];
 }
 
 export interface LearningGraph {

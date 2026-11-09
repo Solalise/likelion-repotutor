@@ -1,8 +1,10 @@
 import path from "node:path";
-import { Node, Project, ScriptTarget, SyntaxKind, type CallExpression, type SourceFile } from "ts-morph";
+import { Node, Project, ScriptTarget, SyntaxKind, ts, type SourceFile } from "ts-morph";
 import type { FileAnalysis, FunctionInfo, FunctionRelation, RepositoryAnalysis, SourceInput } from "@/types/analysis";
-import { buildGraph } from "./graphBuilder";
+import { buildGraph, resolveImportPath } from "./graphBuilder";
 import { analyzeImport } from "./importAnalyzer";
+import { analyzeApiRequest, connectApiRequests } from "./apiRelations";
+import { collectEntryPointMetadata } from "@/lib/features/entryPointMetadata";
 import { normalizePath, symbolNodeId } from "./pathUtils";
 
 type FunctionNode = Node & { getStartLineNumber(): number; getEndLineNumber(): number; getText(): string };
@@ -28,6 +30,7 @@ function ownerName(node: Node): string | undefined {
 function collectCandidates(sourceFile: SourceFile): Candidate[] {
   const candidates: Candidate[] = [];
   for (const declaration of sourceFile.getDescendantsOfKind(SyntaxKind.FunctionDeclaration)) {
+    if (!declaration.getBody()) continue;
     const name = declaration.getName() ?? (declaration.isDefaultExport() ? "default" : "anonymous");
     candidates.push({ node: declaration, declaration, name, qualifiedName: name, kind: "function" });
   }
@@ -38,8 +41,10 @@ function collectCandidates(sourceFile: SourceFile): Candidate[] {
       ? initializer.getArguments().find((argument) => Node.isArrowFunction(argument) || Node.isFunctionExpression(argument)) : undefined;
     const functionNode = Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer) ? initializer : wrapped;
     if (!functionNode || (!Node.isArrowFunction(functionNode) && !Node.isFunctionExpression(functionNode))) continue;
-    const name = declaration.getName();
-    candidates.push({ node: functionNode, declaration, name, qualifiedName: name, kind: "arrow" });
+    const name = wrapped ? `${declaration.getName()}.callback` : declaration.getName();
+    // A callback passed to a wrapper is not the wrapper's return value.
+    // Keep its readable context name, but do not bind calls of the result to it.
+    candidates.push({ node: functionNode, declaration: wrapped ? functionNode : declaration, name, qualifiedName: name, kind: "arrow" });
   }
   for (const declaration of sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment)) {
     const initializer = declaration.getInitializer();
@@ -49,9 +54,25 @@ function collectCandidates(sourceFile: SourceFile): Candidate[] {
     candidates.push({ node: initializer, declaration, name, qualifiedName: owner ? `${owner}.${name}` : name, kind: "method" });
   }
   for (const method of sourceFile.getDescendantsOfKind(SyntaxKind.MethodDeclaration)) {
+    if (!method.getBody()) continue;
     const name = method.getName();
     const owner = ownerName(method);
     candidates.push({ node: method, declaration: method, name, qualifiedName: owner ? `${owner}.${name}` : name, kind: "method" });
+  }
+  for (const declaration of sourceFile.getDescendantsOfKind(SyntaxKind.PropertyDeclaration)) {
+    const initializer = declaration.getInitializer();
+    if (!initializer || (!Node.isArrowFunction(initializer) && !Node.isFunctionExpression(initializer))) continue;
+    const name = declaration.getName();
+    const owner = ownerName(declaration);
+    candidates.push({ node: initializer, declaration, name, qualifiedName: owner ? `${owner}.${name}` : name, kind: "method" });
+  }
+  // Keep every callback's execution boundary, including inline JSX handlers and IIFEs.
+  const collected = new Set(candidates.map((candidate) => candidate.node));
+  for (const node of sourceFile.getDescendants().filter((item) => Node.isArrowFunction(item) || Node.isFunctionExpression(item))) {
+    if (collected.has(node)) continue;
+    const name = Node.isFunctionExpression(node) && node.getName()
+      ? node.getName()! : `callback@${node.getStartLineNumber()}:${node.getStart() - node.getStartLinePos() + 1}`;
+    candidates.push({ node, declaration: node, name, qualifiedName: name, kind: "arrow" });
   }
   return candidates;
 }
@@ -66,6 +87,7 @@ function enclosingCandidate(node: Node, candidates: Map<string, Candidate>): Can
   while (current) {
     const match = candidates.get(nodeKey(current));
     if (match) return match;
+    if (Node.isFunctionLikeDeclaration(current)) return undefined;
     current = current.getParent();
   }
   return undefined;
@@ -76,7 +98,7 @@ function resolvedDeclarations(node: Node): Node[] {
   if (!symbol) return [];
   const visited = new Set<string>();
   while (symbol.isAlias()) {
-    const key = `${symbol.getName()}:${symbol.getDeclarations()[0]?.getStart() ?? -1}`;
+    const key = symbol.getDeclarations().map(nodeKey).join("|") || symbol.getName();
     if (visited.has(key)) break;
     visited.add(key);
     const aliased = symbol.getAliasedSymbol();
@@ -86,35 +108,29 @@ function resolvedDeclarations(node: Node): Node[] {
   return symbol.getDeclarations();
 }
 
-function targetId(node: Node, candidates: Map<string, Candidate>, ids: Map<Candidate, string>): string | undefined {
+function targetId(node: Node, candidates: Map<string, Candidate>, ids: Map<Candidate, string>, visited = new Set<string>()): string | undefined {
+  const key = nodeKey(node);
+  if (visited.has(key)) return undefined;
+  visited.add(key);
+  const direct = candidates.get(key);
+  if (direct) return ids.get(direct);
+  if (Node.isParenthesizedExpression(node) || Node.isAsExpression(node) || Node.isNonNullExpression(node)) {
+    return targetId(node.getExpression(), candidates, ids, visited);
+  }
+  const targets = new Set<string>();
   for (const declaration of resolvedDeclarations(node)) {
-    const candidate = enclosingCandidate(declaration, candidates);
-    if (candidate) return ids.get(candidate);
+    // Resolve the declaration itself, never the function containing a variable or parameter.
+    const candidate = candidates.get(nodeKey(declaration));
+    if (candidate) targets.add(ids.get(candidate)!);
+    else if (Node.isVariableDeclaration(declaration) && declaration.getVariableStatement()?.getDeclarationKind() === "const") {
+      const initializer = declaration.getInitializer();
+      if (initializer && (Node.isIdentifier(initializer) || Node.isPropertyAccessExpression(initializer))) {
+        const target = targetId(initializer, candidates, ids, visited);
+        if (target) targets.add(target);
+      }
+    }
   }
-  return undefined;
-}
-
-function staticString(node: Node | undefined): string | undefined {
-  return node && (Node.isStringLiteral(node) || Node.isNoSubstitutionTemplateLiteral(node)) ? node.getLiteralValue() : undefined;
-}
-function propertyValue(call: CallExpression, name: string): string | undefined {
-  const object = call.getArguments().find(Node.isObjectLiteralExpression);
-  const property = object?.getProperty(name);
-  return property && Node.isPropertyAssignment(property) ? staticString(property.getInitializer()) : undefined;
-}
-
-function deriveRequestPath(node: Node | undefined, depth = 0): string | undefined {
-  if (!node || depth > 3) return undefined;
-  const literal = staticString(node);
-  if (literal) return literal;
-  if (Node.isTemplateExpression(node)) {
-    return node.getHead().getLiteralText()
-      + node.getTemplateSpans().map((span) => `__DYNAMIC__${span.getLiteral().getLiteralText()}`).join("");
-  }
-  if (Node.isCallExpression(node) && /(?:^|\.)(?:get|build|create)?ApiUrl$/i.test(node.getExpression().getText())) {
-    return deriveRequestPath(node.getArguments()[0], depth + 1);
-  }
-  return undefined;
+  return targets.size === 1 ? [...targets][0] : undefined;
 }
 
 function localValueAliases(sourceFile: SourceFile): Map<string, string> {
@@ -132,26 +148,6 @@ function relationName(expression: Node, aliases: Map<string, string>): string {
   return `${aliases.get(owner) ?? owner}.${expression.getName()}`;
 }
 
-function requestRelation(call: CallExpression): FunctionRelation | undefined {
-  const expression = call.getExpression();
-  const text = expression.getText();
-  let requestPath: string | undefined;
-  let requestMethod: string | undefined;
-  if (text === "fetch") {
-    requestPath = deriveRequestPath(call.getArguments()[0]);
-    requestMethod = propertyValue(call, "method")?.toUpperCase() ?? "GET";
-  } else if (Node.isPropertyAccessExpression(expression) && /^(get|post|put|patch|delete|head|options)$/i.test(expression.getName())) {
-    if (!/(?:axios|client|api)$/i.test(expression.getExpression().getText())) return undefined;
-    requestPath = staticString(call.getArguments()[0]);
-    requestMethod = expression.getName().toUpperCase();
-  } else if (/axios$/i.test(text)) {
-    requestPath = propertyValue(call, "url");
-    requestMethod = propertyValue(call, "method")?.toUpperCase() ?? "GET";
-  }
-  if (!requestPath?.startsWith("/")) return undefined;
-  return { relation: "api", name: `${requestMethod} ${requestPath}`, line: call.getStartLineNumber(), evidence: evidence(call), confidence: "confirmed", requestPath, requestMethod };
-}
-
 function analyzeRelations(candidate: Candidate, candidates: Map<string, Candidate>, ids: Map<Candidate, string>): FunctionRelation[] {
   const relations: FunctionRelation[] = [];
   const aliases = localValueAliases(candidate.node.getSourceFile());
@@ -161,16 +157,15 @@ function analyzeRelations(candidate: Candidate, candidates: Map<string, Candidat
   };
   for (const call of candidate.node.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     if (enclosingCandidate(call, candidates) !== candidate) continue;
-    const request = requestRelation(call);
+    const request = analyzeApiRequest(call);
     if (request) push(request);
     const expression = call.getExpression();
     const target = targetId(expression, candidates, ids);
-    if (target !== ids.get(candidate)) push({
+    push({
       relation: "call", name: relationName(expression, aliases), targetId: target,
       line: call.getStartLineNumber(), evidence: evidence(call), confidence: target ? "confirmed" : "inferred",
     });
     for (const argument of call.getArguments()) {
-      if (!Node.isIdentifier(argument) && !Node.isPropertyAccessExpression(argument)) continue;
       const callbackTarget = targetId(argument, candidates, ids);
       if (callbackTarget && callbackTarget !== ids.get(candidate)) push({ relation: "reference", name: argument.getText(), targetId: callbackTarget, line: argument.getStartLineNumber(), evidence: evidence(call), confidence: "confirmed" });
     }
@@ -183,12 +178,19 @@ function analyzeRelations(candidate: Candidate, candidates: Map<string, Candidat
     push({ relation: "component", name: tag.getText().split(".").at(-1) ?? tag.getText(), targetId: target, line: element.getStartLineNumber(), evidence: evidence(element), confidence: target ? "confirmed" : "inferred" });
   }
   for (const attribute of candidate.node.getDescendantsOfKind(SyntaxKind.JsxAttribute)) {
-    if (enclosingCandidate(attribute, candidates) !== candidate || !/^on[A-Z]/.test(attribute.getNameNode().getText())) continue;
+    if (enclosingCandidate(attribute, candidates) !== candidate) continue;
     const initializer = attribute.getInitializer();
     const expression = initializer && Node.isJsxExpression(initializer) ? initializer.getExpression() : undefined;
     if (!expression) continue;
-    const references = Node.isIdentifier(expression) || Node.isPropertyAccessExpression(expression) ? [expression]
-      : expression.getDescendants().filter((item) => Node.isIdentifier(item) || Node.isPropertyAccessExpression(item));
+    const directTarget = targetId(expression, candidates, ids);
+    if (directTarget) {
+      push({ relation: "reference", name: expression.getText(), targetId: directTarget, line: attribute.getStartLineNumber(), evidence: evidence(attribute), confidence: "confirmed" });
+      continue;
+    }
+    const references = expression.getDescendants().filter((item) =>
+      (Node.isIdentifier(item) || Node.isPropertyAccessExpression(item))
+      && enclosingCandidate(item, candidates) === candidate
+      && !item.getFirstAncestor((ancestor) => Node.isCallExpression(ancestor) && ancestor.getStart() >= expression.getStart() && ancestor.getEnd() <= expression.getEnd()));
     for (const reference of references) {
       const target = targetId(reference, candidates, ids);
       if (target) push({ relation: "reference", name: reference.getText(), targetId: target, line: attribute.getStartLineNumber(), evidence: evidence(attribute), confidence: "confirmed" });
@@ -197,34 +199,22 @@ function analyzeRelations(candidate: Candidate, candidates: Map<string, Candidat
   return relations;
 }
 
-function routePattern(filePath: string): RegExp | undefined {
-  const parts = normalizePath(filePath).split("/");
-  const appIndex = parts.lastIndexOf("app");
-  if (appIndex < 0 || !/^route\.[jt]sx?$/.test(parts.at(-1) ?? "")) return undefined;
-  const routeParts = parts.slice(appIndex + 1, -1).filter((part) => !/^\(.*\)$/.test(part) && !part.startsWith("@"));
-  if (routeParts[0] !== "api") return undefined;
-  const pattern = routeParts.map((part) => {
-    if (/^\[\[\.\.\.[^/]+\]\]$/.test(part)) return ".*";
-    if (/^\[\.\.\.[^/]+\]$/.test(part)) return ".+";
-    if (/^\[[^/]+\]$/.test(part)) return "[^/]+";
-    return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  }).join("/");
-  return new RegExp(`^/${pattern}/?$`);
-}
-function connectApiRequests(files: FileAnalysis[]): void {
-  const routes = files.flatMap((file) => {
-    const pattern = routePattern(file.path);
-    return pattern ? file.functions.filter((fn) => fn.nodeType === "api").map((fn) => ({ fn, pattern })) : [];
-  });
-  for (const fn of files.flatMap((file) => file.functions)) for (const relation of fn.relations ?? []) {
-    if (relation.relation !== "api" || !relation.requestPath || !relation.requestMethod) continue;
-    const pathname = relation.requestPath.split(/[?#]/, 1)[0];
-    relation.targetId = routes.find(({ fn: route, pattern }) => route.name === relation.requestMethod && pattern.test(pathname))?.fn.id;
-  }
-}
-
 export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-repository"): RepositoryAnalysis {
-  const project = new Project({ useInMemoryFileSystem: true, compilerOptions: { allowJs: true, jsx: 2, target: ScriptTarget.ESNext, moduleResolution: 2 }, skipAddingFilesFromTsConfig: true });
+  const knownPaths = inputs.map((input) => normalizePath(input.path));
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    compilerOptions: { allowJs: true, jsx: 2, target: ScriptTarget.ESNext, moduleResolution: 2 },
+    skipAddingFilesFromTsConfig: true,
+    // Use the existing repository-local import rules in the type checker too.
+    // This resolves aliases to declarations instead of guessing IDs by name.
+    resolutionHost: (host, options) => ({
+      resolveModuleNames: (names, containingFile) => names.map((name) => {
+        const resolved = resolveImportPath(containingFile.replace(/^\//, ""), name, knownPaths);
+        return resolved ? { resolvedFileName: `/${resolved}` }
+          : ts.resolveModuleName(name, containingFile, options(), host).resolvedModule;
+      }),
+    }),
+  });
   const sourceFiles = inputs.filter((input) => /\.(?:tsx?|jsx?)$/.test(input.path)).map((input) => {
     const normalized = normalizePath(input.path);
     return { path: normalized, sourceFile: project.createSourceFile(`/${normalized}`, input.content, { overwrite: true }) };
@@ -238,7 +228,11 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
     byFile.set(filePath, items);
     for (const item of items) {
       candidates.set(nodeKey(item.node), item); candidates.set(nodeKey(item.declaration), item);
-      ids.set(item, symbolNodeId(filePath, item.qualifiedName));
+      const scope = item.node.getAncestors().reverse()
+        .filter((ancestor) => Node.isFunctionLikeDeclaration(ancestor) || Node.isBlock(ancestor)
+          || Node.isClassDeclaration(ancestor) || Node.isClassExpression(ancestor) || Node.isObjectLiteralExpression(ancestor))
+        .map((ancestor) => `${ancestor.getKindName()}@${ancestor.getStart()}`).join("/") || "module";
+      ids.set(item, symbolNodeId(filePath, item.qualifiedName, { start: item.declaration.getStart(), scope }));
     }
   }
   const files: FileAnalysis[] = sourceFiles.map(({ path: filePath, sourceFile }) => ({
@@ -259,16 +253,17 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
       };
     }),
   }));
-  connectApiRequests(files);
+  connectApiRequests(files, sourceFiles, (node) => targetId(node, candidates, ids));
   const graph = buildGraph(files);
   const functionRelations = files.flatMap((file) => file.functions.flatMap((fn) => (fn.relations ?? []).map((relation) => ({ fn, relation }))));
   const unresolvedRelations = functionRelations.filter(({ fn, relation }) => !graph.edges.some((edge) =>
-    edge.source === fn.id && edge.relation === relation.relation && edge.line === relation.line,
+    edge.source === fn.id && edge.target === relation.targetId && edge.relation === relation.relation && edge.line === relation.line,
   ));
   return {
     repository,
     files,
     ...graph,
+    entryPoints: collectEntryPointMetadata(sourceFiles, (node) => targetId(node, candidates, ids)),
     stats: {
       files: files.length,
       functions: files.flatMap((file) => file.functions).length,

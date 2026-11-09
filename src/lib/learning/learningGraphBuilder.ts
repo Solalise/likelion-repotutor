@@ -1,6 +1,7 @@
 import type { CodeNode, RepositoryAnalysis } from "@/types/analysis";
 import type { LearningEdge, LearningGraph, LearningNode, LearningStage } from "@/types/learning";
 import { generateLearningLabel } from "./labelGenerator";
+import { aggregateRelationEdges, depthFirstReachability, selectConnectedNodeIds, uniqueGraphNodes } from "@/lib/graph/dfs";
 
 const DEMO_DETAILS: Record<string, Pick<LearningNode, "codeSnippet" | "nextStep" | "relatedFiles">> = {
   LoginPage: {
@@ -30,9 +31,9 @@ const DEMO_DETAILS: Record<string, Pick<LearningNode, "codeSnippet" | "nextStep"
   },
 };
 
-function fromCodeNode(node: CodeNode): LearningNode {
-  const label = generateLearningLabel(node);
-  const details = DEMO_DETAILS[node.name] ?? { relatedFiles: [] };
+function fromCodeNode(node: CodeNode, mode: "analysis" | "demo" = "analysis", context?: Parameters<typeof generateLearningLabel>[2]): LearningNode {
+  const label = generateLearningLabel(node, mode, context);
+  const details = mode === "demo" ? DEMO_DETAILS[node.name] ?? { relatedFiles: [] } : { relatedFiles: [] };
   return {
     id: node.id,
     technicalName: node.name,
@@ -43,11 +44,11 @@ function fromCodeNode(node: CodeNode): LearningNode {
     codeEndLine: node.endLine,
     nextStep: details.nextStep,
     relatedFiles: details.relatedFiles,
-    connectionReason: "AST에서 다른 코드와의 관계를 확인했습니다.",
+    connectionReason: mode === "demo" ? "로그인 데모를 설명하기 위한 학습 단계입니다." : "AST에서 다른 코드와의 관계를 확인했습니다.",
     incomingRelations: [],
     outgoingRelations: [],
-    confidence: "confirmed",
-    source: "ast",
+    confidence: mode === "demo" ? "limited" : "confirmed",
+    source: mode === "demo" ? "demo" : "ast",
   };
 }
 
@@ -67,16 +68,16 @@ function buildDemoLoginGraph(analysis: RepositoryAnalysis): LearningGraph | unde
   const findUser = findNode(analysis, "findUser");
   if (!loginPage || !handleLogin || !login || !api || !findUser) return undefined;
 
-  const start = fromCodeNode(loginPage);
+  const start = fromCodeNode(loginPage, "demo");
   const conditionId = "learning:condition:user-exists";
   const failureId = "learning:end:login-failure";
   const successId = "learning:end:login-success";
   const nodes: LearningNode[] = [
     start,
-    fromCodeNode(handleLogin),
-    fromCodeNode(login),
-    fromCodeNode(api),
-    fromCodeNode(findUser),
+    fromCodeNode(handleLogin, "demo"),
+    fromCodeNode(login, "demo"),
+    fromCodeNode(api, "demo"),
+    fromCodeNode(findUser, "demo"),
     {
       id: conditionId,
       title: "사용자가 존재하는가?",
@@ -134,7 +135,7 @@ function buildDemoLoginGraph(analysis: RepositoryAnalysis): LearningGraph | unde
 }
 
 export function buildLearningGraph(analysis: RepositoryAnalysis): LearningGraph {
-  const demoGraph = analysis.source !== "github" ? buildDemoLoginGraph(analysis) : undefined;
+  const demoGraph = analysis.source === "sample" ? buildDemoLoginGraph(analysis) : undefined;
   if (demoGraph) return demoGraph;
 
   return buildRepositoryLearningGraph(analysis);
@@ -142,7 +143,7 @@ export function buildLearningGraph(analysis: RepositoryAnalysis): LearningGraph 
 
 function relationLabel(relation: LearningEdge["relation"]): string {
   if (relation === "component") return "컴포넌트 표시";
-  if (relation === "reference") return "콜백 연결";
+  if (relation === "reference") return "함수 참조·전달 (실행 미확정)";
   if (relation === "import") return "파일 불러오기";
   if (relation === "request") return "API 요청";
   return "함수 호출";
@@ -153,7 +154,7 @@ export function buildRepositoryLearningGraph(
   selectedNodeIds?: Iterable<string>,
 ): LearningGraph {
   const allowed = selectedNodeIds ? new Set(selectedNodeIds) : undefined;
-  const codeNodes = analysis.nodes.filter((node) => node.type !== "file" && (!allowed || allowed.has(node.id)));
+  const codeNodes = uniqueGraphNodes(analysis.nodes.filter((node) => node.type !== "file" && (!allowed || allowed.has(node.id))));
   const codeNodeMap = new Map(codeNodes.map((node) => [node.id, node]));
   const directEdges: LearningEdge[] = analysis.edges.flatMap((item) => {
     const source = codeNodeMap.get(item.source);
@@ -162,38 +163,26 @@ export function buildRepositoryLearningGraph(
     const relation: LearningEdge["relation"] = item.relation === "api" ? "request"
       : item.relation === "component" ? "component"
         : item.relation === "reference" ? "reference" : "call";
-    return [{ id: `learning:${item.id}`, source: item.source, target: item.target, relation, label: relationLabel(relation) }];
+    return [{ id: `learning:${item.id}`, source: item.source, target: item.target, relation,
+      confidence: item.confidence, occurrences: item.occurrences ?? [{ edgeId: item.id, line: item.line, evidence: item.evidence, confidence: item.confidence }],
+      label: `${relationLabel(relation)}${item.confidence === "inferred" ? " · 추정" : item.confidence === "confirmed" ? " · 정적 확인" : " · 근거 미표시"}` }];
   });
 
-  const representativeByFile = new Map<string, CodeNode>();
-  for (const node of [...codeNodes].sort((a, b) => Number(b.type === "component") - Number(a.type === "component") || a.line! - b.line!)) {
-    if (!representativeByFile.has(node.filePath)) representativeByFile.set(node.filePath, node);
-  }
-  const directPairs = new Set(directEdges.map((item) => `${item.source}->${item.target}`));
-  const importEdges: LearningEdge[] = analysis.edges.flatMap((item) => {
-    if (item.relation !== "import" || !item.source.startsWith("file:") || !item.target.startsWith("file:")) return [];
-    const source = representativeByFile.get(item.source.slice(5));
-    const target = representativeByFile.get(item.target.slice(5));
-    if (!source || !target || source.id === target.id || directPairs.has(`${source.id}->${target.id}`)) return [];
-    return [{
-      id: `learning:${item.id}:${source.id}->${target.id}`,
-      source: source.id,
-      target: target.id,
-      relation: "import" as const,
-      label: relationLabel("import"),
-    }];
-  });
-  const edges = [...directEdges, ...importEdges];
-  const baseById = new Map(codeNodes.map((node) => [node.id, fromCodeNode(node)]));
+  // File dependencies remain in the developer graph; they are not function flow.
+  const edges = aggregateRelationEdges(directEdges).map((edge) => ({ ...edge,
+    label: `${relationLabel(edge.relation)}${edge.confidence === "inferred" ? " · 추정" : edge.confidence === "confirmed" ? " · 정적 확인" : " · 근거 미표시"}` }));
+  const pageEntryIds = new Set((analysis.entryPoints ?? []).filter((entry) => entry.kind === "page").map((entry) => entry.nodeId));
+  const baseById = new Map(codeNodes.map((node) => {
+    const base = fromCodeNode(node, "analysis", { edges: analysis.edges.filter((edge) => codeNodeMap.has(edge.source) && codeNodeMap.has(edge.target)), entryPoints: analysis.entryPoints });
+    return [node.id, pageEntryIds.has(node.id) ? {
+      ...base, category: "start" as const, title: "페이지 진입점",
+      description: "파일 기반 페이지의 default export로 연결된 함수입니다. 원본 코드와 정적 연결 관계를 확인해 주세요.",
+      purpose: "이 경로의 페이지 코드를 살펴보는 출발점입니다.",
+    } : base];
+  }));
   const roleOf = (nodeId: string): string => {
-    const category = baseById.get(nodeId)?.category;
-    if (/^(?:handle|on)[A-Z]/.test(codeNodeMap.get(nodeId)?.name ?? "")) return "이벤트 핸들러";
-    if (category === "start") return "화면 진입점";
-    if (category === "ui-action") return "UI/이벤트 처리";
-    if (category === "service") return "서비스 로직";
-    if (category === "api") return "API 처리";
-    if (category === "database") return "데이터 접근";
-    return "함수";
+    const node = baseById.get(nodeId);
+    return `${node?.title ?? "함수"}${node?.roleConfidence === "inferred" ? " · 추정" : ""}`;
   };
   const relationPriority: Record<LearningEdge["relation"], number> = {
     request: 0, call: 1, reference: 2, component: 3, query: 4, import: 5, execute: 6, return: 7, branch: 8,
@@ -205,11 +194,11 @@ export function buildRepositoryLearningGraph(
     const relationNames = [...new Set(related.map((item) => relationLabel(item.relation)))];
     const incomingRelations = [...new Set(edges.filter((item) => item.target === node.id).sort((a, b) => relationPriority[a.relation] - relationPriority[b.relation]).flatMap((item) => {
       const source = codeNodeMap.get(item.source);
-      return source ? [`${source.name} (${roleOf(source.id)}) → ${node.name} (${roleOf(node.id)}) · ${relationLabel(item.relation)}`] : [];
+      return source ? [`${source.name} (${roleOf(source.id)}) → ${node.name} (${roleOf(node.id)}) · ${item.label ?? relationLabel(item.relation)}`] : [];
     }))];
     const outgoingRelations = [...new Set(edges.filter((item) => item.source === node.id).sort((a, b) => relationPriority[a.relation] - relationPriority[b.relation]).flatMap((item) => {
       const target = codeNodeMap.get(item.target);
-      return target ? [`${node.name} (${roleOf(node.id)}) → ${target.name} (${roleOf(target.id)}) · ${relationLabel(item.relation)}`] : [];
+      return target ? [`${node.name} (${roleOf(node.id)}) → ${target.name} (${roleOf(target.id)}) · ${item.label ?? relationLabel(item.relation)}`] : [];
     }))];
     const base = baseById.get(node.id)!;
     const outgoingNames = edges.filter((item) => item.source === node.id).flatMap((item) => {
@@ -226,7 +215,7 @@ export function buildRepositoryLearningGraph(
         ? `${base.description} AST에서는 ${[...new Set(outgoingNames)].slice(0, 3).join(", ")} 코드와 직접 연결됩니다.`
         : base.description,
       purpose: incomingNames.length > 0
-        ? `${[...new Set(incomingNames)].slice(0, 3).join(", ")} 코드가 이 코드를 참조하거나 호출하므로 현재 기능의 연결 지점으로 필요합니다.`
+        ? `정적 분석에서 ${[...new Set(incomingNames)].slice(0, 3).join(", ")} 코드로부터 연결된 관계가 있습니다. 아래 관계 종류와 원본 코드를 함께 확인해 주세요.`
         : base.purpose,
       relatedFiles: [...new Set(relatedFiles)],
       connectionReason: relationNames.length > 0
@@ -234,7 +223,7 @@ export function buildRepositoryLearningGraph(
         : "정적 분석에서 이 코드와 직접 연결된 관계를 찾지 못했습니다.",
       incomingRelations,
       outgoingRelations,
-      confidence: relationNames.length > 0 ? "confirmed" as const : "limited" as const,
+      confidence: related.length > 0 && related.every((item) => item.confidence === "confirmed") ? "confirmed" as const : "limited" as const,
     };
   });
   return { nodes, edges };
@@ -246,11 +235,11 @@ export function summarizeLearningFeature(featureTitle: string, graph: LearningGr
   const services = graph.nodes.filter((node) => node.category === "service" || node.category === "api").slice(0, 2);
   const parts = [
     screens.length > 0 ? `${screens.map((node) => node.technicalName).join(", ")} 화면 코드` : undefined,
-    actions.length > 0 ? `${actions.map((node) => node.technicalName).join(", ")} 사용자 동작 코드` : undefined,
+    actions.length > 0 ? `${actions.map((node) => node.technicalName).join(", ")} 이름 기반 동작 후보(추정)` : undefined,
     services.length > 0 ? `${services.map((node) => node.technicalName).join(", ")} 서비스·API 코드` : undefined,
   ].filter(Boolean);
   return parts.length > 0
-    ? `${featureTitle} 기능에서 AST로 확인된 ${parts.join("와 ")}를 단계별로 살펴봅니다.`
+    ? `${featureTitle} 기능에서 ${parts.join("와 ")}의 정적 관계를 살펴봅니다.`
     : `${featureTitle} 기능에서 정적 분석으로 확인된 코드 관계를 살펴봅니다.`;
 }
 
@@ -276,57 +265,41 @@ export function buildLearningStages(graph: LearningGraph, entryNodeId?: string):
     graph.nodes.filter((node) => node.category === "start" || node.category === "ui-action"));
   const referenceTargets = new Set(graph.edges.filter((item) => item.relation === "reference").map((item) => item.target));
   const resultPattern = /(?:result|error|success|fail|complete|save|share|cancel|retry)/i;
-  addStage("action", "action", "사용자 동작", "이벤트 핸들러와 콜백으로 확인된 사용자 동작을 살펴봅니다.",
+  addStage("action", "action", "사용자 동작", "이름 기반 동작 후보와 함수 참조입니다. 참조는 실행을 보장하지 않습니다.",
     graph.nodes.filter((node) => !resultPattern.test(node.technicalName ?? "")
       && (referenceTargets.has(node.id) || /^(?:handle|on)[A-Z]/.test(node.technicalName ?? ""))));
-  addStage("data", "data", "데이터 처리", "함수 호출, 서비스, API 및 파일 의존 관계를 확인합니다.",
+  addStage("data", "data", "데이터 처리", "함수 호출, 서비스 및 API 관계를 확인합니다.",
     graph.nodes.filter((node) => !resultPattern.test(node.technicalName ?? "")
       && (node.category === "service" || node.category === "api" || node.category === "database" || node.category === "logic")));
-  addStage("result", "result", "결과 및 오류 처리", "이름과 AST 관계로 확인 가능한 결과·완료·오류 처리 코드를 살펴봅니다.",
+  addStage("result", "result", "결과 및 오류 처리", "이름으로 추정한 결과·오류 관련 후보입니다. 실제 동작은 코드에서 확인하세요.",
     graph.nodes.filter((node) => resultPattern.test(node.technicalName ?? "")));
   return stages;
 }
 
 export function selectLearningStageGraph(graph: LearningGraph, stage: LearningStage, expanded = false, maxDepth = 2): LearningGraph {
   if (expanded) return traverseLearningGraph(graph, stage.nodeIds[0], maxDepth, 12);
-  const selected = new Set(stage.nodeIds.slice(0, 4));
-  for (const item of graph.edges) {
+  const nodes = uniqueGraphNodes(graph.nodes);
+  const ids = new Set(nodes.map((node) => node.id));
+  const edges = aggregateRelationEdges(graph.edges.filter((edge) => edge.relation !== "import" && ids.has(edge.source) && ids.has(edge.target)));
+  const selected = new Set([...new Set(stage.nodeIds.filter((id) => ids.has(id)))].slice(0, 4));
+  for (const item of edges) {
     if (selected.size >= 4) break;
     if (selected.has(item.source) && !selected.has(item.target)) selected.add(item.target);
     else if (selected.has(item.target) && !selected.has(item.source)) selected.add(item.source);
   }
   return {
-    nodes: graph.nodes.filter((node) => selected.has(node.id)),
-    edges: graph.edges.filter((item) => selected.has(item.source) && selected.has(item.target)),
+    nodes: nodes.filter((node) => selected.has(node.id)),
+    edges: edges.filter((item) => selected.has(item.source) && selected.has(item.target)),
   };
 }
 
 export function traverseLearningGraph(graph: LearningGraph, startId: string, maxDepth: number, maxNodes = Number.POSITIVE_INFINITY): LearningGraph {
-  if (maxDepth < 0 || !graph.nodes.some((node) => node.id === startId)) return { nodes: [], edges: [] };
-  const visited = new Set<string>();
-  const selectedEdges = new Map<string, LearningEdge>();
-  const adjacency = new Map<string, LearningEdge[]>();
-  for (const item of graph.edges) {
-    adjacency.set(item.source, [...(adjacency.get(item.source) ?? []), item]);
-    adjacency.set(item.target, [...(adjacency.get(item.target) ?? []), item]);
-  }
-
-  function dfs(nodeId: string, depth: number): void {
-    if (visited.has(nodeId) || depth > maxDepth || visited.size >= maxNodes) return;
-    visited.add(nodeId);
-    if (depth === maxDepth) return;
-    for (const item of adjacency.get(nodeId) ?? []) {
-      const nextId = item.source === nodeId ? item.target : item.source;
-      if (!graph.nodes.some((node) => node.id === nextId)) continue;
-      if (!visited.has(nextId) && visited.size < maxNodes) {
-        selectedEdges.set(item.id, item);
-        dfs(nextId, depth + 1);
-      }
-    }
-  }
-  dfs(startId, 0);
+  const nodes = uniqueGraphNodes(graph.nodes);
+  // Stage inspection intentionally includes callers as well as callees within its input scope.
+  const reachable = depthFirstReachability(startId, nodes.map((node) => node.id), graph.edges, maxDepth, true);
+  const selected = selectConnectedNodeIds(startId, reachable, maxNodes);
   return {
-    nodes: graph.nodes.filter((node) => visited.has(node.id)),
-    edges: [...selectedEdges.values()].filter((item) => visited.has(item.source) && visited.has(item.target)),
+    nodes: nodes.filter((node) => selected.has(node.id)),
+    edges: aggregateRelationEdges(reachable.edges.filter((edge) => selected.has(edge.source) && selected.has(edge.target))),
   };
 }

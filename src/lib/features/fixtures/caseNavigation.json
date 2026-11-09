@@ -1,0 +1,32 @@
+[
+  {
+    "path": "apps/mobile/app/case/documents/index.tsx",
+    "content": "import { DocumentsScreen } from \"@/features/documents/screens/DocumentsScreen\";\n\nexport default function DocumentsRoute() {\n  return <DocumentsScreen />;\n}\n",
+    "sourceUrl": "https://github.com/team-mallang/likelion-hackathon/blob/main/apps/mobile/app/case/documents/index.tsx",
+    "sha": "156d86572a97ab1d364b615ee45aac49f2d8de22"
+  },
+  {
+    "path": "apps/mobile/app/case/directions/index.tsx",
+    "content": "import { DirectionsScreen } from \"@/features/directions/screens/DirectionsScreen\";\n\nexport default function DirectionsRoute() {\n  return <DirectionsScreen />;\n}\n",
+    "sourceUrl": "https://github.com/team-mallang/likelion-hackathon/blob/main/apps/mobile/app/case/directions/index.tsx",
+    "sha": "6dfff30bab0785d6c6da79fd788a9e3d9e2b46b4"
+  },
+  {
+    "path": "apps/mobile/app/case/confirmation/index.tsx",
+    "content": "import { ConfirmationScreen } from \"@/features/case/screens/ConfirmationScreen\";\n\nexport default function ConfirmationRoute() {\n  return <ConfirmationScreen />;\n}\n",
+    "sourceUrl": "https://github.com/team-mallang/likelion-hackathon/blob/main/apps/mobile/app/case/confirmation/index.tsx",
+    "sha": "414d265400035b05b3b4cbd093c4200487b04a30"
+  },
+  {
+    "path": "apps/mobile/app/case/nearby-agencies/index.tsx",
+    "content": "import { NearbyAgenciesScreen } from \"@/features/nearby-agencies/screens/NearbyAgenciesScreen\";\n\nexport default function NearbyAgenciesRoute() {\n  return <NearbyAgenciesScreen />;\n}\n",
+    "sourceUrl": "https://github.com/team-mallang/likelion-hackathon/blob/main/apps/mobile/app/case/nearby-agencies/index.tsx",
+    "sha": "439028cd89be2aa80d1c9ef280de855a4671c7f9"
+  },
+  {
+    "path": "apps/mobile/app/case/guides/index.tsx",
+    "content": "import { CaseGuidesScreen } from \"@/features/guides/screens/CaseGuidesScreen\";\n\nexport default function CaseGuidesRoute() {\n  return <CaseGuidesScreen />;\n}\n",
+    "sourceUrl": "https://github.com/team-mallang/likelion-hackathon/blob/main/apps/mobile/app/case/guides/index.tsx",
+    "sha": "4db1f8cf1444dc9f26b535542e809edaf57bc659"
+  }
+]

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RepositoryAnalysis } from "@/types/analysis";
 import { buildLearningGraph, buildLearningStages, buildRepositoryLearningGraph, selectLearningStageGraph, traverseLearningGraph } from "./learningGraphBuilder";
 import { generateLearningLabel } from "./labelGenerator";
+import { analyzeSourceFiles } from "@/lib/ast/analyzer";
 
 const codeNode = (name: string, type: "component" | "function" | "api", filePath: string) => ({
   id: `symbol:${filePath}#${name}`,
@@ -13,6 +14,7 @@ const codeNode = (name: string, type: "component" | "function" | "api", filePath
 
 const analysis: RepositoryAnalysis = {
   repository: "sample-repository",
+  source: "sample",
   files: [],
   nodes: [
     codeNode("LoginPage", "component", "app/login/page.tsx"),
@@ -26,12 +28,59 @@ const analysis: RepositoryAnalysis = {
 };
 
 describe("buildLearningGraph", () => {
-  it("keeps AST-backed steps separate from demo learning steps", () => {
+  it("uses demo content only for the explicitly selected sample", () => {
     const graph = buildLearningGraph(analysis);
     expect(graph.nodes).toHaveLength(8);
     expect(graph.nodes.find((node) => node.technicalName === "handleLogin")?.title).toBe("로그인 버튼 클릭");
     expect(graph.nodes.find((node) => node.title === "사용자가 존재하는가?")?.source).toBe("demo");
     expect(graph.edges.find((edge) => edge.label === "API 요청")?.relation).toBe("request");
+    expect(graph.nodes.every((node) => node.source === "demo")).toBe(true);
+  });
+
+  it.each(["github", undefined] as const)("does not infer demo mode from identifiers or repository name (source=%s)", (source) => {
+    const graph = buildLearningGraph({ ...analysis, source });
+    expect(graph.nodes).toHaveLength(5);
+    expect(graph.edges).toEqual([]);
+    expect(graph.nodes.every((node) => node.source === "ast" && !node.nextStep && !node.codeSnippet)).toBe(true);
+    expect(graph.nodes.find((node) => node.technicalName === "POST")?.title).toBe("POST API 처리");
+  });
+
+  it("keeps original AST snippets for all demo-like names in a GitHub repository", () => {
+    const inputs = [
+      { path: "app/api/orders/route.ts", content: "export function POST() { return Response.json({ orderId: 123 }); }" },
+      { path: "src/login.ts", content: "export function login() { return 'local-only'; }" },
+      { path: "src/users.ts", content: "export function findUser() { return 42; }" },
+      { path: "app/login/page.tsx", content: "export function LoginPage() { return <p>Custom login</p>; }" },
+      { path: "src/handler.ts", content: "export function handleLogin() { return false; }" },
+    ];
+    const actual: RepositoryAnalysis = { ...analyzeSourceFiles(inputs, "owner/repo"), source: "github" };
+    const graph = buildLearningGraph(actual);
+    for (const fn of actual.files.flatMap((file) => file.functions)) {
+      const node = graph.nodes.find((item) => item.id === fn.id)!;
+      expect(node.codeSnippet).toBe(fn.sourceCode);
+      expect(node.line).toBe(fn.line);
+      expect(node.codeEndLine).toBe(fn.endLine);
+      expect(node.source).toBe("ast");
+      expect(node.nextStep).toBeUndefined();
+    }
+    const order = graph.nodes.find((node) => node.technicalName === "POST")!;
+    expect(order.description).not.toContain("로그인");
+    expect(order.codeSnippet).not.toContain("findUser");
+    const login = graph.nodes.find((node) => node.technicalName === "login")!;
+    expect(login.description).toContain("근거가 부족");
+    expect(login.description).not.toContain("API");
+    expect(login.purpose).not.toContain("인증");
+    expect(graph.edges).toEqual(actual.edges);
+  });
+
+  it("marks identifier-based roles as estimates and gives general guidance without evidence", () => {
+    const handler = generateLearningLabel(codeNode("handleLogin", "function", "src/handler.ts"));
+    expect(handler.description).toContain("추정");
+    expect(handler.description).not.toContain("이메일");
+    const ordinary = generateLearningLabel(codeNode("findUser", "function", "src/users.ts"));
+    expect(ordinary.description).toContain("근거가 부족");
+    expect(ordinary.purpose).toContain("실제 실행 순서나 실행 여부를 보장하지 않습니다");
+    expect(generateLearningLabel(codeNode("login", "function", "src/auth.ts"), "demo").title).toBe("로그인 요청 처리");
   });
 
   it("applies depth-limited traversal to the learning graph", () => {
@@ -52,8 +101,8 @@ describe("buildLearningGraph", () => {
       files: [],
       nodes: [route, screen, handler, service, police],
       edges: [
-        { id: "route-screen", source: route.id, target: screen.id, relation: "component" },
-        { id: "screen-handler", source: screen.id, target: handler.id, relation: "call" },
+        { id: "route-screen", source: route.id, target: screen.id, relation: "component", confidence: "confirmed" },
+        { id: "screen-handler", source: screen.id, target: handler.id, relation: "call", confidence: "confirmed" },
         { id: `import:${screen.filePath}->${service.filePath}`, source: `file:${screen.filePath}`, target: `file:${service.filePath}`, relation: "import" },
       ],
       stats: { files: 4, functions: 5, relations: 3 },
@@ -64,8 +113,8 @@ describe("buildLearningGraph", () => {
       confidence: "confirmed",
     });
     expect(graph.nodes.some((node) => node.technicalName === "PoliceReportScreen")).toBe(false);
-    expect(graph.edges.map((item) => item.relation)).toEqual(expect.arrayContaining(["component", "call", "import"]));
-    expect(graph.edges).toHaveLength(3);
+    expect(graph.edges.map((item) => item.relation)).toEqual(["component", "call"]);
+    expect(graph.edges).toHaveLength(2);
   });
 
   it("limits the initial GitHub learning graph and expands with depth", () => {
@@ -90,7 +139,7 @@ describe("buildLearningGraph", () => {
     expect(handler("handleCancelEdit").title).toBe("수정 취소");
     expect(handler("handleSaveEdit").title).toBe("수정 내용 저장");
     expect(handler("handleSaveOrShare").title).toBe("저장 또는 공유 처리");
-    expect(handler("handleUnrecognizedDomainAction").title).toContain("handleUnrecognizedDomainAction");
+    expect(handler("handleUnrecognizedDomainAction")).toMatchObject({ title: "동작 처리 후보", roleConfidence: "inferred" });
   });
 
   it("creates only stages supported by nodes and keeps the focused graph small", () => {
@@ -125,7 +174,7 @@ describe("buildLearningGraph", () => {
     });
     const explanation = graph.nodes.find((node) => node.id === handler.id)!;
     expect(explanation.incomingRelations).toEqual([
-      "LookupScreen (UI/이벤트 처리) → handleSubmit (이벤트 핸들러) · 콜백 연결",
+      "LookupScreen (화면 구성 코드 · 추정) → handleSubmit (제출 · 추정) · 함수 참조·전달 (실행 미확정) · 근거 미표시",
     ]);
   });
 });

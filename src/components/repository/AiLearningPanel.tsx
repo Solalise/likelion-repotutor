@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertCircle, BookOpen, BrainCircuit, FileCode2, Lightbulb, LoaderCircle, RefreshCw, Sparkles } from "lucide-react";
 import type { RepositoryFeature } from "@/types/analysis";
 import type { AiLearningResponse } from "@/types/aiLearning";
@@ -20,10 +20,13 @@ export function AiLearningPanel({ connectionId, feature, selectedFunction }: AiL
     ? feature && { id: feature.id, label: feature.title }
     : selectedFunction && { id: selectedFunction.id, label: selectedFunction.name };
 
-  useEffect(() => {
+  const targetKey = `${connectionId}:${targetType}:${target?.id ?? ""}`;
+  const [previousTargetKey, setPreviousTargetKey] = useState(targetKey);
+  if (previousTargetKey !== targetKey) {
+    setPreviousTargetKey(targetKey);
     setResult(undefined);
     setError(undefined);
-  }, [target?.id, targetType]);
+  }
 
   async function generate(regenerate = false): Promise<void> {
     if (!target) return;

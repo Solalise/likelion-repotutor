@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { traceDisplayGraph, traverseGraph } from "@/lib/graph/dfs";
 import { analyzeSourceFiles } from "./analyzer";
+import type { RepositoryAnalysis } from "@/types/analysis";
+
+function nodeId(result: RepositoryAnalysis, filePath: string, name: string): string {
+  const matches = result.nodes.filter((node) => node.type !== "file" && node.filePath === filePath && node.name === name);
+  expect(matches).toHaveLength(1);
+  return matches[0].id;
+}
 
 const sources = [
   { path: "app/login/page.tsx", content: `import { login } from "../../services/auth";
@@ -46,21 +53,21 @@ describe("analyzeSourceFiles", () => {
 
     expect(result.edges).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        source: "symbol:apps/mobile/app/document/index.tsx#DocumentRoute",
-        target: "symbol:apps/mobile/src/features/document/screens/DocumentScreen.tsx#DocumentScreen",
+        source: nodeId(result, "apps/mobile/app/document/index.tsx", "DocumentRoute"),
+        target: nodeId(result, "apps/mobile/src/features/document/screens/DocumentScreen.tsx", "DocumentScreen"),
         relation: "component",
       }),
       expect.objectContaining({
-        source: "symbol:apps/mobile/src/features/document/screens/DocumentScreen.tsx#DocumentScreen",
-        target: "symbol:apps/mobile/src/components/common/button.tsx#Button",
+        source: nodeId(result, "apps/mobile/src/features/document/screens/DocumentScreen.tsx", "DocumentScreen"),
+        target: nodeId(result, "apps/mobile/src/components/common/button.tsx", "Button"),
         relation: "component",
       }),
     ]));
-    expect(result.nodes.map((node) => node.name)).toEqual(expect.arrayContaining(["runScan", "handleScan", "retryScan"]));
+    expect(result.nodes.map((node) => node.name)).toEqual(expect.arrayContaining(["runScan", "handleScan", "retryScan.callback"]));
     expect(result.edges).toContainEqual(expect.objectContaining({
-      source: "symbol:apps/mobile/src/features/document/screens/DocumentScreen.tsx#DocumentScreen",
-      target: "symbol:apps/mobile/src/features/document/screens/DocumentScreen.tsx#runScan",
-      relation: "reference",
+      source: nodeId(result, "apps/mobile/src/features/document/screens/DocumentScreen.tsx", "handleScan"),
+      target: nodeId(result, "apps/mobile/src/features/document/screens/DocumentScreen.tsx", "runScan"),
+      relation: "call",
     }));
   });
 
@@ -78,17 +85,17 @@ describe("analyzeSourceFiles", () => {
         }` },
     ]);
     const edgePairs = result.edges.map((edge) => `${edge.relation}:${edge.source}->${edge.target}`);
-    expect(edgePairs).toContain("call:symbol:app/page.tsx#handleClick->symbol:lib/actions.ts#save");
-    expect(edgePairs).toContain("call:symbol:app/page.tsx#Page->symbol:lib/actions.ts#Worker.run");
-    expect(edgePairs).toContain("call:symbol:app/page.tsx#Page->symbol:lib/actions.ts#helpers.finish");
+    expect(edgePairs).toContain(`call:${nodeId(result, "app/page.tsx", "handleClick")}->${nodeId(result, "lib/actions.ts", "save")}`);
+    expect(edgePairs).toContain(`call:${nodeId(result, "app/page.tsx", "Page")}->${nodeId(result, "lib/actions.ts", "Worker.run")}`);
+    expect(edgePairs).toContain(`call:${nodeId(result, "app/page.tsx", "Page")}->${nodeId(result, "lib/actions.ts", "helpers.finish")}`);
     expect(result.edges).toContainEqual(expect.objectContaining({
-      source: "symbol:app/page.tsx#Page", target: "symbol:app/page.tsx#handleClick", relation: "reference", confidence: "confirmed",
+      source: nodeId(result, "app/page.tsx", "Page"), target: nodeId(result, "app/page.tsx", "handleClick"), relation: "reference", confidence: "confirmed",
     }));
   });
 
   it("connects static fetch and axios requests to matching Next.js route handlers", () => {
     const result = analyzeSourceFiles([
-      { path: "app/users/page.tsx", content: `export function UsersPage() {
+      { path: "app/users/page.tsx", content: `import axios from "axios"; export function UsersPage() {
         const load = async () => fetch("/api/users/42");
         const remove = () => axios.delete("/api/users/42");
         return <button onClick={load}>load</button>;
@@ -97,8 +104,8 @@ describe("analyzeSourceFiles", () => {
         export async function DELETE() { return Response.json({ ok: true }); }` },
     ]);
     expect(result.edges).toEqual(expect.arrayContaining([
-      expect.objectContaining({ source: "symbol:app/users/page.tsx#load", target: "symbol:app/api/users/[id]/route.ts#GET", relation: "api", evidence: `fetch("/api/users/42")` }),
-      expect.objectContaining({ source: "symbol:app/users/page.tsx#remove", target: "symbol:app/api/users/[id]/route.ts#DELETE", relation: "api" }),
+      expect.objectContaining({ source: nodeId(result, "app/users/page.tsx", "load"), target: nodeId(result, "app/api/users/[id]/route.ts", "GET"), relation: "api", evidence: `fetch("/api/users/42")` }),
+      expect.objectContaining({ source: nodeId(result, "app/users/page.tsx", "remove"), target: nodeId(result, "app/api/users/[id]/route.ts", "DELETE"), relation: "api" }),
     ]));
   });
 
@@ -134,7 +141,7 @@ describe("analyzeSourceFiles", () => {
     expect(full.edges).toHaveLength(2);
   });
 
-  it("connects PreviousCaseLookupScreen through an imported object method to its API route", () => {
+  it("keeps imported method calls without guessing a different application API target", () => {
     const result = analyzeSourceFiles([
       { path: "apps/mobile/src/features/case-access/screens/PreviousCaseLookupScreen.tsx", content: `
         import { previousCaseService } from "@/features/case-access/services/previousCase";
@@ -151,20 +158,20 @@ describe("analyzeSourceFiles", () => {
     ], "team/repository");
     const edgePairs = result.edges.map((edge) => `${edge.relation}:${edge.source}->${edge.target}`);
     expect(result.nodes).toContainEqual(expect.objectContaining({ name: "previousCaseService.lookup", filePath: "apps/mobile/src/features/case-access/services/previousCase.ts" }));
-    expect(edgePairs).toContain("call:symbol:apps/mobile/src/features/case-access/screens/PreviousCaseLookupScreen.tsx#handleSubmit->symbol:apps/mobile/src/features/case-access/services/previousCase.ts#previousCaseService.lookup");
-    expect(result.edges).toContainEqual(expect.objectContaining({
-      source: "symbol:apps/mobile/src/features/case-access/services/previousCase.ts#previousCaseService.lookup",
-      target: "symbol:apps/web/src/app/api/cases/auth/route.ts#POST",
+    expect(edgePairs).toContain(`call:${nodeId(result, "apps/mobile/src/features/case-access/screens/PreviousCaseLookupScreen.tsx", "handleSubmit")}->${nodeId(result, "apps/mobile/src/features/case-access/services/previousCase.ts", "previousCaseService.lookup")}`);
+    expect(result.edges).not.toContainEqual(expect.objectContaining({
+      source: nodeId(result, "apps/mobile/src/features/case-access/services/previousCase.ts", "previousCaseService.lookup"),
+      target: nodeId(result, "apps/web/src/app/api/cases/auth/route.ts", "POST"),
       relation: "api",
       evidence: expect.stringContaining("fetch(getApiUrl"),
     }));
-    const flow = traceDisplayGraph("symbol:apps/mobile/src/features/case-access/screens/PreviousCaseLookupScreen.tsx#PreviousCaseLookupScreen", result.nodes, result.edges, { maxDepth: 3 });
+    const flow = traceDisplayGraph(nodeId(result, "apps/mobile/src/features/case-access/screens/PreviousCaseLookupScreen.tsx", "PreviousCaseLookupScreen"), result.nodes, result.edges, { maxDepth: 3 });
     expect(flow.nodes.map((node) => node.name)).toEqual(expect.arrayContaining([
-      "PreviousCaseLookupScreen", "handleSubmit", "previousCaseService.lookup", "POST",
+      "PreviousCaseLookupScreen", "handleSubmit", "previousCaseService.lookup",
     ]));
   });
 
-  it("resolves a local object alias and only matches a compatible dynamic API route", () => {
+  it("resolves a local object alias but leaves dynamic wrapped API URLs unresolved", () => {
     const result = analyzeSourceFiles([
       { path: "apps/mobile/src/features/nearby-agencies/screens/NearbyAgenciesScreen.tsx", content: `
         import { apiNearbyAgenciesService } from "@/features/nearby-agencies/services/apiNearbyAgencies";
@@ -182,24 +189,24 @@ describe("analyzeSourceFiles", () => {
       { path: "apps/web/src/app/api/other/[id]/route.ts", content: "export async function GET() { return Response.json([]); }" },
     ], "team/repository");
     expect(result.edges).toContainEqual(expect.objectContaining({
-      source: "symbol:apps/mobile/src/features/nearby-agencies/screens/NearbyAgenciesScreen.tsx#loadAgencies",
-      target: "symbol:apps/mobile/src/features/nearby-agencies/services/apiNearbyAgencies.ts#apiNearbyAgenciesService.getNearbyAgencies",
+      source: nodeId(result, "apps/mobile/src/features/nearby-agencies/screens/NearbyAgenciesScreen.tsx", "loadAgencies"),
+      target: nodeId(result, "apps/mobile/src/features/nearby-agencies/services/apiNearbyAgencies.ts", "apiNearbyAgenciesService.getNearbyAgencies"),
       relation: "call",
       evidence: expect.stringContaining("nearbyAgenciesService.getNearbyAgencies"),
     }));
-    expect(result.edges).toContainEqual(expect.objectContaining({
-      source: "symbol:apps/mobile/src/features/nearby-agencies/services/apiNearbyAgencies.ts#apiNearbyAgenciesService.getNearbyAgencies",
-      target: "symbol:apps/web/src/app/api/cases/[id]/nearby-agencies/route.ts#GET",
+    expect(result.edges).not.toContainEqual(expect.objectContaining({
+      source: nodeId(result, "apps/mobile/src/features/nearby-agencies/services/apiNearbyAgencies.ts", "apiNearbyAgenciesService.getNearbyAgencies"),
+      target: nodeId(result, "apps/web/src/app/api/cases/[id]/nearby-agencies/route.ts", "GET"),
       relation: "api",
       evidence: expect.stringContaining("fetch(getApiUrl"),
     }));
     expect(result.edges).not.toContainEqual(expect.objectContaining({
-      source: "symbol:apps/mobile/src/features/nearby-agencies/services/apiNearbyAgencies.ts#apiNearbyAgenciesService.getNearbyAgencies",
-      target: "symbol:apps/web/src/app/api/other/[id]/route.ts#GET",
+      source: nodeId(result, "apps/mobile/src/features/nearby-agencies/services/apiNearbyAgencies.ts", "apiNearbyAgenciesService.getNearbyAgencies"),
+      target: nodeId(result, "apps/web/src/app/api/other/[id]/route.ts", "GET"),
     }));
-    const flow = traceDisplayGraph("symbol:apps/mobile/src/features/nearby-agencies/screens/NearbyAgenciesScreen.tsx#NearbyAgenciesScreen", result.nodes, result.edges, { maxDepth: 3 });
+    const flow = traceDisplayGraph(nodeId(result, "apps/mobile/src/features/nearby-agencies/screens/NearbyAgenciesScreen.tsx", "NearbyAgenciesScreen"), result.nodes, result.edges, { maxDepth: 3 });
     expect(flow.nodes.map((node) => node.name)).toEqual(expect.arrayContaining([
-      "NearbyAgenciesScreen", "loadAgencies", "apiNearbyAgenciesService.getNearbyAgencies", "GET",
+      "NearbyAgenciesScreen", "loadAgencies", "apiNearbyAgenciesService.getNearbyAgencies",
     ]));
   });
 });

@@ -1,18 +1,12 @@
 import { traceDisplayGraph } from "@/lib/graph/dfs";
-import type { CodeEdge, CodeNode, RepositoryAnalysis, RepositoryFeature, RepositoryFeatureDiscovery, TraversalResult } from "@/types/analysis";
+import type { CodeEdge, CodeNode, RepositoryAnalysis, RepositoryEntryPoint, RepositoryFeature, RepositoryFeatureDiscovery, TraversalResult } from "@/types/analysis";
 
-const GENERIC_UI_NAMES = new Set([
-  "Button", "IconButton", "Input", "TextInput", "Modal", "Dialog", "Card", "Header", "Footer",
-  "Layout", "Container", "Spacer", "Divider", "Loader", "Spinner", "ErrorState", "EmptyState",
-]);
-const TOOLING_PATH = /(?:^|\/)(?:plugins?|scripts?|config|configs|tooling|buildSrc|gradle|\.github)(?:\/|$)|(?:^|\/)(?:babel|metro|webpack|vite|jest|eslint|prettier)\.config\./i;
-const TEST_PATH = /(?:^|\/)(?:__tests__|tests?|fixtures?)(?:\/|$)|\.(?:test|spec)\.[cm]?[jt]sx?$/i;
-const COMMON_COMPONENT_PATH = /(?:^|\/)components\/(?:common|ui|layout|feedback)(?:\/|$)/i;
-const USER_ENTRY_PATH = /(?:^|\/)(?:app|pages?|screens?|routes?)(?:\/|$)/i;
-const USER_ENTRY_NAME = /(?:Route|Screen|Page)$/;
-const INTERNAL_NAME = /^(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)$|(?:Provider|Context|Layout|Hook)$/i;
-const TRAVERSAL_BOUNDARY = /(?:Provider|Context|Layout|View|ViewShared)$|^use[A-Z]|Mock|\.mock$|(?:BottomNavigation|NavigationItem|AppScreen|FlowHeader|ProgressBar)$/;
 const MAX_FEATURE_DEPTH = 5;
+const ROUTE_LABELS: Record<string, string> = {
+  login: "로그인", signup: "회원가입", settings: "설정", profile: "프로필", dashboard: "대시보드",
+  users: "사용자", orders: "주문", products: "상품",
+};
+const METHOD_LABELS: Record<string, string> = { GET: "조회", POST: "생성", PUT: "수정", PATCH: "수정", DELETE: "삭제" };
 
 export interface FeatureGroupMapping {
   entryNodeId: string;
@@ -20,184 +14,119 @@ export interface FeatureGroupMapping {
   description?: string;
   includeNodeIds?: string[];
 }
+export interface FeatureDiscoveryOptions { mappings?: FeatureGroupMapping[] }
 
-export interface FeatureDiscoveryOptions {
-  mappings?: FeatureGroupMapping[];
+function symbolEdges(analysis: RepositoryAnalysis): CodeEdge[] {
+  const ids = new Set(analysis.nodes.filter((node) => node.type !== "file").map((node) => node.id));
+  return analysis.edges.filter((edge) => edge.relation !== "import" && ids.has(edge.source) && ids.has(edge.target));
 }
 
-function isTooling(node: CodeNode): boolean {
-  return TOOLING_PATH.test(node.filePath) || TEST_PATH.test(node.filePath)
-    || /(?:Gradle|Webpack|Babel|Metro|ConfigPlugin)/i.test(node.name);
-}
-
-function isGenericUi(node: CodeNode): boolean {
-  return GENERIC_UI_NAMES.has(node.name) || COMMON_COMPONENT_PATH.test(node.filePath);
-}
-
-function hiddenReason(node: CodeNode): string | undefined {
-  if (isTooling(node)) return "개발·테스트 도구 코드";
-  if (isGenericUi(node)) return "공통 UI 컴포넌트";
-  if (INTERNAL_NAME.test(node.name)) return "HTTP 핸들러 또는 내부 인프라";
-  if (TRAVERSAL_BOUNDARY.test(node.name)) return "Provider·Hook·Mock 등 내부 코드";
-  return undefined;
-}
-
-function isUserFeatureEntry(node: CodeNode): boolean {
-  return node.type === "component" && USER_ENTRY_NAME.test(node.name) && USER_ENTRY_PATH.test(node.filePath)
-    && !isTooling(node) && !isGenericUi(node) && !INTERNAL_NAME.test(node.name);
-}
-
-function actualEdges(analysis: RepositoryAnalysis): CodeEdge[] {
-  const symbolIds = new Set(analysis.nodes.filter((node) => node.type !== "file").map((node) => node.id));
-  return analysis.edges.filter((edge) => edge.relation !== "import" && symbolIds.has(edge.source) && symbolIds.has(edge.target));
-}
-
-function entryScore(node: CodeNode, edges: CodeEdge[]): number {
-  const outgoing = edges.filter((edge) => edge.source === node.id).length;
-  const incoming = edges.filter((edge) => edge.target === node.id).length;
-  const roleScore = /Route$/.test(node.name) ? 80 : /Page$/.test(node.name) ? 65 : /Screen$/.test(node.name) ? 55 : 0;
-  return roleScore + outgoing * 8 + incoming * 3 - (hiddenReason(node) ? 250 : 0);
-}
-
-function featureStem(node: CodeNode): string {
-  return node.name.replace(/(?:Route|Screen|Page)$/, "").toLocaleLowerCase("en");
-}
-
-function applicationScope(node: CodeNode): string {
-  return node.filePath.split("/").slice(0, 2).join("/").toLocaleLowerCase("en");
-}
-
-function selectFeatureEntries(nodes: CodeNode[], edges: CodeEdge[]): CodeNode[] {
-  const byFeature = new Map<string, CodeNode>();
-  for (const node of nodes.filter(isUserFeatureEntry)) {
-    const key = `${applicationScope(node)}:${featureStem(node)}`;
-    const current = byFeature.get(key);
-    if (!current || entryScore(node, edges) > entryScore(current, edges)) byFeature.set(key, node);
+function routeTitle(entry: RepositoryEntryPoint): { title: string; inferred: boolean } {
+  if (entry.kind === "page") {
+    const label = entry.routePath === "/" ? "홈" : ROUTE_LABELS[entry.routePath.slice(1)];
+    return { title: `${label ?? entry.routePath} 페이지`, inferred: Boolean(label) };
   }
-  return [...byFeature.values()];
+  const noun = ROUTE_LABELS[entry.routePath.split("/").filter((part) => part && !part.startsWith("[")).at(-1) ?? ""];
+  const action = METHOD_LABELS[entry.method ?? ""];
+  return noun && action
+    ? { title: `${entry.method} ${entry.routePath} · ${noun} ${action} API`, inferred: true }
+    : { title: `${entry.method} ${entry.routePath} API`, inferred: false };
 }
 
-const TOKEN_LABELS: Record<string, string> = {
-  access: "접근", agencies: "기관", agency: "기관", card: "카드", case: "사건", complete: "완료",
-  confirmation: "확인", create: "생성", directions: "길 안내", document: "문서", documents: "문서",
-  guide: "가이드", guides: "가이드", home: "홈", insurance: "보험", lookup: "조회", nearby: "주변",
-  new: "새로운", police: "경찰", previous: "이전", product: "상품", products: "상품", report: "신고서",
-  scan: "스캔", summary: "요약", conversation: "대화",
-};
-
-function identifierWords(name: string): string[] {
-  return name.replace(/(?:Route|Screen|Page)$/, "").replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ").trim().split(/\s+/).filter(Boolean);
-}
-
-function userFeatureTitle(name: string): string {
-  return identifierWords(name).map((word) => TOKEN_LABELS[word.toLocaleLowerCase("en")] ?? word).join(" ");
-}
-
-function adjacencyFor(nodes: CodeNode[], edges: CodeEdge[]): Map<string, string[]> {
-  const ids = new Set(nodes.map((node) => node.id));
-  const adjacency = new Map<string, string[]>();
-  for (const edge of edges) {
-    if (!ids.has(edge.source) || !ids.has(edge.target)) continue;
-    adjacency.set(edge.source, [...(adjacency.get(edge.source) ?? []), edge.target]);
-    adjacency.set(edge.target, [...(adjacency.get(edge.target) ?? []), edge.source]);
-  }
-  return adjacency;
-}
-
-function collectFeatureNodes(entry: CodeNode, nodes: CodeNode[], adjacency: Map<string, string[]>, entryIds: Set<string>): CodeNode[] {
-  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-  const visited = new Set<string>();
-  const queue: Array<{ id: string; depth: number }> = [{ id: entry.id, depth: 0 }];
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (visited.has(current.id)) continue;
-    const node = nodeMap.get(current.id);
-    if (!node) continue;
-    if (current.id !== entry.id && entryIds.has(current.id)) continue;
-    visited.add(current.id);
+/** Only follow outgoing confirmed relationships. References remain references, not executions. */
+function collectScope(entry: CodeNode, edges: CodeEdge[], nodes: Map<string, CodeNode>, entryIds: Set<string>) {
+  const outgoing = new Map<string, CodeEdge[]>();
+  for (const edge of edges) outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge]);
+  const visited = new Set([entry.id]);
+  const expandable = new Set<string>();
+  const queue = [{ id: entry.id, depth: 0 }];
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const current = queue[cursor];
     if (current.depth >= MAX_FEATURE_DEPTH) continue;
-    if (current.id !== entry.id && (isGenericUi(node) || isTooling(node) || TRAVERSAL_BOUNDARY.test(node.name))) continue;
-    for (const next of adjacency.get(current.id) ?? []) if (!visited.has(next)) queue.push({ id: next, depth: current.depth + 1 });
+    expandable.add(current.id);
+    for (const edge of outgoing.get(current.id) ?? []) {
+      if (edge.confidence !== "confirmed" || !nodes.has(edge.target)) continue;
+      // A confirmed API request may show its endpoint, but the endpoint's implementation
+      // is explored through its own feature. Other route entries do not join this feature.
+      const boundary = edge.target !== entry.id && entryIds.has(edge.target);
+      if (boundary && edge.relation !== "api") continue;
+      if (visited.has(edge.target)) continue;
+      visited.add(edge.target);
+      if (!boundary) queue.push({ id: edge.target, depth: current.depth + 1 });
+    }
   }
-  return [...visited].flatMap((id) => nodeMap.has(id) ? [nodeMap.get(id)!] : []);
+  return { ids: visited, expandable };
 }
 
-function featureFromNodes(
-  entry: CodeNode,
-  featureNodes: CodeNode[],
-  edges: CodeEdge[],
-  partial: boolean,
-  mapping?: FeatureGroupMapping,
-  hidden = false,
+function makeFeature(
+  analysis: RepositoryAnalysis, entry: CodeNode, edges: CodeEdge[], entryIds: Set<string>,
+  metadata?: RepositoryEntryPoint, mapping?: FeatureGroupMapping, hidden = false,
 ): RepositoryFeature {
-  const uniqueNodes = [...new Map(featureNodes.map((node) => [node.id, node])).values()];
-  const allIds = new Set(uniqueNodes.map((node) => node.id));
-  const groupEdges = edges.filter((edge) => allIds.has(edge.source) && allIds.has(edge.target));
-  const title = mapping?.title?.trim() || userFeatureTitle(entry.name);
-  const limited = groupEdges.length === 0;
-  const baseDescription = mapping?.description?.trim() || (limited
-    ? `${title} 진입점은 확인했지만 연결된 내부 코드는 정적 분석에서 확인되지 않았습니다.`
-    : `${title} 화면에서 시작해 정적으로 연결이 확인된 코드 흐름입니다.`);
+  const nodes = new Map(analysis.nodes.filter((node) => node.type !== "file").map((node) => [node.id, node]));
+  const scope = hidden ? { ids: new Set([entry.id]), expandable: new Set<string>() } : collectScope(entry, edges, nodes, entryIds);
+  for (const id of mapping?.includeNodeIds ?? []) {
+    if (nodes.has(id) && (id === entry.id || !entryIds.has(id))) scope.ids.add(id);
+  }
+  const groupEdges = edges.filter((edge) => scope.expandable.has(edge.source) && scope.ids.has(edge.target)
+    && (edge.target === entry.id || !entryIds.has(edge.target) || edge.relation === "api"));
+  const label = metadata ? routeTitle(metadata) : { title: entry.name, inferred: false };
+  const title = mapping?.title?.trim() || label.title;
+  const titleInferred = Boolean(!mapping?.title?.trim() && label.inferred);
+  const limited = !groupEdges.some((edge) => edge.confidence === "confirmed");
+  const routeDescription = metadata
+    ? `${metadata.kind === "page" ? "페이지" : "API"} 진입점 ${metadata.method ? `${metadata.method} ` : ""}${metadata.routePath} (${metadata.filePath}).`
+    : hidden ? "독립 라우트로 확인되지 않은 내부 코드입니다." : "사용자가 지정한 코드 진입점입니다.";
+  const notes = [
+    mapping?.description?.trim() || routeDescription,
+    titleInferred ? "표시 이름은 경로·메서드에 따른 추정이며 실제 업무 의미를 확정하지 않습니다." : undefined,
+    hidden ? undefined : limited ? "확인된 하위 연결이 없습니다." : "진입점에서 나가는 정적 코드 관계를 표시합니다.",
+    groupEdges.some((edge) => edge.relation === "reference") ? "참조·콜백 전달은 실행을 뜻하지 않으며, 콜백 본문의 연결도 실행 시점이나 실행 여부를 보장하지 않습니다." : undefined,
+    groupEdges.some((edge) => edge.confidence === "inferred") ? "추정 관계는 따로 표시하며 기능 범위를 확장하는 근거로 사용하지 않습니다." : undefined,
+    groupEdges.some((edge) => edge.relation === "api" && entryIds.has(edge.target) && edge.target !== entry.id) ? "API 진입점 이후 구현은 해당 API 기능에서 확인하세요." : undefined,
+    analysis.collection?.partial ? "분석 파일 제한으로 일부 관계가 누락될 수 있습니다." : undefined,
+  ].filter(Boolean);
   return {
-    id: `feature:${entry.id}`,
-    title,
-    technicalName: entry.name,
-    description: partial ? `${baseDescription} 분석 파일 제한으로 일부 단계가 누락될 수 있습니다.` : baseDescription,
-    entryNodeId: entry.id,
-    entryFilePath: entry.filePath,
-    nodeIds: uniqueNodes.map((node) => node.id),
-    filePaths: [...new Set(uniqueNodes.map((node) => node.filePath))],
-    connectedNodeCount: uniqueNodes.length,
-    connectionCount: groupEdges.length,
-    limited,
-    hidden,
-    hiddenReason: hidden ? hiddenReason(entry) ?? "독립적인 사용자 기능으로 확인되지 않은 내부 코드" : undefined,
-    score: entryScore(entry, edges) + groupEdges.length * 10 + uniqueNodes.length * 2,
+    id: metadata ? `feature:${metadata.kind}:${metadata.filePath}${metadata.method ? `:${metadata.method}` : ""}` : `feature:${hidden ? "internal" : "manual"}:${entry.id}`,
+    title, technicalName: entry.name, description: notes.join(" "),
+    entryNodeId: entry.id, entryFilePath: metadata?.filePath ?? entry.filePath,
+    nodeIds: [...scope.ids], edgeIds: groupEdges.map((edge) => edge.id),
+    filePaths: [...new Set([metadata?.filePath ?? entry.filePath, ...[...scope.ids].map((id) => nodes.get(id)!.filePath)])],
+    connectedNodeCount: scope.ids.size, connectionCount: groupEdges.length, limited, hidden,
+    hiddenReason: hidden ? "파일 기반 페이지·API 진입점으로 확인되지 않은 코드" : undefined,
+    score: (metadata?.kind === "page" ? 100 : metadata?.kind === "api" ? 50 : 0) + groupEdges.length * 10 + scope.ids.size * 2,
+    entryKind: metadata?.kind ?? (hidden ? "internal" : "manual"), routePath: metadata?.routePath,
+    httpMethod: metadata?.method, titleInferred,
   };
 }
 
 export function discoverRepositoryFeatures(analysis: RepositoryAnalysis, options: FeatureDiscoveryOptions = {}): RepositoryFeatureDiscovery {
-  const nodes = analysis.nodes.filter((node) => node.type !== "file");
-  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-  const edges = actualEdges(analysis);
-  const entries = selectFeatureEntries(nodes, edges);
-  const entryIds = new Set(entries.map((node) => node.id));
-  const adjacency = adjacencyFor(nodes, edges);
-  const mappingByEntry = new Map((options.mappings ?? []).map((mapping) => [mapping.entryNodeId, mapping]));
-  const automatic = entries.map((entry) => {
-    const mapping = mappingByEntry.get(entry.id);
-    const collected = collectFeatureNodes(entry, nodes, adjacency, entryIds);
-    for (const nodeId of mapping?.includeNodeIds ?? []) {
-      const node = nodeMap.get(nodeId);
-      if (node && !collected.some((item) => item.id === node.id)) collected.push(node);
-    }
-    return featureFromNodes(entry, collected, edges, Boolean(analysis.collection?.partial), mapping);
-  });
+  const nodes = new Map(analysis.nodes.filter((node) => node.type !== "file").map((node) => [node.id, node]));
+  const edges = symbolEdges(analysis);
+  const entries = (analysis.entryPoints ?? []).filter((entry) => nodes.has(entry.nodeId));
+  const entryIds = new Set(entries.map((entry) => entry.nodeId));
+  const mappings = new Map((options.mappings ?? []).map((mapping) => [mapping.entryNodeId, mapping]));
+  const automatic = entries.map((metadata) => makeFeature(analysis, nodes.get(metadata.nodeId)!, edges, entryIds, metadata, mappings.get(metadata.nodeId)));
   for (const mapping of options.mappings ?? []) {
-    if (automatic.some((feature) => feature.entryNodeId === mapping.entryNodeId)) continue;
-    const entry = nodeMap.get(mapping.entryNodeId);
-    if (!entry) continue;
-    const mappedNodes = [entry, ...(mapping.includeNodeIds ?? []).flatMap((id) => nodeMap.has(id) ? [nodeMap.get(id)!] : [])];
-    automatic.push(featureFromNodes(entry, mappedNodes, edges, Boolean(analysis.collection?.partial), mapping));
+    if (entryIds.has(mapping.entryNodeId) || !nodes.has(mapping.entryNodeId)) continue;
+    automatic.push(makeFeature(analysis, nodes.get(mapping.entryNodeId)!, edges, entryIds, undefined, mapping));
   }
-  const primary = automatic.filter((feature) => !feature.limited).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
-  const limited = automatic.filter((feature) => feature.limited).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
-  const ownedIds = new Set(automatic.flatMap((feature) => feature.nodeIds));
-  const hidden = nodes.filter((node) => !ownedIds.has(node.id) || Boolean(hiddenReason(node)))
-    .map((node) => featureFromNodes(node, [node], edges, Boolean(analysis.collection?.partial), undefined, true))
-    .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
-  return { primary, limited, hidden };
+  const sort = (a: RepositoryFeature, b: RepositoryFeature) => b.score - a.score || a.id.localeCompare(b.id);
+  const owned = new Set(automatic.flatMap((feature) => feature.nodeIds));
+  return {
+    primary: automatic.filter((feature) => !feature.limited).sort(sort),
+    limited: automatic.filter((feature) => feature.limited).sort(sort),
+    hidden: [...nodes.values()].filter((node) => !owned.has(node.id)).map((node) => makeFeature(analysis, node, edges, entryIds, undefined, undefined, true)).sort(sort),
+  };
 }
 
-export function traverseRepositoryFeature(
-  analysis: RepositoryAnalysis,
-  feature: RepositoryFeature,
-  maxDepth: number,
-  expandedNodeIds: Iterable<string> = [],
-): TraversalResult {
-  const allowed = new Set(feature.nodeIds);
-  const nodes = analysis.nodes.filter((node) => allowed.has(node.id));
-  const edges = analysis.edges.filter((edge) => allowed.has(edge.source) && allowed.has(edge.target) && edge.relation !== "import");
-  return traceDisplayGraph(feature.entryNodeId, nodes, edges, { maxDepth, expandedNodeIds });
+/** Keep feature boundaries identical in developer, learning and AI projections. */
+export function repositoryFeatureEdges(analysis: RepositoryAnalysis, feature: RepositoryFeature): CodeEdge[] {
+  const nodes = new Set(feature.nodeIds);
+  const ids = feature.edgeIds ? new Set(feature.edgeIds) : undefined;
+  return analysis.edges.filter((edge) => edge.relation !== "import" && nodes.has(edge.source) && nodes.has(edge.target) && (!ids || ids.has(edge.id)));
+}
+
+export function traverseRepositoryFeature(analysis: RepositoryAnalysis, feature: RepositoryFeature, maxDepth: number, expandedNodeIds: Iterable<string> = [], selectedNodeId?: string): TraversalResult {
+  const ids = new Set(feature.nodeIds);
+  return traceDisplayGraph(feature.entryNodeId, analysis.nodes.filter((node) => ids.has(node.id)), repositoryFeatureEdges(analysis, feature), { maxDepth, expandedNodeIds, selectedNodeId });
 }

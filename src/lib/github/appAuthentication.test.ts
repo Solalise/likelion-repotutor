@@ -5,7 +5,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe("GitHub installation fetcher", () => {
   it("rewrites codeload downloads to the authenticated archive API", async () => {
     vi.stubEnv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/repotutor");
-    const fetchMock = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => new Response("archive", { status: 200 }));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response("archive", { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     const { createInstallationFetcher } = await import("./appAuthentication");
     const installationFetch = createInstallationFetcher("installation-secret");

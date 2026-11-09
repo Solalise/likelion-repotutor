@@ -11,6 +11,10 @@ export function githubAnalysisCacheKey(namespace: string, repository: string, co
 export function getGithubAnalysisCache(key: string): RepositoryAnalysis | undefined {
   const entry = cache.get(key);
   if (!entry) return undefined;
+  if (!Array.isArray(entry.value.entryPoints)) {
+    cache.delete(key);
+    return undefined;
+  }
   if (Date.now() - entry.storedAt >= CACHE_TTL_MS) {
     cache.delete(key);
     return undefined;

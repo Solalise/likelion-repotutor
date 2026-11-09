@@ -1,4 +1,4 @@
-import type { CodeNode } from "@/types/analysis";
+import type { CodeEdge, CodeNode, RepositoryEntryPoint } from "@/types/analysis";
 import type { LearningCategory } from "@/types/learning";
 
 interface GeneratedLabel {
@@ -6,6 +6,9 @@ interface GeneratedLabel {
   description: string;
   purpose: string;
   category: LearningCategory;
+  roleConfidence?: "confirmed" | "inferred" | "unknown";
+  facts?: string[];
+  roleBasis?: string;
 }
 
 const FEATURE_LABELS: Array<[RegExp, string]> = [
@@ -95,51 +98,44 @@ const KNOWN_LABELS: Record<string, GeneratedLabel> = {
   },
 };
 
-export function generateLearningLabel(node: CodeNode): GeneratedLabel {
-  const known = KNOWN_LABELS[node.name];
+export function generateLearningLabel(node: CodeNode, mode: "analysis" | "demo" = "analysis", context: { edges?: CodeEdge[]; entryPoints?: RepositoryEntryPoint[] } = {}): GeneratedLabel {
+  const known = mode === "demo" ? KNOWN_LABELS[node.name] : undefined;
   if (known) return known;
 
+  const entry = context.entryPoints?.find((entry) => entry.nodeId === node.id);
+  const confirmed = (context.edges ?? []).filter((edge) => edge.confidence === "confirmed" && edge.relation !== "import");
+  const outgoing = confirmed.filter((edge) => edge.source === node.id);
+  const incoming = confirmed.filter((edge) => edge.target === node.id);
+  const facts = [
+    ...(node.sourceCode ? ["AST에서 추출한 원본 함수 코드가 있습니다."] : []),
+    ...(entry ? [`파일 기반 ${entry.kind === "page" ? "페이지" : "API"} 진입점: ${entry.method ? `${entry.method} ` : ""}${entry.routePath}`] : []),
+    ...(outgoing.some((edge) => edge.relation === "call") ? ["다른 함수를 호출하는 코드가 확인됩니다."] : []),
+    ...(outgoing.some((edge) => edge.relation === "api") ? ["요청 URL·메서드와 서버 라우트가 정적으로 연결됩니다."] : []),
+    ...(outgoing.some((edge) => edge.relation === "component") ? ["다른 컴포넌트를 사용하는 JSX가 확인됩니다."] : []),
+    ...(incoming.some((edge) => edge.relation === "reference") ? ["다른 코드에서 이 함수를 참조하거나 전달합니다. 실행 여부는 보장하지 않습니다."] : []),
+  ];
+  const common = { facts, purpose: "원본 코드와 연결 종류를 함께 살펴보세요. 화살표는 실제 실행 순서나 실행 여부를 보장하지 않습니다." };
+  if (entry) return { ...common,
+    title: entry.kind === "page" ? "페이지 진입점" : "서버 요청 처리",
+    description: entry.kind === "page" ? `${entry.routePath} 페이지의 진입점으로 확인된 함수입니다.` : `${entry.method ?? ""} ${entry.routePath} 요청을 받는 서버 진입점입니다. 업무 내용은 코드에서 확인해 주세요.`,
+    category: entry.kind === "page" ? "start" : "api", roleConfidence: "confirmed", roleBasis: "파일 기반 라우트의 export 연결" };
+  if (outgoing.some((edge) => edge.relation === "api")) return { ...common,
+    title: "서버 API 요청 연결", description: "이 함수 안의 API 요청과 서버 라우트 사이에 정적 연결이 있습니다. 요청 성공이나 실행 시점은 보장하지 않습니다.",
+    category: "service", roleConfidence: "confirmed", roleBasis: "확인된 API 관계" };
+  if (outgoing.some((edge) => edge.relation === "component")) return { ...common,
+    title: "화면 컴포넌트 구성", description: "이 함수 안에서 다른 컴포넌트를 사용하는 JSX가 확인됩니다. 조건에 따라 표시되지 않을 수 있습니다.",
+    category: "ui-action", roleConfidence: "confirmed", roleBasis: "확인된 컴포넌트 사용 관계" };
+  if (node.type === "api") return { ...common, title: `${node.name} API 처리`,
+    description: "정적 분석의 API 분류를 바탕으로 한 역할 추정입니다. 요청 경로와 실제 처리는 원본 코드에서 확인하세요.",
+    category: "api", roleConfidence: "inferred", roleBasis: "API 노드 분류 (라우트 근거 없음)" };
   const feature = featureLabel(node);
-  if (node.type === "api") {
-    return {
-      title: `${node.name} API 처리`,
-      description: "클라이언트 요청을 받아 필요한 서버 로직을 실행합니다.",
-      purpose: "화면과 서버 기능을 연결하는 API 진입점입니다.",
-      category: "api",
-    };
-  }
-  if (node.type === "component") {
-    const role = /Route$|(?:^|\/)app\//.test(`${node.name} ${node.filePath}`) ? "기능 진입"
-      : /Screen$/.test(node.name) ? "화면"
-        : /View$/.test(node.name) ? "화면 구성" : "UI 컴포넌트";
-    return {
-      title: feature ? `${feature} ${role}` : role,
-      description: `${node.name} 컴포넌트가 사용자에게 보이는 UI를 구성합니다.`,
-      purpose: role === "기능 진입" ? "라우트와 실제 기능 화면을 연결합니다." : "사용자가 기능을 보고 조작할 수 있는 화면 영역을 담당합니다.",
-      category: role === "기능 진입" ? "start" : "ui-action",
-    };
-  }
-  if (/(?:^|\/)services?\//i.test(node.filePath) || /Service$/.test(node.name)) {
-    return {
-      title: feature ? `${feature} 서비스 처리` : "서비스 로직 처리",
-      description: `${node.name} 함수가 화면과 분리된 서비스 작업을 담당합니다.`,
-      purpose: "화면 컴포넌트가 직접 처리하지 않도록 핵심 작업을 별도 코드로 분리합니다.",
-      category: "service",
-    };
-  }
-  if (/^handle[A-Z]|^on[A-Z]/.test(node.name)) {
-    const action = actionLabel(node.name);
-    return {
-      title: action ?? `${node.name} · 사용자 동작`,
-      description: `${node.name} 함수가 화면에서 전달된 사용자 동작을 처리합니다.`,
-      purpose: "UI 이벤트를 다음 로직과 연결합니다.",
-      category: "logic",
-    };
-  }
-  return {
-    title: feature ? `${feature} 핵심 로직` : "핵심 로직 처리",
-    description: `${node.name} 함수가 맡은 코드 작업을 실행합니다.`,
-    purpose: "앞 단계에서 전달받은 값을 처리하고 다음 코드로 연결합니다.",
-    category: "logic",
-  };
+  const action = /^handle[A-Z]|^on[A-Z]/.test(node.name) ? actionLabel(node.name) ?? "동작 처리 후보" : undefined;
+  const title = action ?? (node.type === "component" ? (feature ? `${feature} ${/Screen$/.test(node.name) ? "화면" : "UI 컴포넌트"}` : "화면 구성 코드")
+    : /(?:^|\/)services?\//i.test(node.filePath) || /Service$/.test(node.name) ? "서비스 로직" : undefined);
+  if (title) return { ...common, title,
+    description: `${node.name}의 이름·경로·분류를 바탕으로 추정한 역할입니다. 실제 동작은 원본 코드와 관계를 확인해 주세요.`,
+    category: node.type === "component" ? "ui-action" : "logic", roleConfidence: "inferred", roleBasis: "이름·파일 경로·노드 분류에 따른 추정" };
+  return { ...common, title: "함수 코드 살펴보기",
+    description: `${node.name} 함수의 업무 역할을 판단할 근거가 부족합니다. 입력값과 반환값을 원본 코드에서 살펴보세요.`,
+    category: "logic", roleConfidence: "unknown", roleBasis: "역할 판단 근거 부족" };
 }

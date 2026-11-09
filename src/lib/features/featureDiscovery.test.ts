@@ -1,91 +1,51 @@
 import { describe, expect, it } from "vitest";
-import type { CodeNode, RepositoryAnalysis } from "@/types/analysis";
+import { analyzeSourceFiles } from "@/lib/ast/analyzer";
 import { discoverRepositoryFeatures, traverseRepositoryFeature } from "./featureDiscovery";
 
-const node = (name: string, type: CodeNode["type"], filePath: string): CodeNode => ({
-  id: `symbol:${filePath}#${name}`,
-  name,
-  type,
-  filePath,
-  line: 1,
-});
-
-const documentRoute = node("DocumentScanRoute", "component", "apps/mobile/app/case/document-scan/index.tsx");
-const documentScreen = node("DocumentScanScreen", "component", "apps/mobile/src/features/document-scan/screens/DocumentScanScreen.tsx");
-const button = node("Button", "component", "apps/mobile/src/components/common/button.tsx");
-const lookup = node("PreviousCaseLookupRoute", "component", "apps/mobile/app/case/lookup/index.tsx");
-const createGradle = node("createGradleBlock", "function", "apps/mobile/plugins/withAgoraRtmAndroid.js");
-const replaceGradle = node("replaceAgoraGradleBlock", "function", "apps/mobile/plugins/withAgoraRtmAndroid.js");
-
-const analysis: RepositoryAnalysis = {
-  repository: "team-mallang/likelion-hackathon",
-  source: "github",
-  files: [],
-  nodes: [documentRoute, documentScreen, button, lookup, createGradle, replaceGradle],
-  edges: [
-    { id: "route-screen", source: documentRoute.id, target: documentScreen.id, relation: "call" },
-    { id: "screen-button", source: documentScreen.id, target: button.id, relation: "call" },
-    { id: "gradle-replace", source: createGradle.id, target: replaceGradle.id, relation: "call" },
-  ],
-  stats: { files: 5, functions: 6, relations: 3 },
-};
-
 describe("discoverRepositoryFeatures", () => {
-  it("prioritizes connected business features and keeps common/tooling nodes hidden", () => {
-    const result = discoverRepositoryFeatures(analysis);
-    expect(result.primary[0]).toMatchObject({
-      title: "문서 스캔",
-      technicalName: "DocumentScanRoute",
-      connectionCount: 2,
-      connectedNodeCount: 3,
-    });
-    expect(result.primary[0].nodeIds).toContain(button.id);
-    expect(result.limited).toEqual(expect.arrayContaining([
-      expect.objectContaining({ title: "이전 사건 조회", technicalName: "PreviousCaseLookupRoute", limited: true }),
-    ]));
-    expect([...result.primary, ...result.limited].map((feature) => feature.technicalName)).not.toContain("Button");
-    expect(result.hidden.map((feature) => feature.technicalName)).toEqual(expect.arrayContaining([
-      "Button", "createGradleBlock", "replaceAgoraGradleBlock",
-    ]));
-  });
-
-  it("returns only real analyzed edges in call direction", () => {
-    const feature = discoverRepositoryFeatures(analysis).primary[0];
-    const graph = traverseRepositoryFeature(analysis, feature, 2);
-    expect(graph.nodes.map((item) => item.id)).toEqual([documentRoute.id, documentScreen.id, button.id]);
-    expect(graph.edges).toEqual([
-      expect.objectContaining({ source: documentRoute.id, target: documentScreen.id, relation: "call", occurrences: [expect.objectContaining({ edgeId: "route-screen" })] }),
-      expect.objectContaining({ source: documentScreen.id, target: button.id, relation: "call", occurrences: [expect.objectContaining({ edgeId: "screen-button" })] }),
+  it("retains existing mobile app/index file routes without promoting their screen components", () => {
+    const analysis = analyzeSourceFiles([
+      { path: "apps/mobile/app/case/document-scan/index.tsx", content: "import { DocumentScreen } from '../../../src/screens/DocumentScreen'; export default function DocumentRoute() { return <DocumentScreen/>; }" },
+      { path: "apps/mobile/src/screens/DocumentScreen.tsx", content: "export function DocumentScreen() { return <button/>; }" },
+      { path: "apps/mobile/app/case/lookup/index.tsx", content: "export default function LookupRoute() { return <div/>; }" },
+      { path: "apps/mobile/plugins/build.ts", content: "export function createGradleBlock() { return true; }" },
     ]);
+    const result = discoverRepositoryFeatures(analysis);
+    const features = [...result.primary, ...result.limited];
+    expect(features.map((feature) => feature.routePath).sort()).toEqual(["/case/document-scan", "/case/lookup"]);
+    expect(features.map((feature) => feature.technicalName)).not.toContain("DocumentScreen");
+    const feature = features.find((item) => item.routePath === "/case/document-scan")!;
+    expect(feature.nodeIds.map((id) => analysis.nodes.find((node) => node.id === id)?.name)).toEqual(["DocumentRoute", "DocumentScreen"]);
+    expect(result.hidden.map((feature) => feature.technicalName)).toContain("createGradleBlock");
   });
 
-  it("keeps HTTP handlers, providers and mocks out of the top-level feature list", () => {
-    const screen = node("CaseSearchScreen", "component", "apps/mobile/src/features/case-search/screens/CaseSearchScreen.tsx");
-    const handler = node("handleSearch", "function", "apps/mobile/src/features/case-search/screens/CaseSearchScreen.tsx");
-    const post = node("POST", "api", "apps/web/src/app/api/cases/search/route.ts");
-    const provider = node("CaseProvider", "component", "apps/mobile/src/features/case/context/CaseContext.tsx");
-    const mock = node("searchWithMock", "function", "packages/search/src/mock.ts");
-    const result = discoverRepositoryFeatures({
-      ...analysis,
-      nodes: [screen, handler, post, provider, mock],
-      edges: [
-        { id: "screen-handler", source: screen.id, target: handler.id, relation: "reference" },
-        { id: "handler-post", source: handler.id, target: post.id, relation: "api" },
-        { id: "screen-provider", source: screen.id, target: provider.id, relation: "reference" },
-      ],
-    });
-    expect([...result.primary, ...result.limited].map((feature) => feature.technicalName)).toEqual(["CaseSearchScreen"]);
-    expect(result.primary[0].nodeIds).toEqual(expect.arrayContaining([screen.id, handler.id, post.id, provider.id]));
-    expect(result.hidden.map((feature) => feature.technicalName)).toEqual(expect.arrayContaining(["CaseProvider", "searchWithMock"]));
+  it("preserves original directed relationships, evidence and confidence in the selected graph", () => {
+    const analysis = analyzeSourceFiles([{ path: "app/page.tsx", content: "export default function Page() { const handle = () => work(); return <button onClick={handle}/>; } function work() {}" }]);
+    const feature = discoverRepositoryFeatures(analysis).primary[0];
+    const graph = traverseRepositoryFeature(analysis, feature, 3);
+    expect(graph.edges.map((edge) => edge.relation).sort()).toEqual(["call", "reference"]);
+    expect(graph.edges.every((edge) => edge.confidence === "confirmed" && edge.evidence)).toBe(true);
+    expect(graph.edges.every((edge) => analysis.edges.some((original) => original.source === edge.source && original.target === edge.target && original.relation === edge.relation))).toBe(true);
+    expect(feature.description).toContain("참조");
+    expect(feature.description).toContain("실행을 뜻하지 않으며");
   });
 
-  it("supports an optional mapping using analyzed node IDs only", () => {
-    const entry = node("CustomFlow", "function", "src/domain/custom.ts");
-    const internal = node("runCustomFlow", "function", "src/domain/custom.ts");
-    const result = discoverRepositoryFeatures({ ...analysis, nodes: [entry, internal], edges: [] }, {
-      mappings: [{ entryNodeId: entry.id, title: "사용자 지정 흐름", includeNodeIds: [internal.id, "missing"] }],
-    });
-    expect(result.limited[0]).toMatchObject({ title: "사용자 지정 흐름", technicalName: "CustomFlow" });
-    expect(result.limited[0].nodeIds).toEqual([entry.id, internal.id]);
+  it("lists exported API handlers independently and keeps providers and screens internal", () => {
+    const analysis = analyzeSourceFiles([
+      { path: "app/page.tsx", content: "import { CaseProvider } from '../src/provider'; export default function Page() { return <CaseProvider/>; }" },
+      { path: "src/provider.tsx", content: "export function CaseProvider() { return <div/>; } export function CaseSearchScreen() { return <div/>; }" },
+      { path: "app/api/users/route.ts", content: "export function GET() {} export function POST() {} function DELETE() {}" },
+    ]);
+    const result = discoverRepositoryFeatures(analysis);
+    expect([...result.primary, ...result.limited].map((feature) => feature.technicalName).sort()).toEqual(["GET", "POST", "Page"]);
+    expect(result.hidden.map((feature) => feature.technicalName)).toEqual(expect.arrayContaining(["CaseSearchScreen", "DELETE"]));
+  });
+
+  it("supports explicit mappings without generating synthetic connections", () => {
+    const analysis = analyzeSourceFiles([{ path: "src/domain/custom.ts", content: "export function CustomFlow() {} export function runCustomFlow() {}" }]);
+    const entry = analysis.nodes.find((node) => node.name === "CustomFlow")!;
+    const internal = analysis.nodes.find((node) => node.name === "runCustomFlow")!;
+    const result = discoverRepositoryFeatures(analysis, { mappings: [{ entryNodeId: entry.id, title: "사용자 지정 흐름", includeNodeIds: [internal.id, "missing"] }] });
+    expect(result.limited[0]).toMatchObject({ title: "사용자 지정 흐름", entryKind: "manual", nodeIds: [entry.id, internal.id], edgeIds: [] });
   });
 });

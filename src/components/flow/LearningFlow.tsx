@@ -29,7 +29,7 @@ const POSITIONS: Record<string, { x: number; y: number }> = {
 };
 
 function graphPositions(items: LearningNode[], edges: LearningEdge[]): Map<string, { x: number; y: number }> {
-  if (items.some((node) => node.technicalName === "LoginPage")) {
+  if (items.length > 0 && items.every((node) => node.source === "demo")) {
     return new Map(items.map((node, index) => [node.id, POSITIONS[node.technicalName ?? node.id] ?? { x: 300, y: index * 165 }]));
   }
   const ids = new Set(items.map((node) => node.id));
@@ -43,6 +43,7 @@ function graphPositions(items: LearningNode[], edges: LearningEdge[]): Map<strin
   const levels = new Map<string, number>();
   const queue = items.filter((node) => (incoming.get(node.id) ?? 0) === 0).map((node) => node.id);
   if (queue.length === 0 && items[0]) queue.push(items[0].id);
+  queue.forEach((id) => levels.set(id, 0));
   while (queue.length > 0) {
     const current = queue.shift()!;
     const level = levels.get(current) ?? 0;
@@ -78,11 +79,7 @@ function createNodes(items: LearningNode[], edges: LearningEdge[], selectedId?: 
 }
 
 function createEdges(items: LearningEdge[]): Edge[] {
-  const colorFor = (relation: LearningEdge["relation"]) => relation === "branch" ? "#8a72c7"
-    : relation === "import" ? "#8793a3"
-      : relation === "component" ? "#5965d8"
-        : relation === "reference" ? "#3c82a6"
-        : relation === "request" ? "#d08332" : "#2b9470";
+  const colorFor = (relation: LearningEdge["relation"]) => relation === "reference" ? "#89919b" : "#647080";
   return items.map((item) => ({
     id: item.id,
     source: item.source,
@@ -93,9 +90,10 @@ function createEdges(items: LearningEdge[]): Edge[] {
     style: {
       stroke: colorFor(item.relation),
       strokeWidth: 1.7,
+      strokeDasharray: item.relation === "reference" || item.confidence !== "confirmed" ? "5 4" : undefined,
     },
     labelStyle: { fill: "#5f6e69", fontSize: 10, fontWeight: 650 },
-    labelBgStyle: { fill: "#f6faf8", fillOpacity: 0.95 },
+    labelBgStyle: { fill: "#ffffff", fillOpacity: 0.95 },
     labelBgPadding: [5, 3],
     labelBgBorderRadius: 5,
   }));

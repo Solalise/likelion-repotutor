@@ -107,7 +107,7 @@ function candidateIds(
     return {
       rootId: selection.feature.entryNodeId,
       ids: new Set(selection.feature.nodeIds.filter((id) => functions.has(id))),
-      selectionName: selection.feature.title,
+      selectionName: selection.feature.titleInferred ? `${selection.feature.title} (경로·메서드 기반 추정 이름)` : selection.feature.title,
       selectionId: selection.feature.id,
     };
   }
@@ -245,7 +245,8 @@ export function buildLearningContext(
   const usableInputTokens = Math.max(1, Math.floor(targetInputTokens * (1 - safetyMarginRatio)));
   const safetyMarginTokens = targetInputTokens - usableInputTokens;
   const functions = functionMap(analysis);
-  const edges = relevantEdges(analysis, functions);
+  const featureEdgeIds = selection.type === "feature" && selection.feature.edgeIds ? new Set(selection.feature.edgeIds) : undefined;
+  const edges = relevantEdges(analysis, functions).filter((edge) => !featureEdgeIds || featureEdgeIds.has(edge.id));
   const selected = candidateIds(selection, functions, edges);
   if (!selected.ids.has(selected.rootId) || !functions.has(selected.rootId)) {
     throw new Error(`Unknown learning context entry: ${selected.rootId}`);

@@ -7,8 +7,8 @@ import { LearningFlow } from "@/components/flow/LearningFlow";
 import { RepositoryOverviewFlow } from "@/components/flow/RepositoryOverviewFlow";
 import { traceDisplayGraph } from "@/lib/graph/dfs";
 import { buildRepositoryOverview, findOverviewFeature } from "@/lib/graph/repositoryOverview";
-import { discoverRepositoryFeatures, traverseRepositoryFeature } from "@/lib/features/featureDiscovery";
-import { buildLearningGraph, buildLearningStages, buildRepositoryLearningGraph, selectLearningStageGraph, traverseLearningGraph } from "@/lib/learning/learningGraphBuilder";
+import { discoverRepositoryFeatures, repositoryFeatureEdges, traverseRepositoryFeature } from "@/lib/features/featureDiscovery";
+import { buildLearningGraph, buildLearningStages, buildRepositoryLearningGraph, traverseLearningGraph } from "@/lib/learning/learningGraphBuilder";
 import type { RepositoryAnalysis, RepositoryFeature } from "@/types/analysis";
 import { FeaturePicker } from "./FeaturePicker";
 import { LearningInspector } from "./LearningInspector";
@@ -61,7 +61,6 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
     : { source: "sample" });
   const [selectedFeatureId, setSelectedFeatureId] = useState<string>();
   const [learningStageIndex, setLearningStageIndex] = useState(0);
-  const [learningExpanded, setLearningExpanded] = useState(false);
   const [developerMode, setDeveloperMode] = useState<DeveloperMode>("overview");
   const [expandedOverviewIds, setExpandedOverviewIds] = useState<Set<string>>(() => new Set());
   const [expandedCodeNodeIds, setExpandedCodeNodeIds] = useState<Set<string>>(() => new Set());
@@ -78,7 +77,6 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
     setSelectedFeatureId(firstFeature?.id);
     setFocused(result.source === "github" && Boolean(firstFeature));
     setLearningStageIndex(0);
-    setLearningExpanded(false);
     setDeveloperMode("overview");
     setExpandedOverviewIds(new Set());
     setExpandedCodeNodeIds(new Set());
@@ -134,7 +132,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
   const learningGraph = useMemo(() => {
     if (!analysis) return { nodes: [], edges: [] };
     if (analysis.source !== "github") return buildLearningGraph(analysis);
-    return buildRepositoryLearningGraph(analysis, selectedFeature?.nodeIds);
+    return buildRepositoryLearningGraph(selectedFeature ? { ...analysis, edges: repositoryFeatureEdges(analysis, selectedFeature) } : analysis, selectedFeature?.nodeIds);
   }, [analysis, selectedFeature]);
   const learningStages = useMemo(() => buildLearningStages(learningGraph, selectedFeature?.entryNodeId ?? focusId), [focusId, learningGraph, selectedFeature]);
   const currentLearningStage = learningStages[Math.min(learningStageIndex, Math.max(0, learningStages.length - 1))];
@@ -145,16 +143,16 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
   const technicalGraph = useMemo(() => {
     if (!analysis) return { nodes: [], edges: [], hiddenNodeCount: 0, hiddenEdgeCount: 0 };
     if (analysis.source === "github" && selectedFeature) {
-      return traverseRepositoryFeature(analysis, selectedFeature, depth, expandedCodeNodeIds);
+      return traverseRepositoryFeature(analysis, selectedFeature, depth, expandedCodeNodeIds, selectedId);
     }
     const startNodeId = focusId || selectedId || preferredNodeId(analysis);
-    return traceDisplayGraph(startNodeId, analysis.nodes, analysis.edges, { maxDepth: depth, expandedNodeIds: expandedCodeNodeIds });
+    return traceDisplayGraph(startNodeId, analysis.nodes, analysis.edges, { maxDepth: depth, expandedNodeIds: expandedCodeNodeIds, selectedNodeId: selectedId });
   }, [analysis, depth, expandedCodeNodeIds, focusId, selectedFeature, selectedId]);
   const visibleLearningGraph = useMemo(() => {
-    if (isGithub && currentLearningStage) return selectLearningStageGraph(learningGraph, currentLearningStage, learningExpanded, depth);
+    if (isGithub && analysis) return buildRepositoryLearningGraph({ ...analysis, nodes: technicalGraph.nodes, edges: technicalGraph.edges });
     if (!focusId) return learningGraph;
     return focused ? traverseLearningGraph(learningGraph, focusId, depth) : learningGraph;
-  }, [currentLearningStage, depth, focusId, focused, isGithub, learningExpanded, learningGraph]);
+  }, [analysis, depth, focusId, focused, isGithub, learningGraph, technicalGraph]);
 
   const selectedCodeNode = analysis?.nodes.find((node) => node.id === selectedId);
   const selectedLearningNode = learningGraph.nodes.find((node) => node.id === selectedId);
@@ -180,7 +178,6 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
     setSelectedId(feature.entryNodeId);
     setFocused(true);
     setLearningStageIndex(0);
-    setLearningExpanded(false);
     setExpandedCodeNodeIds(new Set());
     if (viewMode === "developer") setDeveloperMode("feature");
   }
@@ -222,7 +219,6 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
     const next = learningStages[index];
     if (!next) return;
     setLearningStageIndex(index);
-    setLearningExpanded(false);
     setSelectedId(next.nodeIds[0]);
   }
 
@@ -317,9 +313,9 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
               </select>
               <ChevronDown size={14} /></>
           )}
-          {!showingOverview && <label>코드 연결 탐색 범위 <input type="number" min={1} max={8} value={depth} onChange={(event) => setDepth(Number(event.target.value))} />단계</label>}
+          {!showingOverview && <label>코드 연결 탐색 범위 <input type="number" min={0} max={8} value={depth} onChange={(event) => setDepth(Math.max(0, Math.min(8, Math.floor(Number(event.target.value) || 0))))} />단계</label>}
           {showingOverview ? null : viewMode === "learning" && isGithub
-            ? <button className="focus-button" onClick={() => setLearningExpanded((value) => !value)} disabled={!currentLearningStage}><Maximize2 size={14} /> {learningExpanded ? "핵심만 보기" : "전체 관계 확장"}</button>
+            ? <button className="focus-button" onClick={expandSelectedCodeNode} disabled={!selectedId || expandedCodeNodeIds.has(selectedId)}><Maximize2 size={14} /> 선택 노드 확장</button>
             : <button className="focus-button" onClick={() => setFocused(true)} disabled={isGithub && !selectedFeature}><Play size={14} fill="currentColor" /> 흐름 추적</button>}
           {!showingOverview && viewMode === "developer" && Boolean(technicalGraph.hiddenNodeCount || technicalGraph.hiddenEdgeCount) && <button className="focus-button" onClick={expandSelectedCodeNode} disabled={!selectedId || expandedCodeNodeIds.has(selectedId)}><Maximize2 size={14} /> 선택 노드 확장</button>}
           {focused && !showingOverview && !(viewMode === "learning" && isGithub) && <button className="icon-button" onClick={() => isGithub ? setDeveloperMode("overview") : setFocused(false)} title={isGithub ? "전체 구조 보기" : "핵심 흐름 보기"}><RefreshCw size={15} /></button>}
@@ -327,6 +323,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
       </section>
 
       {viewMode === "learning" && isGithub && initialConnectedRepositoryId && (
+        <div id="learning-ai-explanation">
         <AiLearningPanel
           connectionId={initialConnectedRepositoryId}
           feature={selectedFeature}
@@ -337,13 +334,14 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
             line: selectedCodeNode.line,
           } : undefined}
         />
+        </div>
       )}
 
       {viewMode === "learning" && isGithub && currentLearningStage && (
         <section className="learning-journey" aria-label="기능 학습 단계">
           <div className="learning-journey-intro learning-step-title">
             <span>3</span>
-            <div><strong>코드 흐름 확인</strong><small>AI 설명과 실제 코드 연결을 단계별로 확인하세요.</small></div>
+            <div><strong>코드 관계 확인</strong><small>분류별 코드를 선택해 살펴보세요. 분류 순서는 실행 순서가 아닙니다.</small></div>
           </div>
           <div className="learning-stage-track">
             {learningStages.map((stage, index) => (
@@ -367,6 +365,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
           <div className="tree-tip"><GraduationCap size={14} /><p>{isGithub ? "GitHub에서 수집한 파일 중 AST 분석 대상만 표시합니다." : "학습용 보기는 실제 코드 관계에 설명용 단계를 더해 흐름을 쉽게 보여줍니다."}</p></div>
         </aside>}
         <div className={`flow-panel ${viewMode} ${viewMode === "learning" && visibleLearningGraph.nodes.length <= 2 ? "compact" : viewMode === "learning" && visibleLearningGraph.nodes.length <= 4 ? "medium" : ""}`}>
+          {viewMode === "learning" && isGithub && <div className="flow-caption learning-flow-caption"><div><strong>화살표는 코드 관계입니다</strong><span>호출 · API 요청 · 컴포넌트 사용 · 함수 참조를 구분합니다. 점선은 참조 또는 정적 확인되지 않은 관계이며, 실행 순서를 보장하지 않습니다.</span></div><span className="filter-chip">탐색 {depth}단계 · 노드 {technicalGraph.hiddenNodeCount ?? 0}개/연결 {technicalGraph.hiddenEdgeCount ?? 0}개 접힘</span></div>}
           {viewMode === "developer" && <div className="flow-caption">
             <div><strong>{showingOverview ? "프로젝트 → 모듈 → 파일 → 함수" : focused ? selectedFeature?.title ?? "선택한 단계부터 흐름 추적" : "기술 코드 그래프"}</strong><span>{showingOverview ? "점선은 폴더·파일 포함 관계이고, 실선은 AST에서 확인된 코드 의존 관계입니다." : selectedFeature?.limited ? "정적 분석에서 연결을 찾지 못해 시작 노드만 표시합니다. 실제 런타임 연결이 있을 수 있습니다." : selectedFeature?.description ?? "카드를 선택하면 오른쪽에서 자세히 설명해 드려요."}</span></div>
             {showingOverview ? overviewGraph.truncated && <span className="filter-chip">요약됨 · {overviewGraph.hiddenNodeCount}개 숨김</span> : <span className="filter-chip">탐색 {depth}단계{technicalGraph.hiddenNodeCount || technicalGraph.hiddenEdgeCount ? ` · 노드 ${technicalGraph.hiddenNodeCount ?? 0}개/연결 ${technicalGraph.hiddenEdgeCount ?? 0}개 접힘` : ""}</span>}
@@ -384,11 +383,11 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
           )}
         </div>
         {viewMode === "learning" && isGithub ? (
-          <details className="learning-code-details">
+          <details className="learning-code-details" open>
             <summary><span><Braces size={15} /> 상세 코드 보기</span><small>선택한 단계의 코드와 파일 목록을 확인합니다.</small><ChevronDown size={15} /></summary>
             <div className="learning-detail-grid">
               <div className="learning-detail-tree"><div className="panel-heading"><span>저장소 파일</span><small>{analysis.stats.files}</small></div><RepositoryTree files={analysis.files} selectedPath={selectedPath} rootName={analysis.repository} /></div>
-              <div className="learning-detail-inspector"><LearningInspector key={selectedLearningNode?.id ?? "empty"} node={selectedLearningNode} /></div>
+              <div className="learning-detail-inspector"><LearningInspector key={selectedLearningNode?.id ?? "empty"} node={selectedLearningNode} onExplain={initialConnectedRepositoryId ? () => document.getElementById("learning-ai-explanation")?.scrollIntoView({ behavior: "smooth", block: "start" }) : undefined} /></div>
             </div>
           </details>
         ) : <aside className="inspector-panel">

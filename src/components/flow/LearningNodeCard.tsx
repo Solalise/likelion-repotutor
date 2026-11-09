@@ -40,10 +40,11 @@ export function LearningNodeCard({ data, selected }: NodeProps<LearningFlowNode>
         <span className="learning-node-icon"><Icon size={15} /></span>
         <span className="learning-category">{CATEGORY_LABELS[node.category]}</span>
         {node.source === "demo" && <span className="demo-mark">DEMO</span>}
+        {node.source === "ast" && <span className="learning-role-badge">{node.roleConfidence === "confirmed" ? "정적 근거" : node.roleConfidence === "inferred" ? "역할 추정" : "역할 미확정"}</span>}
       </div>
       <strong>{node.title}</strong>
       {node.technicalName && <code>{node.technicalName}()</code>}
-      {node.filePath && <small>{node.filePath}</small>}
+      {node.filePath && <small title={node.filePath}>{node.filePath.split(/[\\/]/).at(-1)}</small>}
       <Handle type="source" position={Position.Bottom} className="learning-handle" />
     </div>
   );

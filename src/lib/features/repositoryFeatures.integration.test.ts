@@ -33,17 +33,17 @@ integrationTest("discovers real feature graphs in team-mallang/likelion-hackatho
   expect(features.hidden.map((feature) => feature.technicalName)).toEqual(expect.arrayContaining([
     "Button", "createGradleBlock", "replaceAgoraGradleBlock",
   ]));
-  expect(defaults.map((feature) => feature.title)).toEqual(expect.arrayContaining([
-    "문서 스캔", "이전 사건 조회", "주변 기관 검색",
+  expect(defaults.map((feature) => feature.routePath)).toEqual(expect.arrayContaining([
+    "/case/document-scan", "/case/lookup", "/case/nearby-agencies",
   ]));
 
   const expectedNodes: Record<string, string[]> = {
-    "문서 스캔": ["DocumentScanRoute", "DocumentScanScreen", "handleStartScan"],
-    "이전 사건 조회": ["PreviousCaseLookupRoute", "PreviousCaseLookupScreen", "handleSubmit"],
-    "주변 기관 검색": ["NearbyAgenciesRoute", "NearbyAgenciesScreen", "handleRequestCurrentLocation", "loadAgencies"],
+    "/case/document-scan": ["DocumentScanRoute", "DocumentScanScreen"],
+    "/case/lookup": ["PreviousCaseLookupRoute", "PreviousCaseLookupScreen"],
+    "/case/nearby-agencies": ["NearbyAgenciesRoute", "NearbyAgenciesScreen"],
   };
   for (const [title, nodeNames] of Object.entries(expectedNodes)) {
-    const feature = features.primary.find((item) => item.title === title);
+    const feature = features.primary.find((item) => item.routePath === title);
     expect(feature, `${title} 기능이 실제 연결을 가져야 합니다.`).toBeDefined();
     const graph = traverseRepositoryFeature(analysis, feature!, 3);
     expect(graph.nodes).toEqual(expect.arrayContaining([

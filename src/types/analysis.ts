@@ -111,6 +111,17 @@ export interface RepositoryAnalysis {
   stats: AnalysisStats;
   source?: AnalysisSource;
   collection?: RepositoryCollection;
+  entryPoints?: RepositoryEntryPoint[];
+}
+
+/** File-route exports resolved to existing AST function IDs on the server. */
+export interface RepositoryEntryPoint {
+  kind: "page" | "api";
+  framework: "next-app" | "app-index";
+  filePath: string;
+  routePath: string;
+  method?: string;
+  nodeId: string;
 }
 
 export interface SourceInput {
@@ -122,8 +133,18 @@ export interface TraversalResult {
   nodes: CodeNode[];
   edges: CodeEdge[];
   deferredNodeIds?: string[];
+  /** Within-Depth omissions only; edges are counted as display relation groups. */
   hiddenNodeCount?: number;
   hiddenEdgeCount?: number;
+  /** Reachable before component folding and display limits, within the requested Depth. */
+  reachableNodeCount?: number;
+  reachableEdgeCount?: number;
+  /** Depth exclusions are separate from hidden-by-display counts. */
+  depthLimitedNodeCount?: number;
+  depthLimitedEdgeCount?: number;
+  collapsedNodeCount?: number;
+  nodeLimitHiddenNodeCount?: number;
+  edgeLimitHiddenNodeCount?: number;
   traversalStates?: Record<string, "New" | "Tracing" | "Used">;
 }
 
@@ -142,6 +163,11 @@ export interface RepositoryFeature {
   hidden: boolean;
   hiddenReason?: string;
   score: number;
+  entryKind?: "page" | "api" | "manual" | "internal";
+  routePath?: string;
+  httpMethod?: string;
+  titleInferred?: boolean;
+  edgeIds?: string[];
 }
 
 export interface RepositoryFeatureDiscovery {

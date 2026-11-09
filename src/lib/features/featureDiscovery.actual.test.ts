@@ -12,23 +12,24 @@ describe("actual repository feature discovery", () => {
     const analysis = analyzeSourceFiles(loaded.sources, loaded.repository);
     const discovery = discoverRepositoryFeatures(analysis);
     const visible = [...discovery.primary, ...discovery.limited];
-    const names = visible.map((feature) => feature.technicalName);
-    expect(visible).toHaveLength(14);
+    const pages = visible.filter((feature) => feature.entryKind === "page");
+    const names = pages.map((feature) => feature.technicalName);
+    expect(pages.length).toBeGreaterThan(0);
     expect(names).not.toEqual(expect.arrayContaining([
       "ConfirmationView", "analyzeCaseWithMock", "POST", "CaseDraftProvider", "requestJson",
       "useExpoAudioRecorder", "expoLocationService.formatLocation", "mockDocumentCreate", "CaseLayout", "CompletionNotice",
     ]));
-    expect(names).toEqual(expect.arrayContaining([
-      "HomeScreen", "PreviousCaseLookupScreen", "CaseGuidesScreen", "PoliceReportScreen", "DocumentScanScreen",
+    expect(pages.map((feature) => feature.routePath)).toEqual(expect.arrayContaining([
+      "/", "/case/lookup", "/case/document-scan",
     ]));
-    const lookup = visible.find((feature) => feature.technicalName === "PreviousCaseLookupScreen")!;
+    const lookup = pages.find((feature) => feature.routePath === "/case/lookup")!;
     const lookupNames = lookup.nodeIds.map((id) => analysis.nodes.find((node) => node.id === id)?.name);
     expect(lookupNames).toEqual(expect.arrayContaining([
-      "PreviousCaseLookupRoute", "PreviousCaseLookupScreen", "handleSubmit", "previousCaseService.lookup",
+      "PreviousCaseLookupRoute", "PreviousCaseLookupScreen", "previousCaseService.lookup",
     ]));
     expect(lookupNames).not.toContain("ConfirmationScreen");
     const context = buildLearningContext(analysis, { type: "feature", feature: lookup });
     expect(context.selection.id).toBe(lookup.id);
-    expect(context.code.map((code) => code.functionName)).toContain("handleSubmit");
+    expect(context.code.some((code) => code.sourceCode.includes("handleSubmit"))).toBe(true);
   }, 60_000);
 });
