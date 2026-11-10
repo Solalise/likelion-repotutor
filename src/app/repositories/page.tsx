@@ -1,9 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Github, LockKeyhole, RefreshCw } from "lucide-react";
 import { auth } from "@/auth";
-import { AppHeader } from "@/components/layout/AppHeader";
+import { AppShell } from "@/components/layout/AppShell";
+import { RepositoryList } from "@/components/repositories/RepositoryList";
+import { GitHubConnectionStatus } from "@/components/repositories/GitHubConnectionStatus";
 import { db } from "@/lib/db";
 import { syncAllUserInstallations } from "@/lib/github/installations";
 
@@ -11,42 +12,55 @@ async function refreshRepositories() {
   "use server";
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  await syncAllUserInstallations(session.user.id);
+  try { await syncAllUserInstallations(session.user.id); }
+  catch { redirect("/repositories?sync=failed"); }
   revalidatePath("/repositories");
+  redirect("/repositories?sync=success");
 }
 
-export default async function RepositoriesPage() {
+export default async function RepositoriesPage({ searchParams }: { searchParams: Promise<{ sync?: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  const connections = await db.userRepository.findMany({
-    where: { userId: session.user.id, active: true },
-    include: { repository: true, installation: true },
-    orderBy: { repository: { fullName: "asc" } },
+  const { sync } = await searchParams;
+  // Reconcile authorization before reading stored repository/analysis metadata.
+  await syncAllUserInstallations(session.user.id);
+  const [connections, installations] = await Promise.all([
+    db.userRepository.findMany({
+      where: { userId: session.user.id, active: true },
+      include: {
+        repository: { include: { analysisRuns: {
+          where: { requestedByUserId: session.user.id, source: "CONNECTED_REPOSITORY" },
+          orderBy: { startedAt: "desc" }, take: 1,
+        } } }, installation: true,
+      },
+      orderBy: { repository: { fullName: "asc" } },
+    }),
+    db.gitHubInstallation.findMany({
+      where: { userId: session.user.id },
+      select: { id: true, accountLogin: true, suspendedAt: true, lastSyncedAt: true },
+    }),
+  ]);
+  const rows = connections.map(({ id, repository, installation }) => {
+    const run = repository.analysisRuns[0];
+    return {
+      id, name: repository.name, owner: repository.owner, visibility: repository.visibility,
+      branch: repository.defaultBranch, suspended: Boolean(installation.suspendedAt),
+      status: run?.status ?? "NONE", analyzedAt: run?.completedAt?.toISOString() ?? null,
+      startedAt: run?.startedAt.toISOString() ?? null,
+    };
   });
   return (
-    <div className="app-page">
-      <AppHeader />
-      <main className="repositories-main">
-        <div className="dashboard-heading">
-          <div><span className="eyebrow">GITHUB APP</span><h1>연결된 저장소</h1><p>GitHub App 설치에서 접근을 허용한 저장소만 표시합니다.</p></div>
-          <div className="repository-actions">
-            <form action={refreshRepositories}><button className="sample-button" type="submit"><RefreshCw size={15} /> 목록 동기화</button></form>
-            <Link className="primary-action" href="/api/github/installations/start"><Github size={16} /> GitHub App 설치</Link>
-          </div>
-        </div>
-        {connections.length === 0 ? (
-          <section className="repository-empty"><LockKeyhole size={28} /><h2>연결된 저장소가 없습니다</h2><p>GitHub App을 설치하고 분석할 저장소만 선택해 주세요.</p></section>
-        ) : (
-          <section className="connected-repository-grid">
-            {connections.map((connection) => <article key={connection.id}>
-              <div><span>{connection.repository.visibility}</span><small>{connection.installation.accountLogin}</small></div>
-              <h2>{connection.repository.fullName}</h2>
-              <p>기본 브랜치 {connection.repository.defaultBranch} · 권한 {connection.permission}</p>
-              <Link href={`/repository?connected=${encodeURIComponent(connection.id)}`}>이 저장소 분석</Link>
-            </article>)}
-          </section>
-        )}
+    <AppShell>
+      <main id="main-content" className="tutor-main">
+        <header className="page-heading heading-actions">
+          <div><span className="eyebrow">MY REPOSITORIES</span><h1>내 저장소</h1><p>연결한 코드를 살펴보고, 학습할 저장소를 선택하세요.</p></div>
+          <Link className="primary-action" href="/api/github/installations/start">＋ 저장소 연결</Link>
+        </header>
+        <GitHubConnectionStatus installations={installations} repositoryCount={connections.length} refreshAction={refreshRepositories} />
+        {sync === "failed" && <p className="notice-error" role="alert">동기화에 실패했습니다. GitHub 로그인과 App 권한을 확인한 뒤 다시 동기화해 주세요.</p>}
+        {sync === "success" && <p role="status">저장소 목록과 권한을 동기화했습니다.</p>}
+        <RepositoryList repositories={rows} />
       </main>
-    </div>
+    </AppShell>
   );
 }

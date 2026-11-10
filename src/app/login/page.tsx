@@ -4,7 +4,7 @@ import { SignInButton } from "@/components/auth/AuthButtons";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 export default async function LoginPage() {
-  if (await auth()) redirect("/repositories");
+  if (await auth()) redirect("/dashboard");
   return (
     <div className="app-page">
       <AppHeader />

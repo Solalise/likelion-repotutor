@@ -1,0 +1,1202 @@
+{
+  "input": [
+    {
+      "path": "lib/db.ts",
+      "content": "import { PrismaClient as Client } from \"@prisma/client\"; export const prisma = new Client();"
+    },
+    {
+      "path": "lib/query.ts",
+      "content": "export async function lookup(client) {\n  if (allowed) { return await client.user.findUnique({ where: { id: 42 } }); }\n}"
+    },
+    {
+      "path": "app/api/users/route.ts",
+      "content": "import { prisma } from \"../../../lib/db\";\nimport { lookup } from \"../../../lib/query\";\nexport async function POST() {\n  await lookup(prisma);\n  await prisma.$transaction(async tx => { await tx.user.update({ where: { id: 42 }, data: { active: true } }); });\n  unknownDb.user.findMany();\n}"
+    },
+    {
+      "path": "app/page.tsx",
+      "content": "export default function Page() {\n  return <button onClick={() => fetch(\"/api/users\", { method: \"POST\" })}>Send</button>;\n}"
+    }
+  ],
+  "output": {
+    "databaseAccess": {
+      "sites": [
+        {
+          "id": "database-access:[\"app/api/users/route.ts\",150,255]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 150,
+            "endOffset": 255,
+            "startLine": 5,
+            "startColumn": 9,
+            "endLine": 5,
+            "endColumn": 114
+          },
+          "sourceCode": "prisma.$transaction(async tx => { await tx.user.update({ where: { id: 42 }, data: { active: true } }); })",
+          "clientExpression": "prisma",
+          "operation": "$transaction",
+          "operationExpression": "prisma.$transaction",
+          "operationType": "transaction",
+          "status": "confirmed",
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+            "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",150,255]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",144,256,\"expression\"]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",144,256,\\\"expression\\\"]\",[]]"
+            ],
+            "branchPath": [],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "contextStatus": "mapped",
+          "serverContexts": [
+            {
+              "id": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",150,255]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [],
+              "status": "confirmed",
+              "clientEvidence": [
+                {
+                  "kind": "constructor-import",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 9,
+                    "endOffset": 31,
+                    "startLine": 1,
+                    "startColumn": 10,
+                    "endLine": 1,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "PrismaClient as Client"
+                },
+                {
+                  "kind": "client-construction",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 79,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 80,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 70,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 71,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "prisma = new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 156,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 15
+                  },
+                  "sourceCode": "prisma"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "database-access:[\"app/api/users/route.ts\",190,251]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 190,
+            "endOffset": 251,
+            "startLine": 5,
+            "startColumn": 49,
+            "endLine": 5,
+            "endColumn": 110
+          },
+          "sourceCode": "tx.user.update({ where: { id: 42 }, data: { active: true } })",
+          "clientExpression": "tx",
+          "model": "user",
+          "operation": "update",
+          "operationExpression": "tx.user.update",
+          "operationType": "write",
+          "status": "confirmed",
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\"]",
+            "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\",190,251]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\",184,252,\"expression\"]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\\\",184,252,\\\"expression\\\"]\",[]]"
+            ],
+            "branchPath": [],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "contextStatus": "mapped",
+          "serverContexts": [
+            {
+              "id": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",190,251]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[[\"transaction-callback\",\"app/api/users/route.ts\",150]]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [
+                {
+                  "kind": "transaction-callback",
+                  "sourceFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+                  "targetFunctionId": "symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 255,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 114
+                  },
+                  "sourceCode": "prisma.$transaction(async tx => { await tx.user.update({ where: { id: 42 }, data: { active: true } }); })",
+                  "sourceEdgeIds": [],
+                  "context": {
+                    "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+                    "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",150,255]",
+                    "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",144,256,\"expression\"]",
+                    "graphNodeIds": [
+                      "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",144,256,\\\"expression\\\"]\",[]]"
+                    ],
+                    "branchPath": [],
+                    "reachability": "reachable-in-model",
+                    "inUnsupportedRegion": false,
+                    "execution": "not-established"
+                  },
+                  "transactionSiteId": "database-access:[\"app/api/users/route.ts\",150,255]"
+                }
+              ],
+              "status": "confirmed",
+              "clientEvidence": [
+                {
+                  "kind": "constructor-import",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 9,
+                    "endOffset": 31,
+                    "startLine": 1,
+                    "startColumn": 10,
+                    "endLine": 1,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "PrismaClient as Client"
+                },
+                {
+                  "kind": "client-construction",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 79,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 80,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 70,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 71,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "prisma = new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 156,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 15
+                  },
+                  "sourceCode": "prisma"
+                },
+                {
+                  "kind": "transaction-callback",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 255,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 114
+                  },
+                  "sourceCode": "prisma.$transaction(async tx => { await tx.user.update({ where: { id: 42 }, data: { active: true } }); })"
+                },
+                {
+                  "kind": "argument-binding",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 176,
+                    "endOffset": 178,
+                    "startLine": 5,
+                    "startColumn": 35,
+                    "endLine": 5,
+                    "endColumn": 37
+                  },
+                  "sourceCode": "tx"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 190,
+                    "endOffset": 192,
+                    "startLine": 5,
+                    "startColumn": 49,
+                    "endLine": 5,
+                    "endColumn": 51
+                  },
+                  "sourceCode": "tx"
+                }
+              ],
+              "transactionSiteId": "database-access:[\"app/api/users/route.ts\",150,255]"
+            }
+          ]
+        },
+        {
+          "id": "database-access:[\"app/api/users/route.ts\",259,284]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 259,
+            "endOffset": 284,
+            "startLine": 6,
+            "startColumn": 3,
+            "endLine": 6,
+            "endColumn": 28
+          },
+          "sourceCode": "unknownDb.user.findMany()",
+          "clientExpression": "unknownDb",
+          "model": "user",
+          "operation": "findMany",
+          "operationExpression": "unknownDb.user.findMany",
+          "operationType": "unknown",
+          "status": "unresolved",
+          "reason": "unverified-client",
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+            "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",259,284]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",259,285,\"expression\"]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",259,285,\\\"expression\\\"]\",[]]"
+            ],
+            "branchPath": [],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "contextStatus": "mapped",
+          "serverContexts": [
+            {
+              "id": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",259,284]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [],
+              "status": "unresolved",
+              "reason": "unverified-client",
+              "clientEvidence": []
+            }
+          ]
+        },
+        {
+          "id": "database-access:[\"lib/query.ts\",69,114]",
+          "ownerFunctionId": "symbol:lib/query.ts#lookup@0[120970d812836f19]",
+          "location": {
+            "filePath": "lib/query.ts",
+            "startOffset": 69,
+            "endOffset": 114,
+            "startLine": 2,
+            "startColumn": 31,
+            "endLine": 2,
+            "endColumn": 76
+          },
+          "sourceCode": "client.user.findUnique({ where: { id: 42 } })",
+          "clientExpression": "client",
+          "model": "user",
+          "operation": "findUnique",
+          "operationExpression": "client.user.findUnique",
+          "operationType": "read",
+          "status": "confirmed",
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\"]",
+            "callSiteId": "control:call:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",69,114]",
+            "statementId": "control:statement:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",56,115,\"return\"]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",\"control:statement:[\\\"symbol:lib/query.ts#lookup@0[120970d812836f19]\\\",56,115,\\\"return\\\"]\",[]]"
+            ],
+            "branchPath": [
+              {
+                "conditionStatementId": "control:statement:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",41,117,\"if\"]",
+                "branch": "true"
+              }
+            ],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "contextStatus": "mapped",
+          "serverContexts": [
+            {
+              "id": "database-context:[\"database-access:[\\\"lib/query.ts\\\",69,114]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[[\"call\",\"app/api/users/route.ts\",126]]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [
+                {
+                  "kind": "call",
+                  "sourceFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+                  "targetFunctionId": "symbol:lib/query.ts#lookup@0[120970d812836f19]",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 126,
+                    "endOffset": 140,
+                    "startLine": 4,
+                    "startColumn": 9,
+                    "endLine": 4,
+                    "endColumn": 23
+                  },
+                  "sourceCode": "lookup(prisma)",
+                  "sourceEdgeIds": [
+                    "call:symbol:app/api/users/route.ts#POST@87[120970d812836f19]->symbol:lib/query.ts#lookup@0[120970d812836f19]:4"
+                  ],
+                  "context": {
+                    "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+                    "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",126,140]",
+                    "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",120,141,\"expression\"]",
+                    "graphNodeIds": [
+                      "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",120,141,\\\"expression\\\"]\",[]]"
+                    ],
+                    "branchPath": [],
+                    "reachability": "reachable-in-model",
+                    "inUnsupportedRegion": false,
+                    "execution": "not-established"
+                  }
+                }
+              ],
+              "status": "confirmed",
+              "clientEvidence": [
+                {
+                  "kind": "constructor-import",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 9,
+                    "endOffset": 31,
+                    "startLine": 1,
+                    "startColumn": 10,
+                    "endLine": 1,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "PrismaClient as Client"
+                },
+                {
+                  "kind": "client-construction",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 79,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 80,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 70,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 71,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "prisma = new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 133,
+                    "endOffset": 139,
+                    "startLine": 4,
+                    "startColumn": 16,
+                    "endLine": 4,
+                    "endColumn": 22
+                  },
+                  "sourceCode": "prisma"
+                },
+                {
+                  "kind": "argument-binding",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 126,
+                    "endOffset": 140,
+                    "startLine": 4,
+                    "startColumn": 9,
+                    "endLine": 4,
+                    "endColumn": 23
+                  },
+                  "sourceCode": "lookup(prisma)"
+                },
+                {
+                  "kind": "argument-binding",
+                  "location": {
+                    "filePath": "lib/query.ts",
+                    "startOffset": 29,
+                    "endOffset": 35,
+                    "startLine": 1,
+                    "startColumn": 30,
+                    "endLine": 1,
+                    "endColumn": 36
+                  },
+                  "sourceCode": "client"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/query.ts",
+                    "startOffset": 69,
+                    "endOffset": 75,
+                    "startLine": 2,
+                    "startColumn": 31,
+                    "endLine": 2,
+                    "endColumn": 37
+                  },
+                  "sourceCode": "client"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        {
+          "code": "static-prisma-only",
+          "message": "Only source-proven @prisma/client clients and supported member calls are identified. Runtime queries, results, effects and commits are not observed."
+        },
+        {
+          "code": "client-resolution-limits",
+          "message": "Global caches, mutable clients, dynamic members, model aliases, extensions, asynchronous factories and other ORMs are not resolved. Type annotations alone do not prove a client."
+        }
+      ]
+    },
+    "flows": [
+      {
+        "id": "behavior:flow:[\"prisma-access-example\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"}]",
+        "entryPoint": {
+          "kind": "api",
+          "framework": "next-app",
+          "filePath": "app/api/users/route.ts",
+          "routePath": "/api/users",
+          "method": "POST",
+          "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+        },
+        "httpRequests": [],
+        "databaseAccesses": [
+          {
+            "site": {
+              "id": "database-access:[\"app/api/users/route.ts\",150,255]",
+              "ownerFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 150,
+                "endOffset": 255,
+                "startLine": 5,
+                "startColumn": 9,
+                "endLine": 5,
+                "endColumn": 114
+              },
+              "sourceCode": "prisma.$transaction(async tx => { await tx.user.update({ where: { id: 42 }, data: { active: true } }); })",
+              "clientExpression": "prisma",
+              "operation": "$transaction",
+              "operationExpression": "prisma.$transaction",
+              "operationType": "transaction",
+              "status": "confirmed",
+              "context": {
+                "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+                "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",150,255]",
+                "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",144,256,\"expression\"]",
+                "graphNodeIds": [
+                  "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",144,256,\\\"expression\\\"]\",[]]"
+                ],
+                "branchPath": [],
+                "reachability": "reachable-in-model",
+                "inUnsupportedRegion": false,
+                "execution": "not-established"
+              },
+              "contextStatus": "mapped"
+            },
+            "serverContext": {
+              "id": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",150,255]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [],
+              "status": "confirmed",
+              "clientEvidence": [
+                {
+                  "kind": "constructor-import",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 9,
+                    "endOffset": 31,
+                    "startLine": 1,
+                    "startColumn": 10,
+                    "endLine": 1,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "PrismaClient as Client"
+                },
+                {
+                  "kind": "client-construction",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 79,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 80,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 70,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 71,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "prisma = new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 156,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 15
+                  },
+                  "sourceCode": "prisma"
+                }
+              ]
+            },
+            "ownerBehaviorNodeId": "behavior:node:[\"behavior:flow:[\\\"prisma-access-example\\\",{\\\"kind\\\":\\\"api\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/api/users/route.ts\\\",\\\"routePath\\\":\\\"/api/users\\\",\\\"method\\\":\\\"POST\\\",\\\"nodeId\\\":\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\"}]\",\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+            "semantics": "static-database-access",
+            "runtimeExecution": "not-observed",
+            "queryResult": "not-analyzed",
+            "transactionCommit": "not-established"
+          },
+          {
+            "site": {
+              "id": "database-access:[\"app/api/users/route.ts\",190,251]",
+              "ownerFunctionId": "symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]",
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 190,
+                "endOffset": 251,
+                "startLine": 5,
+                "startColumn": 49,
+                "endLine": 5,
+                "endColumn": 110
+              },
+              "sourceCode": "tx.user.update({ where: { id: 42 }, data: { active: true } })",
+              "clientExpression": "tx",
+              "model": "user",
+              "operation": "update",
+              "operationExpression": "tx.user.update",
+              "operationType": "write",
+              "status": "confirmed",
+              "context": {
+                "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\"]",
+                "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\",190,251]",
+                "statementId": "control:statement:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\",184,252,\"expression\"]",
+                "graphNodeIds": [
+                  "control:statement-node:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\\\",184,252,\\\"expression\\\"]\",[]]"
+                ],
+                "branchPath": [],
+                "reachability": "reachable-in-model",
+                "inUnsupportedRegion": false,
+                "execution": "not-established"
+              },
+              "contextStatus": "mapped"
+            },
+            "serverContext": {
+              "id": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",190,251]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[[\"transaction-callback\",\"app/api/users/route.ts\",150]]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [
+                {
+                  "kind": "transaction-callback",
+                  "sourceFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+                  "targetFunctionId": "symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 255,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 114
+                  },
+                  "sourceCode": "prisma.$transaction(async tx => { await tx.user.update({ where: { id: 42 }, data: { active: true } }); })",
+                  "sourceEdgeIds": [],
+                  "context": {
+                    "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+                    "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",150,255]",
+                    "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",144,256,\"expression\"]",
+                    "graphNodeIds": [
+                      "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",144,256,\\\"expression\\\"]\",[]]"
+                    ],
+                    "branchPath": [],
+                    "reachability": "reachable-in-model",
+                    "inUnsupportedRegion": false,
+                    "execution": "not-established"
+                  },
+                  "transactionSiteId": "database-access:[\"app/api/users/route.ts\",150,255]"
+                }
+              ],
+              "status": "confirmed",
+              "clientEvidence": [
+                {
+                  "kind": "constructor-import",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 9,
+                    "endOffset": 31,
+                    "startLine": 1,
+                    "startColumn": 10,
+                    "endLine": 1,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "PrismaClient as Client"
+                },
+                {
+                  "kind": "client-construction",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 79,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 80,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 70,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 71,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "prisma = new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 156,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 15
+                  },
+                  "sourceCode": "prisma"
+                },
+                {
+                  "kind": "transaction-callback",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 150,
+                    "endOffset": 255,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 114
+                  },
+                  "sourceCode": "prisma.$transaction(async tx => { await tx.user.update({ where: { id: 42 }, data: { active: true } }); })"
+                },
+                {
+                  "kind": "argument-binding",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 176,
+                    "endOffset": 178,
+                    "startLine": 5,
+                    "startColumn": 35,
+                    "endLine": 5,
+                    "endColumn": 37
+                  },
+                  "sourceCode": "tx"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 190,
+                    "endOffset": 192,
+                    "startLine": 5,
+                    "startColumn": 49,
+                    "endLine": 5,
+                    "endColumn": 51
+                  },
+                  "sourceCode": "tx"
+                }
+              ],
+              "transactionSiteId": "database-access:[\"app/api/users/route.ts\",150,255]"
+            },
+            "ownerBehaviorNodeId": "behavior:node:[\"behavior:flow:[\\\"prisma-access-example\\\",{\\\"kind\\\":\\\"api\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/api/users/route.ts\\\",\\\"routePath\\\":\\\"/api/users\\\",\\\"method\\\":\\\"POST\\\",\\\"nodeId\\\":\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\"}]\",\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\"]",
+            "semantics": "static-database-access",
+            "runtimeExecution": "not-observed",
+            "queryResult": "not-analyzed",
+            "transactionCommit": "not-established"
+          },
+          {
+            "site": {
+              "id": "database-access:[\"app/api/users/route.ts\",259,284]",
+              "ownerFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 259,
+                "endOffset": 284,
+                "startLine": 6,
+                "startColumn": 3,
+                "endLine": 6,
+                "endColumn": 28
+              },
+              "sourceCode": "unknownDb.user.findMany()",
+              "clientExpression": "unknownDb",
+              "model": "user",
+              "operation": "findMany",
+              "operationExpression": "unknownDb.user.findMany",
+              "operationType": "unknown",
+              "status": "unresolved",
+              "reason": "unverified-client",
+              "context": {
+                "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+                "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",259,284]",
+                "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",259,285,\"expression\"]",
+                "graphNodeIds": [
+                  "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",259,285,\\\"expression\\\"]\",[]]"
+                ],
+                "branchPath": [],
+                "reachability": "reachable-in-model",
+                "inUnsupportedRegion": false,
+                "execution": "not-established"
+              },
+              "contextStatus": "mapped"
+            },
+            "serverContext": {
+              "id": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",259,284]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [],
+              "status": "unresolved",
+              "reason": "unverified-client",
+              "clientEvidence": []
+            },
+            "ownerBehaviorNodeId": "behavior:node:[\"behavior:flow:[\\\"prisma-access-example\\\",{\\\"kind\\\":\\\"api\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/api/users/route.ts\\\",\\\"routePath\\\":\\\"/api/users\\\",\\\"method\\\":\\\"POST\\\",\\\"nodeId\\\":\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\"}]\",\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+            "semantics": "static-database-access",
+            "runtimeExecution": "not-observed",
+            "queryResult": "not-analyzed",
+            "transactionCommit": "not-established"
+          },
+          {
+            "site": {
+              "id": "database-access:[\"lib/query.ts\",69,114]",
+              "ownerFunctionId": "symbol:lib/query.ts#lookup@0[120970d812836f19]",
+              "location": {
+                "filePath": "lib/query.ts",
+                "startOffset": 69,
+                "endOffset": 114,
+                "startLine": 2,
+                "startColumn": 31,
+                "endLine": 2,
+                "endColumn": 76
+              },
+              "sourceCode": "client.user.findUnique({ where: { id: 42 } })",
+              "clientExpression": "client",
+              "model": "user",
+              "operation": "findUnique",
+              "operationExpression": "client.user.findUnique",
+              "operationType": "read",
+              "status": "confirmed",
+              "context": {
+                "controlFlowId": "control:function:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\"]",
+                "callSiteId": "control:call:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",69,114]",
+                "statementId": "control:statement:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",56,115,\"return\"]",
+                "graphNodeIds": [
+                  "control:statement-node:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",\"control:statement:[\\\"symbol:lib/query.ts#lookup@0[120970d812836f19]\\\",56,115,\\\"return\\\"]\",[]]"
+                ],
+                "branchPath": [
+                  {
+                    "conditionStatementId": "control:statement:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\",41,117,\"if\"]",
+                    "branch": "true"
+                  }
+                ],
+                "reachability": "reachable-in-model",
+                "inUnsupportedRegion": false,
+                "execution": "not-established"
+              },
+              "contextStatus": "mapped"
+            },
+            "serverContext": {
+              "id": "database-context:[\"database-access:[\\\"lib/query.ts\\\",69,114]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"},[[\"call\",\"app/api/users/route.ts\",126]]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "callPath": [
+                {
+                  "kind": "call",
+                  "sourceFunctionId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]",
+                  "targetFunctionId": "symbol:lib/query.ts#lookup@0[120970d812836f19]",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 126,
+                    "endOffset": 140,
+                    "startLine": 4,
+                    "startColumn": 9,
+                    "endLine": 4,
+                    "endColumn": 23
+                  },
+                  "sourceCode": "lookup(prisma)",
+                  "sourceEdgeIds": [
+                    "call:symbol:app/api/users/route.ts#POST@87[120970d812836f19]->symbol:lib/query.ts#lookup@0[120970d812836f19]:4"
+                  ],
+                  "context": {
+                    "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+                    "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",126,140]",
+                    "statementId": "control:statement:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",120,141,\"expression\"]",
+                    "graphNodeIds": [
+                      "control:statement-node:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\",120,141,\\\"expression\\\"]\",[]]"
+                    ],
+                    "branchPath": [],
+                    "reachability": "reachable-in-model",
+                    "inUnsupportedRegion": false,
+                    "execution": "not-established"
+                  }
+                }
+              ],
+              "status": "confirmed",
+              "clientEvidence": [
+                {
+                  "kind": "constructor-import",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 9,
+                    "endOffset": 31,
+                    "startLine": 1,
+                    "startColumn": 10,
+                    "endLine": 1,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "PrismaClient as Client"
+                },
+                {
+                  "kind": "client-construction",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 79,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 80,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/db.ts",
+                    "startOffset": 70,
+                    "endOffset": 91,
+                    "startLine": 1,
+                    "startColumn": 71,
+                    "endLine": 1,
+                    "endColumn": 92
+                  },
+                  "sourceCode": "prisma = new Client()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 133,
+                    "endOffset": 139,
+                    "startLine": 4,
+                    "startColumn": 16,
+                    "endLine": 4,
+                    "endColumn": 22
+                  },
+                  "sourceCode": "prisma"
+                },
+                {
+                  "kind": "argument-binding",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 126,
+                    "endOffset": 140,
+                    "startLine": 4,
+                    "startColumn": 9,
+                    "endLine": 4,
+                    "endColumn": 23
+                  },
+                  "sourceCode": "lookup(prisma)"
+                },
+                {
+                  "kind": "argument-binding",
+                  "location": {
+                    "filePath": "lib/query.ts",
+                    "startOffset": 29,
+                    "endOffset": 35,
+                    "startLine": 1,
+                    "startColumn": 30,
+                    "endLine": 1,
+                    "endColumn": 36
+                  },
+                  "sourceCode": "client"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "lib/query.ts",
+                    "startOffset": 69,
+                    "endOffset": 75,
+                    "startLine": 2,
+                    "startColumn": 31,
+                    "endLine": 2,
+                    "endColumn": 37
+                  },
+                  "sourceCode": "client"
+                }
+              ]
+            },
+            "ownerBehaviorNodeId": "behavior:node:[\"behavior:flow:[\\\"prisma-access-example\\\",{\\\"kind\\\":\\\"api\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/api/users/route.ts\\\",\\\"routePath\\\":\\\"/api/users\\\",\\\"method\\\":\\\"POST\\\",\\\"nodeId\\\":\\\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\\\"}]\",\"symbol:lib/query.ts#lookup@0[120970d812836f19]\"]",
+            "semantics": "static-database-access",
+            "runtimeExecution": "not-observed",
+            "queryResult": "not-analyzed",
+            "transactionCommit": "not-established"
+          }
+        ],
+        "controlFlowIds": [
+          "control:function:[\"symbol:app/api/users/route.ts#callback@5:29@170[a5ba958594dcd315]\"]",
+          "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+          "control:function:[\"symbol:lib/query.ts#lookup@0[120970d812836f19]\"]"
+        ]
+      },
+      {
+        "id": "behavior:flow:[\"prisma-access-example\",{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/page.tsx\",\"routePath\":\"/\",\"nodeId\":\"symbol:app/page.tsx#Page@0[120970d812836f19]\"}]",
+        "entryPoint": {
+          "kind": "page",
+          "framework": "next-app",
+          "filePath": "app/page.tsx",
+          "routePath": "/",
+          "nodeId": "symbol:app/page.tsx#Page@0[120970d812836f19]"
+        },
+        "httpRequests": [
+          {
+            "request": {
+              "id": "http-request:[\"app/page.tsx\",65,104]",
+              "ownerFunctionId": "symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]",
+              "location": {
+                "filePath": "app/page.tsx",
+                "startOffset": 65,
+                "endOffset": 104,
+                "startLine": 2,
+                "startColumn": 33,
+                "endLine": 2,
+                "endColumn": 72
+              },
+              "sourceCode": "fetch(\"/api/users\", { method: \"POST\" })",
+              "transport": "fetch",
+              "urlExpression": "\"/api/users\"",
+              "methodExpression": "\"POST\"",
+              "url": "/api/users",
+              "method": "POST",
+              "path": "/api/users",
+              "valueEvidence": [
+                {
+                  "location": {
+                    "filePath": "app/page.tsx",
+                    "startOffset": 71,
+                    "endOffset": 83,
+                    "startLine": 2,
+                    "startColumn": 39,
+                    "endLine": 2,
+                    "endColumn": 51
+                  },
+                  "sourceCode": "\"/api/users\""
+                },
+                {
+                  "location": {
+                    "filePath": "app/page.tsx",
+                    "startOffset": 95,
+                    "endOffset": 101,
+                    "startLine": 2,
+                    "startColumn": 63,
+                    "endLine": 2,
+                    "endColumn": 69
+                  },
+                  "sourceCode": "\"POST\""
+                }
+              ],
+              "status": "matched",
+              "candidates": [
+                {
+                  "filePath": "app/api/users/route.ts",
+                  "routePath": "/api/users",
+                  "methods": [
+                    "POST"
+                  ]
+                }
+              ],
+              "contextStatus": "mapped",
+              "context": {
+                "controlFlowId": "control:function:[\"symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]\"]",
+                "callSiteId": "control:call:[\"symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]\",65,104]",
+                "statementId": "control:statement:[\"symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]\",65,104,\"return\"]",
+                "graphNodeIds": [
+                  "control:statement-node:[\"symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]\",\"control:statement:[\\\"symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]\\\",65,104,\\\"return\\\"]\",[]]"
+                ],
+                "branchPath": [],
+                "reachability": "reachable-in-model",
+                "inUnsupportedRegion": false,
+                "execution": "not-established"
+              },
+              "target": {
+                "entryPoint": {
+                  "kind": "api",
+                  "framework": "next-app",
+                  "filePath": "app/api/users/route.ts",
+                  "routePath": "/api/users",
+                  "method": "POST",
+                  "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+                },
+                "matchKind": "static",
+                "parameters": {}
+              }
+            },
+            "ownerBehaviorNodeId": "behavior:node:[\"behavior:flow:[\\\"prisma-access-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/page.tsx\\\",\\\"routePath\\\":\\\"/\\\",\\\"nodeId\\\":\\\"symbol:app/page.tsx#Page@0[120970d812836f19]\\\"}]\",\"symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]\"]",
+            "boundary": {
+              "id": "behavior:http-boundary:[\"behavior:flow:[\\\"prisma-access-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/page.tsx\\\",\\\"routePath\\\":\\\"/\\\",\\\"nodeId\\\":\\\"symbol:app/page.tsx#Page@0[120970d812836f19]\\\"}]\",\"http-request:[\\\"app/page.tsx\\\",65,104]\"]",
+              "relation": "http-request-to-entry",
+              "semantics": "http-boundary",
+              "confidence": "confirmed",
+              "requestSiteId": "http-request:[\"app/page.tsx\",65,104]",
+              "serverEntryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "POST",
+                "nodeId": "symbol:app/api/users/route.ts#POST@87[120970d812836f19]"
+              },
+              "serverFlowId": "behavior:flow:[\"prisma-access-example\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"}]",
+              "serverControlFlowId": "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+              "runtimeTransfer": "not-observed",
+              "executionOrder": "not-established",
+              "response": "not-analyzed",
+              "exceptionPropagation": "not-modeled"
+            }
+          }
+        ],
+        "databaseAccesses": [],
+        "controlFlowIds": [
+          "control:function:[\"symbol:app/api/users/route.ts#POST@87[120970d812836f19]\"]",
+          "control:function:[\"symbol:app/page.tsx#callback@2:27@59[258ae3d78547dead]\"]",
+          "control:function:[\"symbol:app/page.tsx#Page@0[120970d812836f19]\"]"
+        ]
+      }
+    ]
+  }
+}

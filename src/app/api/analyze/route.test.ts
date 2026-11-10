@@ -11,6 +11,7 @@ vi.mock("@/lib/repository/loadGithubRepository", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/repository/loadGithubRepository")>();
   return { ...original, loadGithubRepository: loadGithubRepositoryMock };
 });
+vi.mock("@/lib/github/publicRepositoryAccess", () => ({ requirePublicRepositoryAccess: vi.fn() }));
 
 vi.mock("@/lib/ast/analyzer", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/ast/analyzer")>();

@@ -1,0 +1,500 @@
+{
+  "input": [
+    {
+      "path": "app/login/page.tsx",
+      "content": "import { submit } from \"../../lib/submit\";\nexport default function LoginPage() {\n  const onSubmit = () => submit();\n  return <button onClick={onSubmit}>Sign in</button>;\n}"
+    },
+    {
+      "path": "lib/submit.ts",
+      "content": "export function submit() {\n  return fetch(\"/api/login\", { method: \"POST\" });\n}"
+    },
+    {
+      "path": "app/api/login/route.ts",
+      "content": "import { save } from \"../../../lib/storage\";\nexport async function POST() {\n  return save();\n}"
+    },
+    {
+      "path": "lib/storage.ts",
+      "content": "export function save() { return { ok: true }; }"
+    },
+    {
+      "path": "app/settings/page.tsx",
+      "content": "import { submit } from \"../../lib/submit\";\nexport default function SettingsPage() { return <button onClick={submit}/>; }"
+    }
+  ],
+  "output": {
+    "schemaVersion": 1,
+    "id": "behavior:flow:[\"behavior-example\",{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/login/page.tsx\",\"routePath\":\"/login\",\"nodeId\":\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"}]",
+    "repository": "behavior-example",
+    "entryPoint": {
+      "kind": "page",
+      "framework": "next-app",
+      "filePath": "app/login/page.tsx",
+      "routePath": "/login",
+      "nodeId": "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+    },
+    "status": "partial",
+    "semantics": "static-code-relations",
+    "executionOrder": "not-established",
+    "nodes": [
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"]",
+        "kind": "server",
+        "label": "POST",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/api/login/route.ts#POST@45[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"]",
+          "behavior:entry:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/login/route.ts\",\"routePath\":\"/api/login\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"}]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"]",
+        "kind": "screen",
+        "label": "LoginPage",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"]",
+          "behavior:entry:[{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/login/page.tsx\",\"routePath\":\"/login\",\"nodeId\":\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"}]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\"]",
+        "kind": "function",
+        "label": "onSubmit",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\"]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:lib/submit.ts#submit@0[120970d812836f19]\"]",
+        "kind": "function",
+        "label": "submit",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:lib/submit.ts#submit@0[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\"]"
+        ]
+      },
+      {
+        "id": "behavior:request:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"behavior:relation:[\\\"symbol:lib/submit.ts#submit@0[120970d812836f19]\\\",{\\\"relation\\\":\\\"api\\\",\\\"name\\\":\\\"POST /api/login\\\",\\\"line\\\":2,\\\"evidence\\\":\\\"fetch(\\\\\\\"/api/login\\\\\\\", { method: \\\\\\\"POST\\\\\\\" })\\\",\\\"confidence\\\":\\\"confirmed\\\",\\\"requestPath\\\":\\\"/api/login\\\",\\\"requestMethod\\\":\\\"POST\\\",\\\"targetId\\\":\\\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\\\"}]\"]",
+        "kind": "api-request",
+        "label": "POST /api/login",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:lib/submit.ts#submit@0[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [
+          "api:symbol:lib/submit.ts#submit@0[120970d812836f19]->symbol:app/api/login/route.ts#POST@45[120970d812836f19]:2"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",{\"relation\":\"api\",\"name\":\"POST /api/login\",\"line\":2,\"evidence\":\"fetch(\\\"/api/login\\\", { method: \\\"POST\\\" })\",\"confidence\":\"confirmed\",\"requestPath\":\"/api/login\",\"requestMethod\":\"POST\",\"targetId\":\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"}]"
+        ],
+        "request": {
+          "path": "/api/login",
+          "method": "POST"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\\\"]\",\"reference\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\"]",
+        "relation": "reference",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "reference:symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]->symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]:4"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"onSubmit\",\"targetId\":\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\",\"line\":4,\"evidence\":\"onClick={onSubmit}\",\"confidence\":\"confirmed\"}]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:lib/submit.ts#submit@0[120970d812836f19]\\\"]\",\"call\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:lib/submit.ts#submit@0[120970d812836f19]\"]",
+        "relation": "call",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "call:symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]->symbol:lib/submit.ts#submit@0[120970d812836f19]:3"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\",{\"relation\":\"call\",\"name\":\"submit\",\"targetId\":\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",\"line\":3,\"evidence\":\"submit()\",\"confidence\":\"confirmed\"}]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:lib/submit.ts#submit@0[120970d812836f19]\\\"]\",\"behavior:request:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"behavior:relation:[\\\\\\\"symbol:lib/submit.ts#submit@0[120970d812836f19]\\\\\\\",{\\\\\\\"relation\\\\\\\":\\\\\\\"api\\\\\\\",\\\\\\\"name\\\\\\\":\\\\\\\"POST /api/login\\\\\\\",\\\\\\\"line\\\\\\\":2,\\\\\\\"evidence\\\\\\\":\\\\\\\"fetch(\\\\\\\\\\\\\\\"/api/login\\\\\\\\\\\\\\\", { method: \\\\\\\\\\\\\\\"POST\\\\\\\\\\\\\\\" })\\\\\\\",\\\\\\\"confidence\\\\\\\":\\\\\\\"confirmed\\\\\\\",\\\\\\\"requestPath\\\\\\\":\\\\\\\"/api/login\\\\\\\",\\\\\\\"requestMethod\\\\\\\":\\\\\\\"POST\\\\\\\",\\\\\\\"targetId\\\\\\\":\\\\\\\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\\\\\\\"}]\\\"]\",\"api-request\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:lib/submit.ts#submit@0[120970d812836f19]\"]",
+        "target": "behavior:request:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"behavior:relation:[\\\"symbol:lib/submit.ts#submit@0[120970d812836f19]\\\",{\\\"relation\\\":\\\"api\\\",\\\"name\\\":\\\"POST /api/login\\\",\\\"line\\\":2,\\\"evidence\\\":\\\"fetch(\\\\\\\"/api/login\\\\\\\", { method: \\\\\\\"POST\\\\\\\" })\\\",\\\"confidence\\\":\\\"confirmed\\\",\\\"requestPath\\\":\\\"/api/login\\\",\\\"requestMethod\\\":\\\"POST\\\",\\\"targetId\\\":\\\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\\\"}]\"]",
+        "relation": "api-request",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "api:symbol:lib/submit.ts#submit@0[120970d812836f19]->symbol:app/api/login/route.ts#POST@45[120970d812836f19]:2"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",{\"relation\":\"api\",\"name\":\"POST /api/login\",\"line\":2,\"evidence\":\"fetch(\\\"/api/login\\\", { method: \\\"POST\\\" })\",\"confidence\":\"confirmed\",\"requestPath\":\"/api/login\",\"requestMethod\":\"POST\",\"targetId\":\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"}]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:request:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"behavior:relation:[\\\\\\\"symbol:lib/submit.ts#submit@0[120970d812836f19]\\\\\\\",{\\\\\\\"relation\\\\\\\":\\\\\\\"api\\\\\\\",\\\\\\\"name\\\\\\\":\\\\\\\"POST /api/login\\\\\\\",\\\\\\\"line\\\\\\\":2,\\\\\\\"evidence\\\\\\\":\\\\\\\"fetch(\\\\\\\\\\\\\\\"/api/login\\\\\\\\\\\\\\\", { method: \\\\\\\\\\\\\\\"POST\\\\\\\\\\\\\\\" })\\\\\\\",\\\\\\\"confidence\\\\\\\":\\\\\\\"confirmed\\\\\\\",\\\\\\\"requestPath\\\\\\\":\\\\\\\"/api/login\\\\\\\",\\\\\\\"requestMethod\\\\\\\":\\\\\\\"POST\\\\\\\",\\\\\\\"targetId\\\\\\\":\\\\\\\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\\\\\\\"}]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"behavior-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\\\"]\",\"api-route\"]",
+        "source": "behavior:request:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"behavior:relation:[\\\"symbol:lib/submit.ts#submit@0[120970d812836f19]\\\",{\\\"relation\\\":\\\"api\\\",\\\"name\\\":\\\"POST /api/login\\\",\\\"line\\\":2,\\\"evidence\\\":\\\"fetch(\\\\\\\"/api/login\\\\\\\", { method: \\\\\\\"POST\\\\\\\" })\\\",\\\"confidence\\\":\\\"confirmed\\\",\\\"requestPath\\\":\\\"/api/login\\\",\\\"requestMethod\\\":\\\"POST\\\",\\\"targetId\\\":\\\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\\\"}]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"]",
+        "relation": "api-route",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "api:symbol:lib/submit.ts#submit@0[120970d812836f19]->symbol:app/api/login/route.ts#POST@45[120970d812836f19]:2"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",{\"relation\":\"api\",\"name\":\"POST /api/login\",\"line\":2,\"evidence\":\"fetch(\\\"/api/login\\\", { method: \\\"POST\\\" })\",\"confidence\":\"confirmed\",\"requestPath\":\"/api/login\",\"requestMethod\":\"POST\",\"targetId\":\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"}]"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "id": "behavior:declaration:[\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"]",
+        "location": {
+          "filePath": "app/api/login/route.ts",
+          "precision": "range",
+          "startLine": 2,
+          "endLine": 4
+        },
+        "excerpt": "export async function POST() {\n  return save();\n}",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/api/login/route.ts#POST@45[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/api/login/route.ts#POST@45[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 2,
+          "endLine": 5
+        },
+        "excerpt": "export default function LoginPage() {\n  const onSubmit = () => submit();\n  return <button onClick={onSubmit}>Sign in</button>;\n}",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 3,
+          "endLine": 3
+        },
+        "excerpt": "  const onSubmit = () => submit();",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\"]",
+        "location": {
+          "filePath": "lib/submit.ts",
+          "precision": "range",
+          "startLine": 1,
+          "endLine": 3
+        },
+        "excerpt": "export function submit() {\n  return fetch(\"/api/login\", { method: \"POST\" });\n}",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:lib/submit.ts#submit@0[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:lib/submit.ts#submit@0[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:entry:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/login/route.ts\",\"routePath\":\"/api/login\",\"method\":\"POST\",\"nodeId\":\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"}]",
+        "location": {
+          "filePath": "app/api/login/route.ts",
+          "precision": "file"
+        },
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/api/login/route.ts#POST@45[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "entry-point",
+          "entryPoint": {
+            "kind": "api",
+            "framework": "next-app",
+            "filePath": "app/api/login/route.ts",
+            "routePath": "/api/login",
+            "method": "POST",
+            "nodeId": "symbol:app/api/login/route.ts#POST@45[120970d812836f19]"
+          }
+        }
+      },
+      {
+        "id": "behavior:entry:[{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/login/page.tsx\",\"routePath\":\"/login\",\"nodeId\":\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "file"
+        },
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "entry-point",
+          "entryPoint": {
+            "kind": "page",
+            "framework": "next-app",
+            "filePath": "app/login/page.tsx",
+            "routePath": "/login",
+            "nodeId": "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":4,\"evidence\":\"<button onClick={onSubmit}>\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 4,
+          "endLine": 4
+        },
+        "excerpt": "  return <button onClick={onSubmit}>Sign in</button>;",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]",
+          "relation": {
+            "relation": "component",
+            "name": "button",
+            "line": 4,
+            "evidence": "<button onClick={onSubmit}>",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"onSubmit\",\"targetId\":\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\",\"line\":4,\"evidence\":\"onClick={onSubmit}\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 4,
+          "endLine": 4
+        },
+        "excerpt": "  return <button onClick={onSubmit}>Sign in</button>;",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [
+          "reference:symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]->symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]:4"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]",
+          "relation": {
+            "relation": "reference",
+            "name": "onSubmit",
+            "targetId": "symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]",
+            "line": 4,
+            "evidence": "onClick={onSubmit}",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]\",{\"relation\":\"call\",\"name\":\"submit\",\"targetId\":\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",\"line\":3,\"evidence\":\"submit()\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 3,
+          "endLine": 3
+        },
+        "excerpt": "  const onSubmit = () => submit();",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]"
+        ],
+        "sourceEdgeIds": [
+          "call:symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]->symbol:lib/submit.ts#submit@0[120970d812836f19]:3"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#onSubmit@89[3c3c767ab192a629]",
+          "relation": {
+            "relation": "call",
+            "name": "submit",
+            "targetId": "symbol:lib/submit.ts#submit@0[120970d812836f19]",
+            "line": 3,
+            "evidence": "submit()",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",{\"relation\":\"api\",\"name\":\"POST /api/login\",\"line\":2,\"evidence\":\"fetch(\\\"/api/login\\\", { method: \\\"POST\\\" })\",\"confidence\":\"confirmed\",\"requestPath\":\"/api/login\",\"requestMethod\":\"POST\",\"targetId\":\"symbol:app/api/login/route.ts#POST@45[120970d812836f19]\"}]",
+        "location": {
+          "filePath": "lib/submit.ts",
+          "precision": "line",
+          "startLine": 2,
+          "endLine": 2
+        },
+        "excerpt": "  return fetch(\"/api/login\", { method: \"POST\" });",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:lib/submit.ts#submit@0[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [
+          "api:symbol:lib/submit.ts#submit@0[120970d812836f19]->symbol:app/api/login/route.ts#POST@45[120970d812836f19]:2"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:lib/submit.ts#submit@0[120970d812836f19]",
+          "relation": {
+            "relation": "api",
+            "name": "POST /api/login",
+            "line": 2,
+            "evidence": "fetch(\"/api/login\", { method: \"POST\" })",
+            "confidence": "confirmed",
+            "requestPath": "/api/login",
+            "requestMethod": "POST",
+            "targetId": "symbol:app/api/login/route.ts#POST@45[120970d812836f19]"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"fetch\",\"line\":2,\"evidence\":\"fetch(\\\"/api/login\\\", { method: \\\"POST\\\" })\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "lib/submit.ts",
+          "precision": "line",
+          "startLine": 2,
+          "endLine": 2
+        },
+        "excerpt": "  return fetch(\"/api/login\", { method: \"POST\" });",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:lib/submit.ts#submit@0[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:lib/submit.ts#submit@0[120970d812836f19]",
+          "relation": {
+            "relation": "call",
+            "name": "fetch",
+            "line": 2,
+            "evidence": "fetch(\"/api/login\", { method: \"POST\" })",
+            "confidence": "inferred"
+          }
+        }
+      }
+    ],
+    "unresolved": [
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":4,\"evidence\":\"<button onClick={onSubmit}>\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]",
+        "relation": "component",
+        "targetName": "button",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":4,\"evidence\":\"<button onClick={onSubmit}>\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      },
+      {
+        "id": "behavior:unresolved:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"fetch\",\"line\":2,\"evidence\":\"fetch(\\\"/api/login\\\", { method: \\\"POST\\\" })\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:lib/submit.ts#submit@0[120970d812836f19]",
+        "relation": "call",
+        "targetName": "fetch",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:lib/submit.ts#submit@0[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"fetch\",\"line\":2,\"evidence\":\"fetch(\\\"/api/login\\\", { method: \\\"POST\\\" })\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      }
+    ],
+    "limitations": [
+      {
+        "code": "execution-order-unavailable",
+        "message": "Static relationships do not establish execution order, invocation count, or reachability at runtime."
+      },
+      {
+        "code": "event-semantics-unavailable",
+        "message": "JSX/callback references are not event dispatch or handler execution evidence."
+      },
+      {
+        "code": "conditions-unavailable",
+        "message": "Conditions, branches, exceptions, and async control flow are not extracted."
+      },
+      {
+        "code": "data-access-unavailable",
+        "message": "DB operations, schemas, and transactions are not semantically identified."
+      },
+      {
+        "code": "results-unavailable",
+        "message": "Return values and response/data flow are not extracted."
+      },
+      {
+        "code": "unversioned-source",
+        "message": "No commit SHA is available; locations refer only to this supplied analysis snapshot."
+      },
+      {
+        "code": "entry-boundary",
+        "message": "The API endpoint is shown as a boundary; its implementation has its own flow.",
+        "sourceNodeIds": [
+          "symbol:app/api/login/route.ts#POST@45[120970d812836f19]"
+        ]
+      }
+    ],
+    "entryNodeId": "behavior:node:[\"behavior:flow:[\\\"behavior-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@43[120970d812836f19]\"]"
+  }
+}

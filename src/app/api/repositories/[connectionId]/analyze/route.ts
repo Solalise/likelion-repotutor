@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { wantsAnalysisReceipt } from "@/lib/repository/sampleAnalysis";
+import { coalesceAnalysis } from "@/lib/repository/analysisWork";
 import type { Prisma } from "@prisma/client";
 import { analyzeSourceFiles } from "@/lib/ast/analyzer";
 import { requireUserId } from "@/lib/auth/currentUser";
@@ -7,21 +8,18 @@ import { createInstallationFetcher, getInstallationAccessToken } from "@/lib/git
 import { getGithubAnalysisCache, githubAnalysisCacheKey, setGithubAnalysisCache } from "@/lib/repository/githubAnalysisCache";
 import { loadGithubRepository } from "@/lib/repository/loadGithubRepository";
 import type { RepositoryAnalysis } from "@/types/analysis";
+import { requireRepositoryAccess, RepositoryAccessError, repositoryAccessResponse, repositoryJson } from "@/lib/github/repositoryAccess";
 
 interface RouteContext { params: Promise<{ connectionId: string }> }
 
 export async function GET(_request: Request, context: RouteContext) {
   let userId: string;
   try { userId = await requireUserId(); }
-  catch { return NextResponse.json({ message: "로그인이 필요합니다." }, { status: 401 }); }
+  catch { return repositoryJson({ message: "로그인이 필요합니다." }, { status: 401 }); }
   const { connectionId } = await context.params;
-  const connection = await db.userRepository.findFirst({
-    where: { id: connectionId, userId, active: true },
-    include: { repository: true, installation: true },
-  });
-  if (!connection || connection.installation.suspendedAt) {
-    return NextResponse.json({ message: "접근이 허용된 연결 저장소를 찾을 수 없습니다." }, { status: 404 });
-  }
+  let connection;
+  try { connection = await requireRepositoryAccess(userId, connectionId); }
+  catch (error) { return repositoryAccessResponse(error); }
   const run = await db.analysisRun.create({
     data: {
       repositoryId: connection.repositoryId,
@@ -35,14 +33,20 @@ export async function GET(_request: Request, context: RouteContext) {
     const token = await getInstallationAccessToken(connection.installation.installationId);
     const namespace = `installation:${connection.installation.installationId}`;
     const loaded = await loadGithubRepository(connection.repository.htmlUrl, createInstallationFetcher(token), namespace);
+    // Source collection may take time; recheck before exposing or caching its result.
+    await requireRepositoryAccess(userId, connectionId);
     const analysisCacheKey = githubAnalysisCacheKey(namespace, loaded.repository, loaded.collection.commitSha);
     const cached = getGithubAnalysisCache(analysisCacheKey);
-    const analysis: RepositoryAnalysis = cached ?? {
-      ...analyzeSourceFiles(loaded.sources, loaded.repository),
-      source: "github",
-      collection: { source: "github", ...loaded.collection },
-    };
-    if (!cached) setGithubAnalysisCache(analysisCacheKey, analysis);
+    const analysis: RepositoryAnalysis = await coalesceAnalysis(analysisCacheKey, () => {
+      const current = cached ?? getGithubAnalysisCache(analysisCacheKey);
+      if (current) return current;
+      const created: RepositoryAnalysis = {
+        ...analyzeSourceFiles(loaded.sources, loaded.repository), source: "github",
+        collection: { source: "github", ...loaded.collection },
+      };
+      setGithubAnalysisCache(analysisCacheKey, created);
+      return created;
+    });
     await db.$transaction([
       db.analysisRun.update({
         where: { id: run.id },
@@ -50,7 +54,8 @@ export async function GET(_request: Request, context: RouteContext) {
       }),
       db.userRepository.update({ where: { id: connection.id }, data: { lastAccessedAt: new Date() } }),
     ]);
-    return NextResponse.json(cached ? {
+    if (wantsAnalysisReceipt(_request)) return repositoryJson({ status: "analysis-complete", repository: analysis.repository, commitSha: loaded.collection.commitSha });
+    return repositoryJson(cached ? {
       ...analysis,
       collection: { ...analysis.collection!, ...loaded.collection, source: "github", cached: true },
     } : analysis);
@@ -60,6 +65,6 @@ export async function GET(_request: Request, context: RouteContext) {
       where: { id: run.id },
       data: { status: "FAILED", errorCode: error instanceof Error ? error.name : "UNKNOWN", errorMessage: message, completedAt: new Date() },
     });
-    return NextResponse.json({ message }, { status: 502 });
+    return error instanceof RepositoryAccessError ? repositoryAccessResponse(error) : repositoryJson({ message }, { status: 502 });
   }
 }

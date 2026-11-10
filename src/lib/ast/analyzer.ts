@@ -6,6 +6,11 @@ import { analyzeImport } from "./importAnalyzer";
 import { analyzeApiRequest, connectApiRequests } from "./apiRelations";
 import { collectEntryPointMetadata } from "@/lib/features/entryPointMetadata";
 import { normalizePath, symbolNodeId } from "./pathUtils";
+import { collectReactEventBindings } from "./reactEventBindings";
+import { extractFunctionControlFlow } from "./controlFlowExtractor";
+import { collectHttpRequests } from "./httpRequests";
+import { collectDatabaseAccess } from "./databaseAccess";
+import { collectServerResponses } from "./serverResponses";
 
 type FunctionNode = Node & { getStartLineNumber(): number; getEndLineNumber(): number; getText(): string };
 interface Candidate { node: FunctionNode; declaration: Node; name: string; qualifiedName: string; kind: FunctionInfo["kind"] }
@@ -255,15 +260,40 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
   }));
   connectApiRequests(files, sourceFiles, (node) => targetId(node, candidates, ids));
   const graph = buildGraph(files);
+  const reactEventBindings = collectReactEventBindings(sourceFiles, {
+    resolveTarget: node => targetId(node, candidates, ids),
+    resolveOwner: node => { const candidate = enclosingCandidate(node, candidates); return candidate ? ids.get(candidate) : undefined; },
+  });
+  const functionsById = new Map(files.flatMap(file => file.functions).map(fn => [fn.id, fn]));
+  const functionControlFlows = [...ids].map(([candidate, id]) => extractFunctionControlFlow(candidate.node, functionsById.get(id)!, {
+    edges: graph.edges, resolveTarget: node => targetId(node, candidates, ids),
+    resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
+  }));
   const functionRelations = files.flatMap((file) => file.functions.flatMap((fn) => (fn.relations ?? []).map((relation) => ({ fn, relation }))));
   const unresolvedRelations = functionRelations.filter(({ fn, relation }) => !graph.edges.some((edge) =>
     edge.source === fn.id && edge.target === relation.targetId && edge.relation === relation.relation && edge.line === relation.line,
   ));
+  const entryPoints = collectEntryPointMetadata(sourceFiles, (node) => targetId(node, candidates, ids));
+  const httpRequests = collectHttpRequests(sourceFiles, node => targetId(node, candidates, ids),
+    node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; }, entryPoints, functionControlFlows);
+  const databaseAccess = collectDatabaseAccess(sourceFiles, {
+    definitions: new Map([...ids].map(([candidate, id]) => [id, candidate.node])), files, edges: graph.edges, entries: entryPoints,
+    controlFlows: functionControlFlows, resolveTarget: node => targetId(node, candidates, ids),
+    resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
+  });
+  const serverResponses = collectServerResponses(sourceFiles, { entries: entryPoints, controlFlows: functionControlFlows, database: databaseAccess,
+    resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
+  });
   return {
     repository,
     files,
     ...graph,
-    entryPoints: collectEntryPointMetadata(sourceFiles, (node) => targetId(node, candidates, ids)),
+    reactEventBindings,
+    functionControlFlows,
+    entryPoints,
+    httpRequests,
+    databaseAccess,
+    serverResponses,
     stats: {
       files: files.length,
       functions: files.flatMap((file) => file.functions).length,

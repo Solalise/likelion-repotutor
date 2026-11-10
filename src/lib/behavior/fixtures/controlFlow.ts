@@ -1,0 +1,25 @@
+import type { SourceInput } from "@/types/analysis";
+
+export const controlFlowSources: SourceInput[] = [{ path: "app/page.tsx", content: [
+  "async function work() { return 1; }",
+  "function recover() {}",
+  "function cleanup() {}",
+  "function after() {}",
+  "export default function Page() {",
+  "  const handle = async (ready: boolean) => {",
+  "    try {",
+  "      if (!ready) return;",
+  "      const value = await work();",
+  "      if (value) return value;",
+  '      throw new Error("missing");',
+  "    } catch (error) {",
+  "      recover();",
+  "      throw error;",
+  "    } finally {",
+  "      cleanup();",
+  "    }",
+  "    after();",
+  "  };",
+  "  return <button onClick={handle}>Run</button>;",
+  "}",
+].join("\n") }];

@@ -1,0 +1,389 @@
+{
+  "schemaVersion": 1,
+  "createdAtUtc": "2026-11-10T02:30:44.595Z",
+  "environment": {
+    "node": "v24.14.0",
+    "platform": "win32"
+  },
+  "input": {
+    "files": 91,
+    "compressedSha256": "202a7afb55e98889159296b34a6781acc09c5cef5870677bc814119489560872",
+    "sourceBytes": 490532,
+    "basis": "Exact archived 4-D working-tree input, not current 4-E source."
+  },
+  "scope": "Real API GET handler and real RepoTutor analysis, offline authorization/HEAD adapter mocked. Network/DB/auth latency and source download excluded. Warm percentiles are 20 local calls per feature, not production SLO.",
+  "astMs": 31428.255999999998,
+  "astCacheAdmissionMs": 303.9853000000003,
+  "baseline": {
+    "flows": [
+      {
+        "entry": {
+          "kind": "page",
+          "framework": "next-app",
+          "filePath": "src/app/repository/page.tsx",
+          "routePath": "/repository",
+          "nodeId": "symbol:src/app/repository/page.tsx#RepositoryPage@142[120970d812836f19]"
+        },
+        "buildMs": 2522.700800000006,
+        "bytes": 6367125,
+        "parts": {
+          "cfg": 3006638,
+          "evidence": 1622443,
+          "nodes": 176199,
+          "edges": 611875,
+          "http": 6457,
+          "database": 2,
+          "responses": 106
+        }
+      },
+      {
+        "entry": {
+          "kind": "api",
+          "framework": "next-app",
+          "filePath": "src/app/api/analyze/route.ts",
+          "routePath": "/api/analyze",
+          "method": "GET",
+          "nodeId": "symbol:src/app/api/analyze/route.ts#GET@2386[120970d812836f19]"
+        },
+        "buildMs": 3904.2316999999966,
+        "bytes": 8695695,
+        "parts": {
+          "cfg": 4676513,
+          "evidence": 1770130,
+          "nodes": 169942,
+          "edges": 900502,
+          "http": 2323,
+          "database": 22035,
+          "responses": 216528
+        }
+      },
+      {
+        "entry": {
+          "kind": "api",
+          "framework": "next-app",
+          "filePath": "src/app/api/repositories/[connectionId]/analyze/route.ts",
+          "routePath": "/api/repositories/[connectionId]/analyze",
+          "method": "GET",
+          "nodeId": "symbol:src/app/api/repositories/[connectionId]/analyze/route.ts#GET@780[120970d812836f19]"
+        },
+        "buildMs": 4140.490599999997,
+        "bytes": 9108600,
+        "parts": {
+          "cfg": 4763057,
+          "evidence": 1789981,
+          "nodes": 186637,
+          "edges": 993673,
+          "http": 4339,
+          "database": 240550,
+          "responses": 177245
+        }
+      },
+      {
+        "entry": {
+          "kind": "api",
+          "framework": "next-app",
+          "filePath": "src/app/api/repositories/[connectionId]/learn/route.ts",
+          "routePath": "/api/repositories/[connectionId]/learn",
+          "method": "POST",
+          "nodeId": "symbol:src/app/api/repositories/[connectionId]/learn/route.ts#POST@1215[120970d812836f19]"
+        },
+        "buildMs": 2695.6581000000006,
+        "bytes": 3901727,
+        "parts": {
+          "cfg": 2071775,
+          "evidence": 620987,
+          "nodes": 108253,
+          "edges": 529848,
+          "http": 7632,
+          "database": 159314,
+          "responses": 161747
+        }
+      }
+    ],
+    "totalFlowBuildMs": 13263.0812,
+    "fourFlowBytes": 28073152
+  },
+  "delivery": {
+    "summaryMs": 137.44870000000083,
+    "summaryBytes": 7589,
+    "features": 12,
+    "rows": [
+      {
+        "selection": {
+          "route": "/repository"
+        },
+        "featureId": "f_b2217bb058e1b44c87ae5e6d",
+        "coldFlowMs": 1899.2363000000041,
+        "initialBytes": 14953,
+        "initialNodes": 24,
+        "available": {
+          "nodes": 203,
+          "edges": 220
+        },
+        "truncation": {
+          "analysis": true,
+          "reasons": [
+            "traversal-limit",
+            "server-traversal-limited"
+          ],
+          "omittedByAnalysis": "unknown",
+          "recoverableByExpansion": false,
+          "analysisRecoverableByExpansion": false,
+          "viewportCanExpand": true,
+          "projection": true,
+          "projectionReason": "page-limit",
+          "knownHiddenNodes": 179,
+          "knownHiddenEdges": 197
+        },
+        "nodeDetail": {
+          "ms": 5.316899999997986,
+          "bytes": 16248,
+          "function": "RepositoryWorkspace",
+          "totalChars": 23565,
+          "nextCodeOffset": 6000
+        },
+        "expansion": {
+          "ms": 4.1357999999963795,
+          "bytes": 16032,
+          "visibleNodes": 48
+        },
+        "cfg": {
+          "ms": 9.274199999999837,
+          "bytes": 19467,
+          "nodes": 40,
+          "total": {
+            "nodes": 54,
+            "edges": 2
+          },
+          "nextOffset": 40
+        },
+        "repeats": {
+          "n": 20,
+          "p50Ms": 2.622800000004645,
+          "p95Ms": 3.2782999999981257,
+          "maxMs": 3.3775000000023283
+        },
+        "compactIndexBytes": 182790,
+        "page48Bytes": 28937
+      },
+      {
+        "selection": {
+          "route": "/api/analyze",
+          "method": "GET"
+        },
+        "featureId": "f_d97dbb34fb27f633dc77a1de",
+        "coldFlowMs": 3167.3026000000027,
+        "initialBytes": 15563,
+        "initialNodes": 24,
+        "available": {
+          "nodes": 432,
+          "edges": 493
+        },
+        "truncation": {
+          "analysis": true,
+          "reasons": [
+            "traversal-limit",
+            "recursive-call-boundary",
+            "server-traversal-limit",
+            "server-traversal-limited"
+          ],
+          "omittedByAnalysis": "unknown",
+          "recoverableByExpansion": false,
+          "analysisRecoverableByExpansion": false,
+          "viewportCanExpand": true,
+          "projection": true,
+          "projectionReason": "page-limit",
+          "knownHiddenNodes": 408,
+          "knownHiddenEdges": 469
+        },
+        "nodeDetail": {
+          "ms": 1.5212000000028638,
+          "bytes": 11651,
+          "function": "extractFunctionControlFlow",
+          "totalChars": 11187,
+          "nextCodeOffset": 6000
+        },
+        "expansion": {
+          "ms": 5.996299999998882,
+          "bytes": 16037,
+          "visibleNodes": 48
+        },
+        "cfg": {
+          "ms": 3.4777000000030966,
+          "bytes": 10668,
+          "nodes": 24,
+          "total": {
+            "nodes": 24,
+            "edges": 7
+          },
+          "nextOffset": null
+        },
+        "repeats": {
+          "n": 20,
+          "p50Ms": 2.4411999999938416,
+          "p95Ms": 2.7762000000002445,
+          "maxMs": 2.7876000000032946
+        },
+        "compactIndexBytes": 631452,
+        "page48Bytes": 29509
+      },
+      {
+        "selection": {
+          "route": "/api/repositories/[connectionId]/analyze",
+          "method": "GET"
+        },
+        "featureId": "f_f639fef012541e773c7d547d",
+        "coldFlowMs": 3348.349900000001,
+        "initialBytes": 15269,
+        "initialNodes": 24,
+        "available": {
+          "nodes": 437,
+          "edges": 499
+        },
+        "truncation": {
+          "analysis": true,
+          "reasons": [
+            "traversal-limit",
+            "server-traversal-limit",
+            "server-traversal-limited"
+          ],
+          "omittedByAnalysis": "unknown",
+          "recoverableByExpansion": false,
+          "analysisRecoverableByExpansion": false,
+          "viewportCanExpand": true,
+          "projection": true,
+          "projectionReason": "page-limit",
+          "knownHiddenNodes": 413,
+          "knownHiddenEdges": 475
+        },
+        "nodeDetail": {
+          "ms": 1.230199999998149,
+          "bytes": 11653,
+          "function": "extractFunctionControlFlow",
+          "totalChars": 11187,
+          "nextCodeOffset": 6000
+        },
+        "expansion": {
+          "ms": 5.314800000000105,
+          "bytes": 16588,
+          "visibleNodes": 48
+        },
+        "cfg": {
+          "ms": 3.068700000003446,
+          "bytes": 10668,
+          "nodes": 24,
+          "total": {
+            "nodes": 24,
+            "edges": 7
+          },
+          "nextOffset": null
+        },
+        "repeats": {
+          "n": 20,
+          "p50Ms": 2.375099999997474,
+          "p95Ms": 3.764999999999418,
+          "maxMs": 4.025200000003679
+        },
+        "compactIndexBytes": 617701,
+        "page48Bytes": 29792
+      },
+      {
+        "selection": {
+          "route": "/api/repositories/[connectionId]/learn",
+          "method": "POST"
+        },
+        "featureId": "f_5cc3d2993c5c1b1803d5935e",
+        "coldFlowMs": 2229.7725999999966,
+        "initialBytes": 15597,
+        "initialNodes": 24,
+        "available": {
+          "nodes": 317,
+          "edges": 345
+        },
+        "truncation": {
+          "analysis": true,
+          "reasons": [
+            "server-traversal-limit",
+            "server-traversal-limited"
+          ],
+          "omittedByAnalysis": "unknown",
+          "recoverableByExpansion": false,
+          "analysisRecoverableByExpansion": false,
+          "viewportCanExpand": true,
+          "projection": true,
+          "projectionReason": "page-limit",
+          "knownHiddenNodes": 293,
+          "knownHiddenEdges": 320
+        },
+        "nodeDetail": {
+          "ms": 2.907500000001164,
+          "bytes": 20449,
+          "function": "POST",
+          "totalChars": 5581,
+          "nextCodeOffset": null
+        },
+        "expansion": {
+          "ms": 3.089299999999639,
+          "bytes": 17078,
+          "visibleNodes": 48
+        },
+        "cfg": {
+          "ms": 7.7739999999976135,
+          "bytes": 19635,
+          "nodes": 40,
+          "total": {
+            "nodes": 84,
+            "edges": 12
+          },
+          "nextOffset": 40
+        },
+        "repeats": {
+          "n": 20,
+          "p50Ms": 2.052400000000489,
+          "p95Ms": 3.964399999997113,
+          "maxMs": 4.083099999996193
+        },
+        "compactIndexBytes": 490184,
+        "page48Bytes": 30628
+      }
+    ],
+    "cache": {
+      "indices": {
+        "entries": 1,
+        "serializedBytes": 363891,
+        "maxBytes": 4194304,
+        "maxEntries": 16,
+        "hits": 100,
+        "misses": 1,
+        "evictions": 0
+      },
+      "flows": {
+        "entries": 4,
+        "serializedBytes": 1922127,
+        "maxBytes": 16777216,
+        "maxEntries": 64,
+        "hits": 96,
+        "misses": 16,
+        "evictions": 0
+      },
+      "inFlight": 0,
+      "builds": 4
+    },
+    "astCache": {
+      "entries": 1,
+      "serializedBytes": 25495307,
+      "maxBytes": 134217728,
+      "maxEntries": 8,
+      "hits": 0,
+      "misses": 0,
+      "evictions": 0
+    },
+    "heapUsedBytes": 299286096
+  },
+  "notes": [
+    "Analysis predicates unchanged. Original CFG and all source/evidence remain in bounded AST cache.",
+    "Summary Flow counts are null until selected; source-scope counts are explicitly separate.",
+    "Cold AST and core Flow generation still cost seconds; only read payloads/repeated work optimized.",
+    "Cache limits account serialized bytes, not V8 heap/RSS; heap sample includes benchmark transient allocations."
+  ]
+}

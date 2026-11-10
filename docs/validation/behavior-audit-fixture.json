@@ -1,0 +1,234 @@
+{
+  "sources": [
+    {
+      "path": "app/login/page.tsx",
+      "content": "\"use client\";\nimport type {FormEvent} from \"react\";\nimport {sendLogin} from \"../../client\";\nfunction Widget(_props:{onClick?:(event:FormEvent<HTMLFormElement>)=>Promise<void>}){return <div/>;}\nexport default function LoginPage(){\n async function handleLogin(event:FormEvent<HTMLFormElement>){event.preventDefault(); await sendLogin();}\n return <><form onSubmit={handleLogin}><button>Login</button></form><Widget onClick={handleLogin}/></>;\n}"
+    },
+    {
+      "path": "client.ts",
+      "content": "export async function sendLogin(allowed:boolean=Math.random()>0.5,dynamicUrl:string=location.pathname){\n if (allowed) return fetch(\"/api/login\",{method:\"POST\"});\n fetch(\"https://external.example/api/login\",{method:\"POST\"});\n return fetch(dynamicUrl);\n}\nexport function unrelated(){return fetch(\"/api/unrelated\");}"
+    },
+    {
+      "path": "app/api/login/route.ts",
+      "content": "import {PrismaClient} from \"@prisma/client\";\nconst prisma=new PrismaClient();\nexport async function POST(){\n const user=await prisma.user.findUnique({where:{id:42}});\n if (!user) return Response.json({error:\"missing\"},{status:404});\n const preview=Response.json({preview:true});\n return Response.json({user},{status:200});\n}"
+    },
+    {
+      "path": "app/api/unrelated/route.ts",
+      "content": "export function GET(){return Response.json({unrelated:true});}"
+    },
+    {
+      "path": "app/api/limits/route.ts",
+      "content": "import {PrismaClient} from \"@prisma/client\";\nconst cached=(globalThis as unknown as {client?:PrismaClient}).client ?? new PrismaClient();\nfunction wrap(value:unknown){return Response.json(value);}\nfunction value(){return {id:1};}\nconst items:number[]=[]; const choice:number=Date.now(); function work(_value:number){}\nexport function GET(){\n const fake={user:{findUnique(){return null;}}}; fake.user.findUnique();\n cached.user.findMany();\n for(const item of items){work(item);}\n switch(choice){case 1: work(choice); break; default: break;}\n return wrap(value());\n}"
+    }
+  ],
+  "oracle": [
+    {
+      "id": "fx-entry",
+      "truth": "positive",
+      "stage": "entry",
+      "kind": "entry",
+      "route": "/login",
+      "target": "LoginPage",
+      "note": "Default page export."
+    },
+    {
+      "id": "fx-feature",
+      "truth": "positive",
+      "stage": "discovery",
+      "kind": "feature",
+      "route": "/login",
+      "note": "Page should be an automatic feature."
+    },
+    {
+      "id": "fx-event",
+      "truth": "positive",
+      "stage": "event",
+      "kind": "event",
+      "file": "app/login/page.tsx",
+      "anchor": "onSubmit={handleLogin}",
+      "target": "handleLogin",
+      "note": "Intrinsic form DOM binding."
+    },
+    {
+      "id": "fx-call",
+      "truth": "positive",
+      "stage": "call",
+      "kind": "call",
+      "file": "app/login/page.tsx",
+      "anchor": "sendLogin()",
+      "target": "sendLogin",
+      "note": "Actual imported helper call inside handler."
+    },
+    {
+      "id": "fx-condition",
+      "truth": "positive",
+      "stage": "cfg",
+      "kind": "cfg",
+      "file": "client.ts",
+      "anchor": "fetch(\"/api/login\",{method:\"POST\"})",
+      "branch": "true",
+      "note": "Request belongs to allowed true branch, not a runtime event."
+    },
+    {
+      "id": "fx-http",
+      "truth": "positive",
+      "stage": "http",
+      "kind": "http",
+      "file": "client.ts",
+      "anchor": "fetch(\"/api/login\",{method:\"POST\"})",
+      "route": "/api/login",
+      "method": "POST",
+      "note": "Exact local URL and method export."
+    },
+    {
+      "id": "fx-server-entry",
+      "truth": "positive",
+      "stage": "entry",
+      "kind": "entry",
+      "route": "/api/login",
+      "method": "POST",
+      "target": "POST",
+      "note": "HTTP server entry."
+    },
+    {
+      "id": "fx-db",
+      "truth": "positive",
+      "stage": "db",
+      "kind": "db",
+      "file": "app/api/login/route.ts",
+      "anchor": "prisma.user.findUnique",
+      "note": "Direct new PrismaClient from runtime package import."
+    },
+    {
+      "id": "fx-response",
+      "truth": "positive",
+      "stage": "response",
+      "kind": "creation",
+      "file": "app/api/login/route.ts",
+      "anchor": "Response.json({user},{status:200})",
+      "note": "Actual global Response factory."
+    },
+    {
+      "id": "fx-return",
+      "truth": "positive",
+      "stage": "return",
+      "kind": "return",
+      "file": "app/api/login/route.ts",
+      "anchor": "return Response.json({user},{status:200})",
+      "note": "Response creation is directly returned."
+    },
+    {
+      "id": "fx-lineage",
+      "truth": "positive",
+      "stage": "lineage",
+      "kind": "lineage",
+      "file": "app/api/login/route.ts",
+      "anchor": "Response.json({user},{status:200})",
+      "field": [
+        "user"
+      ],
+      "databaseAnchor": "prisma.user.findUnique",
+      "note": "Same-function const user is the awaited query result; query ID must match this exact definition."
+    },
+    {
+      "id": "fx-preview",
+      "truth": "negative",
+      "stage": "return",
+      "kind": "return",
+      "file": "app/api/login/route.ts",
+      "anchor": "const preview=Response.json({preview:true})",
+      "note": "Creating preview is not a return."
+    },
+    {
+      "id": "fx-custom-prop",
+      "truth": "negative",
+      "stage": "event",
+      "kind": "custom-event",
+      "file": "app/login/page.tsx",
+      "anchor": "onClick={handleLogin}",
+      "note": "Widget prop is not proof of a DOM binding."
+    },
+    {
+      "id": "fx-unrelated",
+      "truth": "negative",
+      "stage": "call",
+      "kind": "unrelated",
+      "target": "unrelated",
+      "note": "Unused helper must not leak into selected page/server flow."
+    },
+    {
+      "id": "fx-dynamic",
+      "truth": "unknown",
+      "stage": "http",
+      "kind": "http",
+      "file": "client.ts",
+      "anchor": "fetch(dynamicUrl)",
+      "note": "Runtime URL is unknowable; no server association is justified."
+    },
+    {
+      "id": "fx-external",
+      "truth": "negative",
+      "stage": "http",
+      "kind": "http",
+      "file": "client.ts",
+      "anchor": "fetch(\"https://external.example/api/login\"",
+      "route": "/api/login",
+      "method": "POST",
+      "note": "External origin must not be linked to an internal route with the same pathname."
+    },
+    {
+      "id": "fx-wrapper",
+      "truth": "positive",
+      "stage": "return",
+      "kind": "return",
+      "file": "app/api/limits/route.ts",
+      "anchor": "return wrap(value())",
+      "note": "Human can follow wrap to Response.json; unsupported inter-function return composition should be reported unresolved and reduce recall."
+    },
+    {
+      "id": "fx-cache",
+      "truth": "unknown",
+      "stage": "db",
+      "kind": "db",
+      "file": "app/api/limits/route.ts",
+      "anchor": "cached.user.findMany()",
+      "note": "Host global cache provenance cannot be statically proven."
+    },
+    {
+      "id": "fx-fake",
+      "truth": "negative",
+      "stage": "db",
+      "kind": "db",
+      "file": "app/api/limits/route.ts",
+      "anchor": "fake.user.findUnique()",
+      "note": "Plain object method, not Prisma."
+    },
+    {
+      "id": "fx-for",
+      "truth": "positive",
+      "stage": "cfg",
+      "kind": "cfg",
+      "file": "app/api/limits/route.ts",
+      "anchor": "for(const item of items)",
+      "unsupported": true,
+      "note": "Must be explicit unsupported region, not a fabricated loop CFG."
+    },
+    {
+      "id": "fx-switch",
+      "truth": "positive",
+      "stage": "cfg",
+      "kind": "cfg",
+      "file": "app/api/limits/route.ts",
+      "anchor": "switch(choice)",
+      "unsupported": true,
+      "note": "Must remain unsupported."
+    },
+    {
+      "id": "fx-runtime",
+      "truth": "negative",
+      "stage": "semantics",
+      "kind": "runtime",
+      "note": "No observed runtime order or completion may be claimed."
+    }
+  ]
+}

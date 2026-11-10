@@ -24,8 +24,12 @@ export function featureNavigationLabel(feature: RepositoryFeature) {
   // Respect explicitly supplied titles; only shorten automatically generated route titles.
   const automatic = feature.titleInferred || feature.title === `${route} 페이지`
     || feature.title === `${feature.httpMethod} ${route} API`;
+  const routeTitle = feature.title === `${route} 페이지` || feature.title === `${feature.httpMethod} ${route} API`;
+  const fallbackTitle = routeTitle && leaf
+    ? api ? `${feature.httpMethod ?? "API"} · ${leaf} API` : `${leaf} 페이지`
+    : feature.title;
   return {
-    title: automatic && translated ? `${api ? `${feature.httpMethod ?? "API"} · ` : ""}${translated}${api ? " API" : ""}` : feature.title,
+    title: automatic && translated ? `${api ? `${feature.httpMethod ?? "API"} · ` : ""}${translated}${api ? " API" : ""}` : fallbackTitle,
     titleInferred: automatic && translated ? true : Boolean(feature.titleInferred),
     path: route ? `${feature.httpMethod ? `${feature.httpMethod} ` : ""}${route}` : feature.entryFilePath,
     summary: api && feature.httpMethod ? `${feature.httpMethod} 요청 진입점` : undefined,
@@ -47,10 +51,10 @@ function structuralGroup(feature: RepositoryFeature): Omit<FeatureNavigationGrou
     ? Math.min(offset + 2, folders.length) : offset + 1;
   const directory = parts.slice(0, appIndex + 1 + anchorLength).join("/");
   const segment = folders[anchorLength - 1];
-  const translation = LABELS[segment];
   return { id: JSON.stringify([feature.entryKind, directory]), directory,
-    title: translation ? `${translation}${feature.entryKind === "api" ? " API" : ""}` : `${segment} ${feature.entryKind === "api" ? "API" : "폴더"}`,
-    titleInferred: Boolean(translation) };
+    // A directory is a navigation aid, never evidence of a user-facing feature.
+    title: `${segment} · ${feature.entryKind === "api" ? "폴더별 API" : "폴더별 페이지"}`,
+    titleInferred: false };
 }
 
 export function buildFeatureNavigation(features: RepositoryFeature[]): FeatureNavigationGroup[] {

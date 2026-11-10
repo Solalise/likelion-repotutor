@@ -1,0 +1,1306 @@
+{
+  "input": [
+    {
+      "path": "app/login/page.tsx",
+      "content": "function handleLogin() { return 1; }\nfunction submitForm() { return 2; }\nfunction audit() { return 3; }\nfunction Button(props: { onClick: () => void }) { return <button onClick={props.onClick}/>; }\nexport default function LoginPage() {\n  const ready = Boolean(Date.now());\n  return <>\n    <button onClick={handleLogin}>Sign in</button>\n    <form onSubmit={(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }}/>\n    <input onChange={ready ? handleLogin : submitForm}/>\n    <Button onClick={handleLogin}/>\n  </>;\n}"
+    }
+  ],
+  "bindings": [
+    {
+      "id": "react-event:[\"app/login/page.tsx\",169,192]",
+      "ownerNodeId": "symbol:app/login/page.tsx#Button@104[120970d812836f19]",
+      "eventName": "onClick",
+      "eventType": "click",
+      "phase": "bubble",
+      "element": {
+        "name": "button",
+        "kind": "intrinsic",
+        "startOffset": 162,
+        "endOffset": 168
+      },
+      "filePath": "app/login/page.tsx",
+      "line": 4,
+      "endLine": 4,
+      "column": 66,
+      "endColumn": 89,
+      "startOffset": 169,
+      "endOffset": 192,
+      "sourceCode": "onClick={props.onClick}",
+      "handlerExpression": "props.onClick",
+      "mode": "dynamic",
+      "targetResolution": "unresolved",
+      "status": "unresolved",
+      "confidence": "unknown",
+      "reason": "dynamic-handler"
+    },
+    {
+      "id": "react-event:[\"app/login/page.tsx\",297,318]",
+      "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+      "eventName": "onClick",
+      "eventType": "click",
+      "phase": "bubble",
+      "element": {
+        "name": "button",
+        "kind": "intrinsic",
+        "startOffset": 290,
+        "endOffset": 296
+      },
+      "filePath": "app/login/page.tsx",
+      "line": 8,
+      "endLine": 8,
+      "column": 13,
+      "endColumn": 34,
+      "startOffset": 297,
+      "endOffset": 318,
+      "sourceCode": "onClick={handleLogin}",
+      "handlerExpression": "handleLogin",
+      "mode": "direct",
+      "targetNodeId": "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]",
+      "targetResolution": "resolved",
+      "status": "confirmed",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "react-event:[\"app/login/page.tsx\",346,440]",
+      "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+      "eventName": "onSubmit",
+      "eventType": "submit",
+      "phase": "bubble",
+      "element": {
+        "name": "form",
+        "kind": "intrinsic",
+        "startOffset": 341,
+        "endOffset": 345
+      },
+      "filePath": "app/login/page.tsx",
+      "line": 9,
+      "endLine": 13,
+      "column": 11,
+      "endColumn": 7,
+      "startOffset": 346,
+      "endOffset": 440,
+      "sourceCode": "onSubmit={(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }}",
+      "handlerExpression": "(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }",
+      "mode": "inline",
+      "targetNodeId": "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]",
+      "targetResolution": "resolved",
+      "status": "confirmed",
+      "confidence": "confirmed"
+    },
+    {
+      "id": "react-event:[\"app/login/page.tsx\",454,497]",
+      "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+      "eventName": "onChange",
+      "eventType": "change",
+      "phase": "bubble",
+      "element": {
+        "name": "input",
+        "kind": "intrinsic",
+        "startOffset": 448,
+        "endOffset": 453
+      },
+      "filePath": "app/login/page.tsx",
+      "line": 14,
+      "endLine": 14,
+      "column": 12,
+      "endColumn": 55,
+      "startOffset": 454,
+      "endOffset": 497,
+      "sourceCode": "onChange={ready ? handleLogin : submitForm}",
+      "handlerExpression": "ready ? handleLogin : submitForm",
+      "mode": "conditional",
+      "targetResolution": "unresolved",
+      "status": "unresolved",
+      "confidence": "inferred",
+      "reason": "conditional-handler"
+    },
+    {
+      "id": "react-event:[\"app/login/page.tsx\",512,533]",
+      "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+      "eventName": "onClick",
+      "eventType": "click",
+      "phase": "bubble",
+      "element": {
+        "name": "Button",
+        "kind": "component",
+        "startOffset": 505,
+        "endOffset": 511
+      },
+      "filePath": "app/login/page.tsx",
+      "line": 15,
+      "endLine": 15,
+      "column": 13,
+      "endColumn": 34,
+      "startOffset": 512,
+      "endOffset": 533,
+      "sourceCode": "onClick={handleLogin}",
+      "handlerExpression": "handleLogin",
+      "mode": "direct",
+      "targetNodeId": "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]",
+      "targetResolution": "resolved",
+      "status": "unresolved",
+      "confidence": "unknown",
+      "reason": "component-prop"
+    }
+  ],
+  "output": {
+    "schemaVersion": 1,
+    "id": "behavior:flow:[\"event-example\",{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/login/page.tsx\",\"routePath\":\"/login\",\"nodeId\":\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"}]",
+    "repository": "event-example",
+    "entryPoint": {
+      "kind": "page",
+      "framework": "next-app",
+      "filePath": "app/login/page.tsx",
+      "routePath": "/login",
+      "nodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+    },
+    "status": "partial",
+    "semantics": "static-code-relations",
+    "executionOrder": "not-established",
+    "nodes": [
+      {
+        "id": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]"
+        ],
+        "eventBindingId": "react-event:[\"app/login/page.tsx\",297,318]"
+      },
+      {
+        "id": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]",
+        "kind": "event",
+        "label": "<form> onSubmit 바인딩",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]"
+        ],
+        "eventBindingId": "react-event:[\"app/login/page.tsx\",346,440]"
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#audit@73[120970d812836f19]\"]",
+        "kind": "function",
+        "label": "audit",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#audit@73[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#audit@73[120970d812836f19]\"]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\"]",
+        "kind": "function",
+        "label": "Button",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#Button@104[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\"]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\"]",
+        "kind": "function",
+        "label": "callback@9:21",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\"]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\"]",
+        "kind": "function",
+        "label": "handleLogin",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\"]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+        "kind": "screen",
+        "label": "LoginPage",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+          "behavior:entry:[{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/login/page.tsx\",\"routePath\":\"/login\",\"nodeId\":\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"}]"
+        ]
+      },
+      {
+        "id": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\"]",
+        "kind": "function",
+        "label": "submitForm",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#submitForm@37[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:declaration:[\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\"]"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "behavior:edge:[\"behavior:event:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"react-event:[\\\\\\\"app/login/page.tsx\\\\\\\",297,318]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\\\"]\",\"event-handler\"]",
+        "source": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\"]",
+        "relation": "event-handler",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:event:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"react-event:[\\\\\\\"app/login/page.tsx\\\\\\\",346,440]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\\\"]\",\"event-handler\"]",
+        "source": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\"]",
+        "relation": "event-handler",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#audit@73[120970d812836f19]\\\"]\",\"call\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#audit@73[120970d812836f19]\"]",
+        "relation": "call",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "call:symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]->symbol:app/login/page.tsx#audit@73[120970d812836f19]:12"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\",{\"relation\":\"call\",\"name\":\"audit\",\"targetId\":\"symbol:app/login/page.tsx#audit@73[120970d812836f19]\",\"line\":12,\"evidence\":\"audit()\",\"confidence\":\"confirmed\"}]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\\\"]\",\"call\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\"]",
+        "relation": "call",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "call:symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]->symbol:app/login/page.tsx#submitForm@37[120970d812836f19]:11"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\",{\"relation\":\"call\",\"name\":\"submitForm\",\"targetId\":\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\",\"line\":11,\"evidence\":\"submitForm()\",\"confidence\":\"confirmed\"}]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"]\",\"behavior:event:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"react-event:[\\\\\\\"app/login/page.tsx\\\\\\\",297,318]\\\"]\",\"event-binding\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+        "target": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]",
+        "relation": "event-binding",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"]\",\"behavior:event:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"react-event:[\\\\\\\"app/login/page.tsx\\\\\\\",346,440]\\\"]\",\"event-binding\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+        "target": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]",
+        "relation": "event-binding",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [],
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\\\"]\",\"component\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\"]",
+        "relation": "component",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "component:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#Button@104[120970d812836f19]:15"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"Button\",\"targetId\":\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\",\"line\":15,\"evidence\":\"<Button onClick={handleLogin}/>\",\"confidence\":\"confirmed\"}]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\\\"]\",\"reference\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\"]",
+        "relation": "reference",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "reference:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]:14",
+          "reference:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]:15"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"handleLogin\",\"targetId\":\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\",\"line\":14,\"evidence\":\"onChange={ready ? handleLogin : submitForm}\",\"confidence\":\"confirmed\"}]",
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"handleLogin\",\"targetId\":\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\",\"line\":15,\"evidence\":\"onClick={handleLogin}\",\"confidence\":\"confirmed\"}]"
+        ]
+      },
+      {
+        "id": "behavior:edge:[\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"]\",\"behavior:node:[\\\"behavior:flow:[\\\\\\\"event-example\\\\\\\",{\\\\\\\"kind\\\\\\\":\\\\\\\"page\\\\\\\",\\\\\\\"framework\\\\\\\":\\\\\\\"next-app\\\\\\\",\\\\\\\"filePath\\\\\\\":\\\\\\\"app/login/page.tsx\\\\\\\",\\\\\\\"routePath\\\\\\\":\\\\\\\"/login\\\\\\\",\\\\\\\"nodeId\\\\\\\":\\\\\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\\\\\"}]\\\",\\\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\\\"]\",\"reference\"]",
+        "source": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+        "target": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\"]",
+        "relation": "reference",
+        "confidence": "confirmed",
+        "semantics": "static-relation",
+        "executionOrder": "not-established",
+        "sourceEdgeIds": [
+          "reference:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#submitForm@37[120970d812836f19]:14"
+        ],
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"submitForm\",\"targetId\":\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\",\"line\":14,\"evidence\":\"onChange={ready ? handleLogin : submitForm}\",\"confidence\":\"confirmed\"}]"
+        ]
+      }
+    ],
+    "evidence": [
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#audit@73[120970d812836f19]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 3,
+          "endLine": 3
+        },
+        "excerpt": "function audit() { return 3; }",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#audit@73[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#audit@73[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 4,
+          "endLine": 4
+        },
+        "excerpt": "function Button(props: { onClick: () => void }) { return <button onClick={props.onClick}/>; }",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#Button@104[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#Button@104[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 9,
+          "endLine": 13
+        },
+        "excerpt": "    <form onSubmit={(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }}/>",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 1,
+          "endLine": 1
+        },
+        "excerpt": "function handleLogin() { return 1; }",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 5,
+          "endLine": 17
+        },
+        "excerpt": "export default function LoginPage() {\n  const ready = Boolean(Date.now());\n  return <>\n    <button onClick={handleLogin}>Sign in</button>\n    <form onSubmit={(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }}/>\n    <input onChange={ready ? handleLogin : submitForm}/>\n    <Button onClick={handleLogin}/>\n  </>;\n}",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:declaration:[\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 2,
+          "endLine": 2
+        },
+        "excerpt": "function submitForm() { return 2; }",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#submitForm@37[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "declaration",
+          "nodeId": "symbol:app/login/page.tsx#submitForm@37[120970d812836f19]"
+        }
+      },
+      {
+        "id": "behavior:entry:[{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/login/page.tsx\",\"routePath\":\"/login\",\"nodeId\":\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "file"
+        },
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "entry-point",
+          "entryPoint": {
+            "kind": "page",
+            "framework": "next-app",
+            "filePath": "app/login/page.tsx",
+            "routePath": "/login",
+            "nodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+          }
+        }
+      },
+      {
+        "id": "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",169,192]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 4,
+          "endLine": 4,
+          "startOffset": 169,
+          "endOffset": 192,
+          "startColumn": 66,
+          "endColumn": 89
+        },
+        "excerpt": "onClick={props.onClick}",
+        "confidence": "unknown",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#Button@104[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "event-binding",
+          "binding": {
+            "id": "react-event:[\"app/login/page.tsx\",169,192]",
+            "ownerNodeId": "symbol:app/login/page.tsx#Button@104[120970d812836f19]",
+            "eventName": "onClick",
+            "eventType": "click",
+            "phase": "bubble",
+            "element": {
+              "name": "button",
+              "kind": "intrinsic",
+              "startOffset": 162,
+              "endOffset": 168
+            },
+            "filePath": "app/login/page.tsx",
+            "line": 4,
+            "endLine": 4,
+            "column": 66,
+            "endColumn": 89,
+            "startOffset": 169,
+            "endOffset": 192,
+            "sourceCode": "onClick={props.onClick}",
+            "handlerExpression": "props.onClick",
+            "mode": "dynamic",
+            "targetResolution": "unresolved",
+            "status": "unresolved",
+            "confidence": "unknown",
+            "reason": "dynamic-handler"
+          }
+        }
+      },
+      {
+        "id": "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 8,
+          "endLine": 8,
+          "startOffset": 297,
+          "endOffset": 318,
+          "startColumn": 13,
+          "endColumn": 34
+        },
+        "excerpt": "onClick={handleLogin}",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "event-binding",
+          "binding": {
+            "id": "react-event:[\"app/login/page.tsx\",297,318]",
+            "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+            "eventName": "onClick",
+            "eventType": "click",
+            "phase": "bubble",
+            "element": {
+              "name": "button",
+              "kind": "intrinsic",
+              "startOffset": 290,
+              "endOffset": 296
+            },
+            "filePath": "app/login/page.tsx",
+            "line": 8,
+            "endLine": 8,
+            "column": 13,
+            "endColumn": 34,
+            "startOffset": 297,
+            "endOffset": 318,
+            "sourceCode": "onClick={handleLogin}",
+            "handlerExpression": "handleLogin",
+            "mode": "direct",
+            "targetNodeId": "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]",
+            "targetResolution": "resolved",
+            "status": "confirmed",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 9,
+          "endLine": 13,
+          "startOffset": 346,
+          "endOffset": 440,
+          "startColumn": 11,
+          "endColumn": 7
+        },
+        "excerpt": "onSubmit={(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }}",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "event-binding",
+          "binding": {
+            "id": "react-event:[\"app/login/page.tsx\",346,440]",
+            "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+            "eventName": "onSubmit",
+            "eventType": "submit",
+            "phase": "bubble",
+            "element": {
+              "name": "form",
+              "kind": "intrinsic",
+              "startOffset": 341,
+              "endOffset": 345
+            },
+            "filePath": "app/login/page.tsx",
+            "line": 9,
+            "endLine": 13,
+            "column": 11,
+            "endColumn": 7,
+            "startOffset": 346,
+            "endOffset": 440,
+            "sourceCode": "onSubmit={(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }}",
+            "handlerExpression": "(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }",
+            "mode": "inline",
+            "targetNodeId": "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]",
+            "targetResolution": "resolved",
+            "status": "confirmed",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",454,497]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 14,
+          "endLine": 14,
+          "startOffset": 454,
+          "endOffset": 497,
+          "startColumn": 12,
+          "endColumn": 55
+        },
+        "excerpt": "onChange={ready ? handleLogin : submitForm}",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "event-binding",
+          "binding": {
+            "id": "react-event:[\"app/login/page.tsx\",454,497]",
+            "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+            "eventName": "onChange",
+            "eventType": "change",
+            "phase": "bubble",
+            "element": {
+              "name": "input",
+              "kind": "intrinsic",
+              "startOffset": 448,
+              "endOffset": 453
+            },
+            "filePath": "app/login/page.tsx",
+            "line": 14,
+            "endLine": 14,
+            "column": 12,
+            "endColumn": 55,
+            "startOffset": 454,
+            "endOffset": 497,
+            "sourceCode": "onChange={ready ? handleLogin : submitForm}",
+            "handlerExpression": "ready ? handleLogin : submitForm",
+            "mode": "conditional",
+            "targetResolution": "unresolved",
+            "status": "unresolved",
+            "confidence": "inferred",
+            "reason": "conditional-handler"
+          }
+        }
+      },
+      {
+        "id": "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",512,533]\"]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 15,
+          "endLine": 15,
+          "startOffset": 512,
+          "endOffset": 533,
+          "startColumn": 13,
+          "endColumn": 34
+        },
+        "excerpt": "onClick={handleLogin}",
+        "confidence": "unknown",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "event-binding",
+          "binding": {
+            "id": "react-event:[\"app/login/page.tsx\",512,533]",
+            "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+            "eventName": "onClick",
+            "eventType": "click",
+            "phase": "bubble",
+            "element": {
+              "name": "Button",
+              "kind": "component",
+              "startOffset": 505,
+              "endOffset": 511
+            },
+            "filePath": "app/login/page.tsx",
+            "line": 15,
+            "endLine": 15,
+            "column": 13,
+            "endColumn": 34,
+            "startOffset": 512,
+            "endOffset": 533,
+            "sourceCode": "onClick={handleLogin}",
+            "handlerExpression": "handleLogin",
+            "mode": "direct",
+            "targetNodeId": "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]",
+            "targetResolution": "resolved",
+            "status": "unresolved",
+            "confidence": "unknown",
+            "reason": "component-prop"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":4,\"evidence\":\"<button onClick={props.onClick}/>\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 4,
+          "endLine": 4
+        },
+        "excerpt": "function Button(props: { onClick: () => void }) { return <button onClick={props.onClick}/>; }",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#Button@104[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#Button@104[120970d812836f19]",
+          "relation": {
+            "relation": "component",
+            "name": "button",
+            "line": 4,
+            "evidence": "<button onClick={props.onClick}/>",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\",{\"relation\":\"call\",\"name\":\"audit\",\"targetId\":\"symbol:app/login/page.tsx#audit@73[120970d812836f19]\",\"line\":12,\"evidence\":\"audit()\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 12,
+          "endLine": 12
+        },
+        "excerpt": "      audit();",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]"
+        ],
+        "sourceEdgeIds": [
+          "call:symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]->symbol:app/login/page.tsx#audit@73[120970d812836f19]:12"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]",
+          "relation": {
+            "relation": "call",
+            "name": "audit",
+            "targetId": "symbol:app/login/page.tsx#audit@73[120970d812836f19]",
+            "line": 12,
+            "evidence": "audit()",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\",{\"relation\":\"call\",\"name\":\"event.preventDefault\",\"line\":10,\"evidence\":\"event.preventDefault()\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 10,
+          "endLine": 10
+        },
+        "excerpt": "      event.preventDefault();",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]",
+          "relation": {
+            "relation": "call",
+            "name": "event.preventDefault",
+            "line": 10,
+            "evidence": "event.preventDefault()",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\",{\"relation\":\"call\",\"name\":\"submitForm\",\"targetId\":\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\",\"line\":11,\"evidence\":\"submitForm()\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 11,
+          "endLine": 11
+        },
+        "excerpt": "      submitForm();",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]"
+        ],
+        "sourceEdgeIds": [
+          "call:symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]->symbol:app/login/page.tsx#submitForm@37[120970d812836f19]:11"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]",
+          "relation": {
+            "relation": "call",
+            "name": "submitForm",
+            "targetId": "symbol:app/login/page.tsx#submitForm@37[120970d812836f19]",
+            "line": 11,
+            "evidence": "submitForm()",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"Boolean\",\"line\":6,\"evidence\":\"Boolean(Date.now())\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 6,
+          "endLine": 6
+        },
+        "excerpt": "  const ready = Boolean(Date.now());",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "call",
+            "name": "Boolean",
+            "line": 6,
+            "evidence": "Boolean(Date.now())",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"Date.now\",\"line\":6,\"evidence\":\"Date.now()\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 6,
+          "endLine": 6
+        },
+        "excerpt": "  const ready = Boolean(Date.now());",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "call",
+            "name": "Date.now",
+            "line": 6,
+            "evidence": "Date.now()",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":8,\"evidence\":\"<button onClick={handleLogin}>\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 8,
+          "endLine": 8
+        },
+        "excerpt": "    <button onClick={handleLogin}>Sign in</button>",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "component",
+            "name": "button",
+            "line": 8,
+            "evidence": "<button onClick={handleLogin}>",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"Button\",\"targetId\":\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\",\"line\":15,\"evidence\":\"<Button onClick={handleLogin}/>\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 15,
+          "endLine": 15
+        },
+        "excerpt": "    <Button onClick={handleLogin}/>",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [
+          "component:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#Button@104[120970d812836f19]:15"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "component",
+            "name": "Button",
+            "targetId": "symbol:app/login/page.tsx#Button@104[120970d812836f19]",
+            "line": 15,
+            "evidence": "<Button onClick={handleLogin}/>",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"form\",\"line\":9,\"evidence\":\"<form onSubmit={(event) => { event.preventDefault(); submitForm(); audit(); }}/>\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "range",
+          "startLine": 9,
+          "endLine": 13
+        },
+        "excerpt": "    <form onSubmit={(event) => {\n      event.preventDefault();\n      submitForm();\n      audit();\n    }}/>",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "component",
+            "name": "form",
+            "line": 9,
+            "evidence": "<form onSubmit={(event) => { event.preventDefault(); submitForm(); audit(); }}/>",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"input\",\"line\":14,\"evidence\":\"<input onChange={ready ? handleLogin : submitForm}/>\",\"confidence\":\"inferred\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 14,
+          "endLine": 14
+        },
+        "excerpt": "    <input onChange={ready ? handleLogin : submitForm}/>",
+        "confidence": "inferred",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "component",
+            "name": "input",
+            "line": 14,
+            "evidence": "<input onChange={ready ? handleLogin : submitForm}/>",
+            "confidence": "inferred"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"handleLogin\",\"targetId\":\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\",\"line\":14,\"evidence\":\"onChange={ready ? handleLogin : submitForm}\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 14,
+          "endLine": 14
+        },
+        "excerpt": "    <input onChange={ready ? handleLogin : submitForm}/>",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [
+          "reference:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]:14"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "reference",
+            "name": "handleLogin",
+            "targetId": "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]",
+            "line": 14,
+            "evidence": "onChange={ready ? handleLogin : submitForm}",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"handleLogin\",\"targetId\":\"symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]\",\"line\":15,\"evidence\":\"onClick={handleLogin}\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 15,
+          "endLine": 15
+        },
+        "excerpt": "    <Button onClick={handleLogin}/>",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [
+          "reference:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]:15"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "reference",
+            "name": "handleLogin",
+            "targetId": "symbol:app/login/page.tsx#handleLogin@0[120970d812836f19]",
+            "line": 15,
+            "evidence": "onClick={handleLogin}",
+            "confidence": "confirmed"
+          }
+        }
+      },
+      {
+        "id": "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"reference\",\"name\":\"submitForm\",\"targetId\":\"symbol:app/login/page.tsx#submitForm@37[120970d812836f19]\",\"line\":14,\"evidence\":\"onChange={ready ? handleLogin : submitForm}\",\"confidence\":\"confirmed\"}]",
+        "location": {
+          "filePath": "app/login/page.tsx",
+          "precision": "line",
+          "startLine": 14,
+          "endLine": 14
+        },
+        "excerpt": "    <input onChange={ready ? handleLogin : submitForm}/>",
+        "confidence": "confirmed",
+        "sourceNodeIds": [
+          "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]"
+        ],
+        "sourceEdgeIds": [
+          "reference:symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]->symbol:app/login/page.tsx#submitForm@37[120970d812836f19]:14"
+        ],
+        "origin": {
+          "kind": "relation",
+          "sourceId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+          "relation": {
+            "relation": "reference",
+            "name": "submitForm",
+            "targetId": "symbol:app/login/page.tsx#submitForm@37[120970d812836f19]",
+            "line": 14,
+            "evidence": "onChange={ready ? handleLogin : submitForm}",
+            "confidence": "confirmed"
+          }
+        }
+      }
+    ],
+    "unresolved": [
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":4,\"evidence\":\"<button onClick={props.onClick}/>\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#Button@104[120970d812836f19]",
+        "relation": "component",
+        "targetName": "button",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#Button@104[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":4,\"evidence\":\"<button onClick={props.onClick}/>\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      },
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\",{\"relation\":\"call\",\"name\":\"event.preventDefault\",\"line\":10,\"evidence\":\"event.preventDefault()\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]",
+        "relation": "call",
+        "targetName": "event.preventDefault",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#callback@9:21@356[73348b0a082042c3]\",{\"relation\":\"call\",\"name\":\"event.preventDefault\",\"line\":10,\"evidence\":\"event.preventDefault()\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      },
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"Boolean\",\"line\":6,\"evidence\":\"Boolean(Date.now())\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "relation": "call",
+        "targetName": "Boolean",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"Boolean\",\"line\":6,\"evidence\":\"Boolean(Date.now())\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      },
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"Date.now\",\"line\":6,\"evidence\":\"Date.now()\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "relation": "call",
+        "targetName": "Date.now",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"call\",\"name\":\"Date.now\",\"line\":6,\"evidence\":\"Date.now()\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      },
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":8,\"evidence\":\"<button onClick={handleLogin}>\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "relation": "component",
+        "targetName": "button",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"button\",\"line\":8,\"evidence\":\"<button onClick={handleLogin}>\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      },
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"form\",\"line\":9,\"evidence\":\"<form onSubmit={(event) => { event.preventDefault(); submitForm(); audit(); }}/>\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "relation": "component",
+        "targetName": "form",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"form\",\"line\":9,\"evidence\":\"<form onSubmit={(event) => { event.preventDefault(); submitForm(); audit(); }}/>\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      },
+      {
+        "id": "behavior:unresolved:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"input\",\"line\":14,\"evidence\":\"<input onChange={ready ? handleLogin : submitForm}/>\",\"confidence\":\"inferred\"},\"inferred-relation\"]",
+        "sourceNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "relation": "component",
+        "targetName": "input",
+        "confidence": "inferred",
+        "reason": "inferred-relation",
+        "evidenceIds": [
+          "behavior:relation:[\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\",{\"relation\":\"component\",\"name\":\"input\",\"line\":14,\"evidence\":\"<input onChange={ready ? handleLogin : submitForm}/>\",\"confidence\":\"inferred\"}]"
+        ],
+        "sourceEdgeIds": []
+      }
+    ],
+    "limitations": [
+      {
+        "code": "execution-order-unavailable",
+        "message": "Static relationships do not establish execution order, invocation count, or reachability at runtime."
+      },
+      {
+        "code": "event-semantics-unavailable",
+        "message": "Explicit supported DOM bindings may be extracted, but event dispatch, component prop forwarding, and handler execution are not established."
+      },
+      {
+        "code": "conditions-unavailable",
+        "message": "Conditions, branches, exceptions, and async control flow are not extracted."
+      },
+      {
+        "code": "data-access-unavailable",
+        "message": "DB operations, schemas, and transactions are not semantically identified."
+      },
+      {
+        "code": "results-unavailable",
+        "message": "Return values and response/data flow are not extracted."
+      },
+      {
+        "code": "unversioned-source",
+        "message": "No commit SHA is available; locations refer only to this supplied analysis snapshot."
+      }
+    ],
+    "entryNodeId": "behavior:node:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\"]",
+    "eventBindings": [
+      {
+        "bindingId": "react-event:[\"app/login/page.tsx\",297,318]",
+        "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "confidence": "confirmed",
+        "status": "projected",
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]"
+        ],
+        "eventNodeId": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",297,318]\"]"
+      },
+      {
+        "bindingId": "react-event:[\"app/login/page.tsx\",346,440]",
+        "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "confidence": "confirmed",
+        "status": "projected",
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]"
+        ],
+        "eventNodeId": "behavior:event:[\"behavior:flow:[\\\"event-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/login/page.tsx\\\",\\\"routePath\\\":\\\"/login\\\",\\\"nodeId\\\":\\\"symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]\\\"}]\",\"react-event:[\\\"app/login/page.tsx\\\",346,440]\"]"
+      },
+      {
+        "bindingId": "react-event:[\"app/login/page.tsx\",454,497]",
+        "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "confidence": "inferred",
+        "status": "unresolved",
+        "reason": "conditional-handler",
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",454,497]\"]"
+        ]
+      },
+      {
+        "bindingId": "react-event:[\"app/login/page.tsx\",512,533]",
+        "ownerNodeId": "symbol:app/login/page.tsx#LoginPage@198[120970d812836f19]",
+        "confidence": "unknown",
+        "status": "unresolved",
+        "reason": "component-prop",
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",512,533]\"]"
+        ]
+      },
+      {
+        "bindingId": "react-event:[\"app/login/page.tsx\",169,192]",
+        "ownerNodeId": "symbol:app/login/page.tsx#Button@104[120970d812836f19]",
+        "confidence": "unknown",
+        "status": "unresolved",
+        "reason": "dynamic-handler",
+        "evidenceIds": [
+          "behavior:event-binding:[\"react-event:[\\\"app/login/page.tsx\\\",169,192]\"]"
+        ]
+      }
+    ]
+  }
+}

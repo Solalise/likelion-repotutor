@@ -17,11 +17,12 @@ function feature(path: string, options: Partial<RepositoryFeature> = {}): Reposi
 }
 
 describe("presentation-only feature navigation", () => {
-  it("groups related routes by their actual directory and preserves the child feature objects", () => {
+  it("labels directory navigation as structural pages and preserves the child feature objects", () => {
     const children = [feature("/case/documents"), feature("/case/directions"), feature("/case/confirmation")];
     const groups = buildFeatureNavigation(children);
     expect(groups).toHaveLength(1);
-    expect(groups[0]).toMatchObject({ title: "사건 처리", titleInferred: true, directory: "app/case" });
+    expect(groups[0]).toMatchObject({ title: "case · 폴더별 페이지", titleInferred: false, directory: "app/case" });
+    expect(groups[0].title).not.toContain("사건 처리");
     groups[0].features.forEach((child, index) => expect(child).toBe(children[index]));
   });
 
@@ -63,7 +64,7 @@ describe("presentation-only feature navigation", () => {
   });
 
   it("keeps unknown roles path-based and does not turn methods into business actions", () => {
-    expect(featureNavigationLabel(feature("/case/unknown-step"))).toMatchObject({ title: "/case/unknown-step 페이지", titleInferred: false, summary: undefined });
+    expect(featureNavigationLabel(feature("/case/unknown-step"))).toMatchObject({ title: "unknown-step 페이지", path: "/case/unknown-step", titleInferred: false, summary: undefined });
     const label = featureNavigationLabel(feature("/api/users", { httpMethod: "POST" }));
     expect(label).toMatchObject({ title: "POST · 사용자 API", titleInferred: true, summary: "POST 요청 진입점" });
     expect(label.title).not.toContain("생성");
@@ -78,7 +79,8 @@ describe("presentation-only feature navigation", () => {
 
   it("supports Korean group and child search plus technical names and normalized paths", () => {
     const groups = buildFeatureNavigation([feature("/case/documents"), feature("/case/directions")]);
-    expect(searchFeatureNavigation(groups, " 사건 처리 ")[0].features).toHaveLength(2);
+    expect(searchFeatureNavigation(groups, " case ")[0].features).toHaveLength(2);
+    expect(searchFeatureNavigation(groups, "폴더별 페이지")[0].features).toHaveLength(2);
     expect(searchFeatureNavigation(groups, "서류")[0].features[0].routePath).toBe("/case/documents");
     expect(searchFeatureNavigation(groups, "DIRECTIONS")[0].features[0].routePath).toBe("/case/directions");
     expect(searchFeatureNavigation(groups, "pAge")[0].features).toHaveLength(2);
@@ -103,6 +105,9 @@ describe("presentation-only feature navigation", () => {
     const groups = buildFeatureNavigation(children);
     expect(groups).toHaveLength(1);
     expect(groups[0].directory).toBe("apps/mobile/app/case");
+    expect(groups[0].title).toBe("case · 폴더별 페이지");
+    expect(groups[0].features).toHaveLength(5);
+    expect(new Set(groups[0].features.map(child => child.id))).toEqual(new Set(children.map(child => child.id)));
     expect(groups[0].features.map((child) => featureNavigationLabel(child).title).sort()).toEqual(["서류", "길 안내", "확인 화면", "주변 기관", "가이드"].sort());
     const searched = searchFeatureNavigation(groups, "서류")[0].features[0];
     expect(searched).toBe(selected);
@@ -112,5 +117,16 @@ describe("presentation-only feature navigation", () => {
     expect(JSON.stringify(discovery)).toBe(before);
     expect(context.code.map((code) => code.functionName)).toContain("DocumentsRoute");
     expect(context.code.map((code) => code.functionName)).not.toContain("DirectionsRoute");
+  });
+
+  it("separates untranslated page titles from full routes without changing identity or scope", () => {
+    const original = feature("/case/card", { entryFilePath: "apps/mobile/app/case/card/index.tsx", nodeIds: ["entry", "callback"], edgeIds: ["reference:1"] });
+    const before = JSON.stringify(original);
+    const label = featureNavigationLabel(original);
+    expect(label).toMatchObject({ title: "card 페이지", path: "/case/card", titleInferred: false });
+    const groups = buildFeatureNavigation([original, feature("/case/directions", { entryFilePath: "apps/mobile/app/case/directions/index.tsx" })]);
+    expect(searchFeatureNavigation(groups, "card")[0].features[0]).toBe(original);
+    expect(searchFeatureNavigation(groups, original.entryFilePath)[0].features[0]).toBe(original);
+    expect(JSON.stringify(original)).toBe(before);
   });
 });

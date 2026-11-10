@@ -1,0 +1,854 @@
+{
+  "input": [
+    {
+      "path": "app/api/users/route.ts",
+      "content": "import {NextResponse} from \"next/server\";\nimport {PrismaClient} from \"@prisma/client\";\nconst prisma=new PrismaClient();\nexport async function GET() {\n  const user=await prisma.user.findUnique({where:{id:42}});\n  const alias=user;\n  const unused=NextResponse.json({preview:true});\n  if (!user) return NextResponse.json({error:\"missing\"},{status:404});\n  const response=NextResponse.json({user:alias},{status:200});\n  return response;\n}"
+    },
+    {
+      "path": "app/page.tsx",
+      "content": "export default function Page(){return <button onClick={()=>fetch(\"/api/users\")}>Load</button>;}"
+    }
+  ],
+  "output": {
+    "serverResponses": {
+      "creations": [
+        {
+          "id": "response-creation:[\"app/api/users/route.ts\",245,278]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 245,
+            "endOffset": 278,
+            "startLine": 7,
+            "startColumn": 16,
+            "endLine": 7,
+            "endColumn": 49
+          },
+          "sourceCode": "NextResponse.json({preview:true})",
+          "pattern": "next-json",
+          "constructorResolution": "confirmed",
+          "constructorEvidence": [
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 8,
+                "endOffset": 20,
+                "startLine": 1,
+                "startColumn": 9,
+                "endLine": 1,
+                "endColumn": 21
+              },
+              "sourceCode": "NextResponse"
+            },
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 245,
+                "endOffset": 257,
+                "startLine": 7,
+                "startColumn": 16,
+                "endLine": 7,
+                "endColumn": 28
+              },
+              "sourceCode": "NextResponse"
+            }
+          ],
+          "statusCode": 200,
+          "statusResolution": "default",
+          "statusEvidence": [],
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",232,279,\"variable\"]",
+            "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",245,278]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\\\",232,279,\\\"variable\\\"]\",[]]"
+            ],
+            "branchPath": [],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "dataSources": [
+            {
+              "id": "response-source:[\"response-creation:[\\\"app/api/users/route.ts\\\",245,278]\",[\"preview\"],272]",
+              "fieldPath": [
+                "preview"
+              ],
+              "expression": {
+                "location": {
+                  "filePath": "app/api/users/route.ts",
+                  "startOffset": 272,
+                  "endOffset": 276,
+                  "startLine": 7,
+                  "startColumn": 43,
+                  "endLine": 7,
+                  "endColumn": 47
+                },
+                "sourceCode": "true"
+              },
+              "kind": "literal",
+              "status": "confirmed",
+              "evidence": [
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 263,
+                    "endOffset": 277,
+                    "startLine": 7,
+                    "startColumn": 34,
+                    "endLine": 7,
+                    "endColumn": 48
+                  },
+                  "sourceCode": "{preview:true}"
+                },
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 272,
+                    "endOffset": 276,
+                    "startLine": 7,
+                    "startColumn": 43,
+                    "endLine": 7,
+                    "endColumn": 47
+                  },
+                  "sourceCode": "true"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "response-creation:[\"app/api/users/route.ts\",300,349]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 300,
+            "endOffset": 349,
+            "startLine": 8,
+            "startColumn": 21,
+            "endLine": 8,
+            "endColumn": 70
+          },
+          "sourceCode": "NextResponse.json({error:\"missing\"},{status:404})",
+          "pattern": "next-json",
+          "constructorResolution": "confirmed",
+          "constructorEvidence": [
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 8,
+                "endOffset": 20,
+                "startLine": 1,
+                "startColumn": 9,
+                "endLine": 1,
+                "endColumn": 21
+              },
+              "sourceCode": "NextResponse"
+            },
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 300,
+                "endOffset": 312,
+                "startLine": 8,
+                "startColumn": 21,
+                "endLine": 8,
+                "endColumn": 33
+              },
+              "sourceCode": "NextResponse"
+            }
+          ],
+          "statusCode": 404,
+          "statusResolution": "static",
+          "statusEvidence": [
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 344,
+                "endOffset": 347,
+                "startLine": 8,
+                "startColumn": 65,
+                "endLine": 8,
+                "endColumn": 68
+              },
+              "sourceCode": "404"
+            }
+          ],
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",293,350,\"return\"]",
+            "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",300,349]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\\\",293,350,\\\"return\\\"]\",[]]"
+            ],
+            "branchPath": [
+              {
+                "conditionStatementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",282,350,\"if\"]",
+                "branch": "true"
+              }
+            ],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "dataSources": [
+            {
+              "id": "response-source:[\"response-creation:[\\\"app/api/users/route.ts\\\",300,349]\",[\"error\"],325]",
+              "fieldPath": [
+                "error"
+              ],
+              "expression": {
+                "location": {
+                  "filePath": "app/api/users/route.ts",
+                  "startOffset": 325,
+                  "endOffset": 334,
+                  "startLine": 8,
+                  "startColumn": 46,
+                  "endLine": 8,
+                  "endColumn": 55
+                },
+                "sourceCode": "\"missing\""
+              },
+              "kind": "literal",
+              "status": "confirmed",
+              "evidence": [
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 318,
+                    "endOffset": 335,
+                    "startLine": 8,
+                    "startColumn": 39,
+                    "endLine": 8,
+                    "endColumn": 56
+                  },
+                  "sourceCode": "{error:\"missing\"}"
+                },
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 325,
+                    "endOffset": 334,
+                    "startLine": 8,
+                    "startColumn": 46,
+                    "endLine": 8,
+                    "endColumn": 55
+                  },
+                  "sourceCode": "\"missing\""
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "response-creation:[\"app/api/users/route.ts\",368,412]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 368,
+            "endOffset": 412,
+            "startLine": 9,
+            "startColumn": 18,
+            "endLine": 9,
+            "endColumn": 62
+          },
+          "sourceCode": "NextResponse.json({user:alias},{status:200})",
+          "pattern": "next-json",
+          "constructorResolution": "confirmed",
+          "constructorEvidence": [
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 8,
+                "endOffset": 20,
+                "startLine": 1,
+                "startColumn": 9,
+                "endLine": 1,
+                "endColumn": 21
+              },
+              "sourceCode": "NextResponse"
+            },
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 368,
+                "endOffset": 380,
+                "startLine": 9,
+                "startColumn": 18,
+                "endLine": 9,
+                "endColumn": 30
+              },
+              "sourceCode": "NextResponse"
+            }
+          ],
+          "statusCode": 200,
+          "statusResolution": "static",
+          "statusEvidence": [
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 407,
+                "endOffset": 410,
+                "startLine": 9,
+                "startColumn": 57,
+                "endLine": 9,
+                "endColumn": 60
+              },
+              "sourceCode": "200"
+            }
+          ],
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",353,413,\"variable\"]",
+            "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",368,412]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\\\",353,413,\\\"variable\\\"]\",[]]"
+            ],
+            "branchPath": [],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "dataSources": [
+            {
+              "id": "response-source:[\"response-creation:[\\\"app/api/users/route.ts\\\",368,412]\",[\"user\"],163,[]]",
+              "fieldPath": [
+                "user"
+              ],
+              "expression": {
+                "location": {
+                  "filePath": "app/api/users/route.ts",
+                  "startOffset": 163,
+                  "endOffset": 208,
+                  "startLine": 5,
+                  "startColumn": 14,
+                  "endLine": 5,
+                  "endColumn": 59
+                },
+                "sourceCode": "await prisma.user.findUnique({where:{id:42}})"
+              },
+              "kind": "database-result",
+              "status": "confirmed",
+              "databaseSiteId": "database-access:[\"app/api/users/route.ts\",169,208]",
+              "sourcePropertyPath": [],
+              "evidence": [
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 386,
+                    "endOffset": 398,
+                    "startLine": 9,
+                    "startColumn": 36,
+                    "endLine": 9,
+                    "endColumn": 48
+                  },
+                  "sourceCode": "{user:alias}"
+                },
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 392,
+                    "endOffset": 397,
+                    "startLine": 9,
+                    "startColumn": 42,
+                    "endLine": 9,
+                    "endColumn": 47
+                  },
+                  "sourceCode": "alias"
+                },
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 218,
+                    "endOffset": 228,
+                    "startLine": 6,
+                    "startColumn": 9,
+                    "endLine": 6,
+                    "endColumn": 19
+                  },
+                  "sourceCode": "alias=user"
+                },
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 224,
+                    "endOffset": 228,
+                    "startLine": 6,
+                    "startColumn": 15,
+                    "endLine": 6,
+                    "endColumn": 19
+                  },
+                  "sourceCode": "user"
+                },
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 158,
+                    "endOffset": 208,
+                    "startLine": 5,
+                    "startColumn": 9,
+                    "endLine": 5,
+                    "endColumn": 59
+                  },
+                  "sourceCode": "user=await prisma.user.findUnique({where:{id:42}})"
+                },
+                {
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 163,
+                    "endOffset": 208,
+                    "startLine": 5,
+                    "startColumn": 14,
+                    "endLine": 5,
+                    "endColumn": 59
+                  },
+                  "sourceCode": "await prisma.user.findUnique({where:{id:42}})"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "returns": [
+        {
+          "id": "response-return:[\"app/api/users/route.ts\",293,350]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 293,
+            "endOffset": 350,
+            "startLine": 8,
+            "startColumn": 14,
+            "endLine": 8,
+            "endColumn": 71
+          },
+          "sourceCode": "return NextResponse.json({error:\"missing\"},{status:404});",
+          "implicit": false,
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",293,350,\"return\"]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\\\",293,350,\\\"return\\\"]\",[]]"
+            ],
+            "branchPath": [
+              {
+                "conditionStatementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",282,350,\"if\"]",
+                "branch": "true"
+              }
+            ],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "responseSiteId": "response-creation:[\"app/api/users/route.ts\",300,349]",
+          "resolution": "confirmed",
+          "evidence": [
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 300,
+                "endOffset": 349,
+                "startLine": 8,
+                "startColumn": 21,
+                "endLine": 8,
+                "endColumn": 70
+              },
+              "sourceCode": "NextResponse.json({error:\"missing\"},{status:404})"
+            }
+          ]
+        },
+        {
+          "id": "response-return:[\"app/api/users/route.ts\",416,432]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 416,
+            "endOffset": 432,
+            "startLine": 10,
+            "startColumn": 3,
+            "endLine": 10,
+            "endColumn": 19
+          },
+          "sourceCode": "return response;",
+          "implicit": false,
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",416,432,\"return\"]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\\\",416,432,\\\"return\\\"]\",[]]"
+            ],
+            "branchPath": [],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "responseSiteId": "response-creation:[\"app/api/users/route.ts\",368,412]",
+          "resolution": "confirmed",
+          "evidence": [
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 423,
+                "endOffset": 431,
+                "startLine": 10,
+                "startColumn": 10,
+                "endLine": 10,
+                "endColumn": 18
+              },
+              "sourceCode": "response"
+            },
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 359,
+                "endOffset": 412,
+                "startLine": 9,
+                "startColumn": 9,
+                "endLine": 9,
+                "endColumn": 62
+              },
+              "sourceCode": "response=NextResponse.json({user:alias},{status:200})"
+            },
+            {
+              "location": {
+                "filePath": "app/api/users/route.ts",
+                "startOffset": 368,
+                "endOffset": 412,
+                "startLine": 9,
+                "startColumn": 18,
+                "endLine": 9,
+                "endColumn": 62
+              },
+              "sourceCode": "NextResponse.json({user:alias},{status:200})"
+            }
+          ]
+        }
+      ],
+      "serverContexts": [
+        {
+          "id": "response-server:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",[]]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]",
+          "entryPoint": {
+            "kind": "api",
+            "framework": "next-app",
+            "filePath": "app/api/users/route.ts",
+            "routePath": "/api/users",
+            "method": "GET",
+            "nodeId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]"
+          },
+          "callSiteIds": []
+        }
+      ],
+      "limitations": [
+        {
+          "code": "static-response-only",
+          "message": "Creation and local return references do not establish runtime delivery, status, query success, or effective completion through finally."
+        },
+        {
+          "code": "local-lineage-only",
+          "message": "Only supported same-function const definitions and static object fields are traced. Mutable values, transforms, inter-function returns, wrapper responses and transaction results remain unresolved."
+        }
+      ]
+    },
+    "databaseAccess": {
+      "sites": [
+        {
+          "id": "database-access:[\"app/api/users/route.ts\",169,208]",
+          "ownerFunctionId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]",
+          "location": {
+            "filePath": "app/api/users/route.ts",
+            "startOffset": 169,
+            "endOffset": 208,
+            "startLine": 5,
+            "startColumn": 20,
+            "endLine": 5,
+            "endColumn": 59
+          },
+          "sourceCode": "prisma.user.findUnique({where:{id:42}})",
+          "clientExpression": "prisma",
+          "model": "user",
+          "operation": "findUnique",
+          "operationExpression": "prisma.user.findUnique",
+          "operationType": "read",
+          "status": "confirmed",
+          "context": {
+            "controlFlowId": "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+            "callSiteId": "control:call:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",169,208]",
+            "statementId": "control:statement:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",152,209,\"variable\"]",
+            "graphNodeIds": [
+              "control:statement-node:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",\"control:statement:[\\\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\\\",152,209,\\\"variable\\\"]\",[]]"
+            ],
+            "branchPath": [],
+            "reachability": "reachable-in-model",
+            "inUnsupportedRegion": false,
+            "execution": "not-established"
+          },
+          "contextStatus": "mapped",
+          "serverContexts": [
+            {
+              "id": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",169,208]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},[]]",
+              "entryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "GET",
+                "nodeId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]"
+              },
+              "callPath": [],
+              "status": "confirmed",
+              "clientEvidence": [
+                {
+                  "kind": "constructor-import",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 50,
+                    "endOffset": 62,
+                    "startLine": 2,
+                    "startColumn": 9,
+                    "endLine": 2,
+                    "endColumn": 21
+                  },
+                  "sourceCode": "PrismaClient"
+                },
+                {
+                  "kind": "client-construction",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 100,
+                    "endOffset": 118,
+                    "startLine": 3,
+                    "startColumn": 14,
+                    "endLine": 3,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "new PrismaClient()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 93,
+                    "endOffset": 118,
+                    "startLine": 3,
+                    "startColumn": 7,
+                    "endLine": 3,
+                    "endColumn": 32
+                  },
+                  "sourceCode": "prisma=new PrismaClient()"
+                },
+                {
+                  "kind": "alias",
+                  "location": {
+                    "filePath": "app/api/users/route.ts",
+                    "startOffset": 169,
+                    "endOffset": 175,
+                    "startLine": 5,
+                    "startColumn": 20,
+                    "endLine": 5,
+                    "endColumn": 26
+                  },
+                  "sourceCode": "prisma"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        {
+          "code": "static-prisma-only",
+          "message": "Only source-proven @prisma/client clients and supported member calls are identified. Runtime queries, results, effects and commits are not observed."
+        },
+        {
+          "code": "client-resolution-limits",
+          "message": "Global caches, mutable clients, dynamic members, model aliases, extensions, asynchronous factories and other ORMs are not resolved. Type annotations alone do not prove a client."
+        }
+      ]
+    },
+    "flows": [
+      {
+        "id": "behavior:flow:[\"server-response-example\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"}]",
+        "entryPoint": {
+          "kind": "api",
+          "framework": "next-app",
+          "filePath": "app/api/users/route.ts",
+          "routePath": "/api/users",
+          "method": "GET",
+          "nodeId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]"
+        },
+        "httpRequests": [],
+        "serverResponses": {
+          "semantics": "static-response-references",
+          "runtimeDelivery": "not-established",
+          "creations": [
+            {
+              "siteId": "response-creation:[\"app/api/users/route.ts\",300,349]",
+              "serverContextId": "response-server:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",[]]",
+              "returnedBy": [
+                "response-return:[\"app/api/users/route.ts\",293,350]"
+              ]
+            },
+            {
+              "siteId": "response-creation:[\"app/api/users/route.ts\",368,412]",
+              "serverContextId": "response-server:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",[]]",
+              "returnedBy": [
+                "response-return:[\"app/api/users/route.ts\",416,432]"
+              ]
+            },
+            {
+              "siteId": "response-creation:[\"app/api/users/route.ts\",245,278]",
+              "serverContextId": "response-server:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",[]]",
+              "returnedBy": []
+            }
+          ],
+          "returns": [
+            {
+              "returnSiteId": "response-return:[\"app/api/users/route.ts\",416,432]",
+              "serverContextId": "response-server:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",[]]",
+              "kind": "entry-return-reference",
+              "responseSiteId": "response-creation:[\"app/api/users/route.ts\",368,412]",
+              "dataSources": [
+                {
+                  "sourceId": "response-source:[\"response-creation:[\\\"app/api/users/route.ts\\\",368,412]\",[\"user\"],163,[]]",
+                  "status": "confirmed",
+                  "databaseContextId": "database-context:[\"database-access:[\\\"app/api/users/route.ts\\\",169,208]\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},[]]"
+                }
+              ]
+            },
+            {
+              "returnSiteId": "response-return:[\"app/api/users/route.ts\",293,350]",
+              "serverContextId": "response-server:[{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"},\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\",[]]",
+              "kind": "entry-return-reference",
+              "responseSiteId": "response-creation:[\"app/api/users/route.ts\",300,349]",
+              "dataSources": [
+                {
+                  "sourceId": "response-source:[\"response-creation:[\\\"app/api/users/route.ts\\\",300,349]\",[\"error\"],325]",
+                  "status": "confirmed"
+                }
+              ]
+            }
+          ]
+        },
+        "controlFlowIds": [
+          "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]"
+        ]
+      },
+      {
+        "id": "behavior:flow:[\"server-response-example\",{\"kind\":\"page\",\"framework\":\"next-app\",\"filePath\":\"app/page.tsx\",\"routePath\":\"/\",\"nodeId\":\"symbol:app/page.tsx#Page@0[120970d812836f19]\"}]",
+        "entryPoint": {
+          "kind": "page",
+          "framework": "next-app",
+          "filePath": "app/page.tsx",
+          "routePath": "/",
+          "nodeId": "symbol:app/page.tsx#Page@0[120970d812836f19]"
+        },
+        "httpRequests": [
+          {
+            "request": {
+              "id": "http-request:[\"app/page.tsx\",59,78]",
+              "ownerFunctionId": "symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]",
+              "location": {
+                "filePath": "app/page.tsx",
+                "startOffset": 59,
+                "endOffset": 78,
+                "startLine": 1,
+                "startColumn": 60,
+                "endLine": 1,
+                "endColumn": 79
+              },
+              "sourceCode": "fetch(\"/api/users\")",
+              "transport": "fetch",
+              "urlExpression": "\"/api/users\"",
+              "url": "/api/users",
+              "method": "GET",
+              "path": "/api/users",
+              "valueEvidence": [
+                {
+                  "location": {
+                    "filePath": "app/page.tsx",
+                    "startOffset": 65,
+                    "endOffset": 77,
+                    "startLine": 1,
+                    "startColumn": 66,
+                    "endLine": 1,
+                    "endColumn": 78
+                  },
+                  "sourceCode": "\"/api/users\""
+                }
+              ],
+              "status": "matched",
+              "candidates": [
+                {
+                  "filePath": "app/api/users/route.ts",
+                  "routePath": "/api/users",
+                  "methods": [
+                    "GET"
+                  ]
+                }
+              ],
+              "contextStatus": "mapped",
+              "context": {
+                "controlFlowId": "control:function:[\"symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]\"]",
+                "callSiteId": "control:call:[\"symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]\",59,78]",
+                "statementId": "control:statement:[\"symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]\",59,78,\"return\"]",
+                "graphNodeIds": [
+                  "control:statement-node:[\"symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]\",\"control:statement:[\\\"symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]\\\",59,78,\\\"return\\\"]\",[]]"
+                ],
+                "branchPath": [],
+                "reachability": "reachable-in-model",
+                "inUnsupportedRegion": false,
+                "execution": "not-established"
+              },
+              "target": {
+                "entryPoint": {
+                  "kind": "api",
+                  "framework": "next-app",
+                  "filePath": "app/api/users/route.ts",
+                  "routePath": "/api/users",
+                  "method": "GET",
+                  "nodeId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]"
+                },
+                "matchKind": "static",
+                "parameters": {}
+              }
+            },
+            "ownerBehaviorNodeId": "behavior:node:[\"behavior:flow:[\\\"server-response-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/page.tsx\\\",\\\"routePath\\\":\\\"/\\\",\\\"nodeId\\\":\\\"symbol:app/page.tsx#Page@0[120970d812836f19]\\\"}]\",\"symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]\"]",
+            "boundary": {
+              "id": "behavior:http-boundary:[\"behavior:flow:[\\\"server-response-example\\\",{\\\"kind\\\":\\\"page\\\",\\\"framework\\\":\\\"next-app\\\",\\\"filePath\\\":\\\"app/page.tsx\\\",\\\"routePath\\\":\\\"/\\\",\\\"nodeId\\\":\\\"symbol:app/page.tsx#Page@0[120970d812836f19]\\\"}]\",\"http-request:[\\\"app/page.tsx\\\",59,78]\"]",
+              "relation": "http-request-to-entry",
+              "semantics": "http-boundary",
+              "confidence": "confirmed",
+              "requestSiteId": "http-request:[\"app/page.tsx\",59,78]",
+              "serverEntryPoint": {
+                "kind": "api",
+                "framework": "next-app",
+                "filePath": "app/api/users/route.ts",
+                "routePath": "/api/users",
+                "method": "GET",
+                "nodeId": "symbol:app/api/users/route.ts#GET@120[120970d812836f19]"
+              },
+              "serverFlowId": "behavior:flow:[\"server-response-example\",{\"kind\":\"api\",\"framework\":\"next-app\",\"filePath\":\"app/api/users/route.ts\",\"routePath\":\"/api/users\",\"method\":\"GET\",\"nodeId\":\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"}]",
+              "serverControlFlowId": "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+              "runtimeTransfer": "not-observed",
+              "executionOrder": "not-established",
+              "response": "not-analyzed",
+              "exceptionPropagation": "not-modeled"
+            }
+          }
+        ],
+        "serverResponses": {
+          "semantics": "static-response-references",
+          "runtimeDelivery": "not-established",
+          "creations": [],
+          "returns": []
+        },
+        "controlFlowIds": [
+          "control:function:[\"symbol:app/api/users/route.ts#GET@120[120970d812836f19]\"]",
+          "control:function:[\"symbol:app/page.tsx#callback@1:56@55[8b6797d63a59ca28]\"]",
+          "control:function:[\"symbol:app/page.tsx#Page@0[120970d812836f19]\"]"
+        ]
+      }
+    ]
+  }
+}

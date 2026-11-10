@@ -24,6 +24,7 @@ const discovery = discoverRepositoryFeatures(analyzeSourceFiles([
   { path: "app/api/users/route.ts", content: "export function GET() {} export function POST() {}" },
   { path: "app/case/documents/page.tsx", content: "export default function Page() { return <div/>; }" },
   { path: "app/case/directions/page.tsx", content: "export default function Page() { return <div/>; }" },
+  { path: "app/case/card/page.tsx", content: "export default function CardRoute() { return <div/>; }" },
 ]));
 const all = [...discovery.primary, ...discovery.limited];
 const onSelect = vi.fn();
@@ -55,14 +56,15 @@ it("shows Korean route labels with an explicit inferred-name annotation and meth
 
 it("expands structural groups without selecting or merging features", () => {
   const tree = open();
-  const group = byClass(tree, "feature-group-trigger").find((node) => renderToStaticMarkup(node).includes("사건 처리"))!;
+  const group = byClass(tree, "feature-group-trigger").find((node) => renderToStaticMarkup(node).includes("case · 폴더별 페이지"))!;
   expect(group.props["aria-expanded"]).toBe(false);
   expect(renderToStaticMarkup(tree)).not.toContain("/case/documents</code>");
   group.props.onClick!();
   expect(renderToStaticMarkup(picker())).toContain("/case/documents</code>");
-  expect(renderToStaticMarkup(picker())).toContain("그룹명 추정");
+  expect(renderToStaticMarkup(picker())).not.toContain("그룹명 추정");
+  expect(renderToStaticMarkup(picker())).not.toContain("사건 처리");
   expect(onSelect).not.toHaveBeenCalled();
-  byClass(picker(), "feature-group-trigger").find((node) => renderToStaticMarkup(node).includes("사건 처리"))!.props.onClick!();
+  byClass(picker(), "feature-group-trigger").find((node) => renderToStaticMarkup(node).includes("case · 폴더별 페이지"))!.props.onClick!();
   expect(renderToStaticMarkup(picker())).not.toContain("/case/documents</code>");
 });
 
@@ -77,17 +79,31 @@ it("passes the exact original child feature and its ID/scope when chosen", () =>
   expect(byClass(picker(), "feature-picker-popover")).toHaveLength(0);
 });
 
-it("finds Korean groups and translated children, auto-expands search, and supports collapse and reset", () => {
+it("finds folder groups and translated children, auto-expands search, and supports collapse and reset", () => {
   open();
-  expect(byClass(search("사건 처리"), "feature-option")).toHaveLength(2);
+  expect(byClass(search("case"), "feature-option")).toHaveLength(3);
   expect(byClass(search("길 안내"), "feature-option")).toHaveLength(1);
   byClass(picker(), "feature-group-trigger")[0].props.onClick!();
   expect(byClass(picker(), "feature-option")).toHaveLength(0);
   expect(byClass(search("DOcuments"), "feature-option")).toHaveLength(1);
-  expect(byClass(search("Page"), "feature-option")).toHaveLength(3);
+  expect(byClass(search("Page"), "feature-option")).toHaveLength(4);
   expect(byClass(search("POST"), "feature-option")).toHaveLength(1);
-  expect(renderToStaticMarkup(search("존재하지않음"))).toContain("검색 조건에 맞는 기능을 찾지 못했습니다");
+  expect(renderToStaticMarkup(search("존재하지않음"))).toContain("검색 조건에 맞는 페이지·API를 찾지 못했습니다");
   expect(byClass(search(""), "feature-group-trigger")).toHaveLength(3);
+});
+
+it("shows an untranslated page title separately from its route and selects the original feature", () => {
+  open();
+  const tree = search("card");
+  const options = byClass(tree, "feature-option");
+  expect(options).toHaveLength(1);
+  const html = renderToStaticMarkup(options[0]);
+  expect(html).toContain("<strong>card 페이지</strong>");
+  expect(html).toContain('<code class="feature-option-path">/case/card</code>');
+  expect(html).not.toContain("<strong>/case/card 페이지</strong>");
+  expect(html).not.toContain("이름 추정");
+  options[0].props.onClick!();
+  expect(onSelect.mock.calls[0][0]).toBe(all.find(feature => feature.routePath === "/case/card"));
 });
 
 it("shows common notices once and removes long analysis descriptions from options", () => {

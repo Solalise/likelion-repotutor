@@ -1,8 +1,9 @@
 import type { RepositoryAnalysis } from "@/types/analysis";
+import { BoundedCache } from "@/lib/cache/boundedCache";
 
 const CACHE_TTL_MS = 30 * 60_000;
 const MAX_ENTRIES = 8;
-const cache = new Map<string, { value: RepositoryAnalysis; storedAt: number }>();
+const cache = new BoundedCache<RepositoryAnalysis>(128*1024*1024,MAX_ENTRIES,CACHE_TTL_MS);
 
 export function githubAnalysisCacheKey(namespace: string, repository: string, commitSha: string): string {
   return `${namespace}:${repository.toLowerCase()}@${commitSha}`;
@@ -11,25 +12,20 @@ export function githubAnalysisCacheKey(namespace: string, repository: string, co
 export function getGithubAnalysisCache(key: string): RepositoryAnalysis | undefined {
   const entry = cache.get(key);
   if (!entry) return undefined;
-  if (!Array.isArray(entry.value.entryPoints)) {
+  if (!Array.isArray(entry.entryPoints)) {
     cache.delete(key);
     return undefined;
   }
-  if (Date.now() - entry.storedAt >= CACHE_TTL_MS) {
-    cache.delete(key);
-    return undefined;
-  }
-  cache.delete(key);
-  cache.set(key, entry);
-  return entry.value;
+  return entry;
 }
 
 export function setGithubAnalysisCache(key: string, value: RepositoryAnalysis): void {
-  cache.delete(key);
-  cache.set(key, { value, storedAt: Date.now() });
-  while (cache.size > MAX_ENTRIES) cache.delete(cache.keys().next().value!);
+  cache.set(key,value);
 }
 
 export function clearGithubAnalysisCacheForTests(): void {
   cache.clear();
 }
+export const deleteGithubAnalysisCache=(key:string)=>cache.delete(key);
+export const githubAnalysisCacheStats=()=>cache.stats();
+export function retainGithubAnalysisVersion(prefix:string,key:string){for(const old of cache.keys())if(old.startsWith(prefix)&&old!==key)cache.delete(old);}

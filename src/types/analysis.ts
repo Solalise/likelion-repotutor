@@ -1,3 +1,8 @@
+import type { FunctionControlFlow } from "./controlFlow";
+import type { HttpRequestSite } from "./http";
+import type { DatabaseAnalysis } from "./database";
+import type { ServerResponseAnalysis } from "./response";
+
 export type CodeNodeType = "file" | "function" | "api" | "component";
 export type CodeRelation = "import" | "call" | "component" | "reference" | "api";
 export type RelationConfidence = "confirmed" | "inferred";
@@ -112,6 +117,48 @@ export interface RepositoryAnalysis {
   source?: AnalysisSource;
   collection?: RepositoryCollection;
   entryPoints?: RepositoryEntryPoint[];
+  /** Additive, site-specific JSX facts; deliberately independent of merged CodeEdges. */
+  reactEventBindings?: ReactEventBinding[];
+  /** Optional additive metadata; existing code/call graphs are unchanged. */
+  functionControlFlows?: FunctionControlFlow[];
+  httpRequests?: HttpRequestSite[];
+  databaseAccess?: DatabaseAnalysis;
+  serverResponses?: ServerResponseAnalysis;
+}
+
+export type ReactEventBindingReason = "component-prop" | "custom-element" | "unsupported-element" | "unsupported-event"
+  | "conditional-handler" | "dynamic-handler" | "unresolved-target" | "missing-handler" | "spread-properties"
+  | "overridden-attribute" | "later-spread" | "owner-unavailable";
+
+export interface ReactEventBinding {
+  id: string;
+  ownerNodeId?: string;
+  eventName: string;
+  eventType?: "click" | "submit" | "change";
+  phase?: "bubble" | "capture";
+  element: {
+    name: string;
+    kind: "intrinsic" | "component" | "custom-element" | "namespaced" | "unknown";
+    /** Exact JSX tag-name range, not the entire opening element. */
+    startOffset: number;
+    endOffset: number;
+  };
+  filePath: string;
+  line: number;
+  endLine: number;
+  column: number;
+  endColumn: number;
+  /** UTF-16 offsets, end-exclusive, relative to FileAnalysis.sourceCode. */
+  startOffset: number;
+  endOffset: number;
+  sourceCode: string;
+  handlerExpression?: string;
+  mode: "direct" | "inline" | "conditional" | "dynamic" | "none" | "spread";
+  targetNodeId?: string;
+  targetResolution: "resolved" | "unresolved";
+  status: "confirmed" | "unresolved";
+  confidence: RelationConfidence | "unknown";
+  reason?: ReactEventBindingReason;
 }
 
 /** File-route exports resolved to existing AST function IDs on the server. */

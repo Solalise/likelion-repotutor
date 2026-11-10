@@ -2,7 +2,7 @@ import { Github, LogOut } from "lucide-react";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
 
-export function SignInButton({ redirectTo = "/repositories" }: { redirectTo?: string }) {
+export function SignInButton({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   return (
     <form action={async () => {
       "use server";

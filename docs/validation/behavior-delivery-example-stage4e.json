@@ -1,0 +1,1241 @@
+{
+  "features": {
+    "snapshot": {
+      "analysisId": "a_222e2e4e3a311c3e6643c114",
+      "repository": "RepoTutor-working-tree",
+      "commitSha": null,
+      "version": "202a7afb55e98889159296b34a6781acc09c5cef5870677bc814119489560872",
+      "source": "connected",
+      "sourcePartial": false
+    },
+    "status": "indexed",
+    "features": [
+      {
+        "id": "f_f639fef012541e773c7d547d",
+        "sourceFeatureId": "feature:api:src/app/api/repositories/[connectionId]/analyze/route.ts:GET",
+        "name": "GET /api/repositories/[connectionId]/analyze API",
+        "entryPoint": {
+          "kind": "api",
+          "routePath": "/api/repositories/[connectionId]/analyze",
+          "method": "GET",
+          "filePath": "src/app/api/repositories/[connectionId]/analyze/route.ts"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 284,
+          "edges": 437
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": true,
+          "database": true,
+          "responses": true
+        },
+        "unresolved": {
+          "count": 29,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_b2217bb058e1b44c87ae5e6d",
+        "sourceFeatureId": "feature:page:src/app/repository/page.tsx",
+        "name": "/repository 페이지",
+        "entryPoint": {
+          "kind": "page",
+          "routePath": "/repository",
+          "filePath": "src/app/repository/page.tsx"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 315,
+          "edges": 388
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": true,
+          "http": true,
+          "database": true,
+          "responses": false
+        },
+        "unresolved": {
+          "count": 27,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_d97dbb34fb27f633dc77a1de",
+        "sourceFeatureId": "feature:api:src/app/api/analyze/route.ts:GET",
+        "name": "GET /api/analyze API",
+        "entryPoint": {
+          "kind": "api",
+          "routePath": "/api/analyze",
+          "method": "GET",
+          "filePath": "src/app/api/analyze/route.ts"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 213,
+          "edges": 309
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": true,
+          "database": true,
+          "responses": true
+        },
+        "unresolved": {
+          "count": 14,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_5cc3d2993c5c1b1803d5935e",
+        "sourceFeatureId": "feature:api:src/app/api/repositories/[connectionId]/learn/route.ts:POST",
+        "name": "POST /api/repositories/[connectionId]/learn API",
+        "entryPoint": {
+          "kind": "api",
+          "routePath": "/api/repositories/[connectionId]/learn",
+          "method": "POST",
+          "filePath": "src/app/api/repositories/[connectionId]/learn/route.ts"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 116,
+          "edges": 162
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": true,
+          "database": true,
+          "responses": true
+        },
+        "unresolved": {
+          "count": 16,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_c1943d9f17d5e1058e9076e1",
+        "sourceFeatureId": "feature:page:src/app/repositories/page.tsx",
+        "name": "/repositories 페이지",
+        "entryPoint": {
+          "kind": "page",
+          "routePath": "/repositories",
+          "filePath": "src/app/repositories/page.tsx"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 43,
+          "edges": 49
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": true,
+          "http": true,
+          "database": true,
+          "responses": false
+        },
+        "unresolved": {
+          "count": 15,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_f8f95b084e44ba1f31a381fe",
+        "sourceFeatureId": "feature:page:src/app/dashboard/page.tsx",
+        "name": "대시보드 페이지",
+        "entryPoint": {
+          "kind": "page",
+          "routePath": "/dashboard",
+          "filePath": "src/app/dashboard/page.tsx"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 27,
+          "edges": 34
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": true,
+          "database": true,
+          "responses": false
+        },
+        "unresolved": {
+          "count": 14,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_4c385b0fd0e4b2a48cb55f5d",
+        "sourceFeatureId": "feature:api:src/app/api/github/repositories/route.ts:GET",
+        "name": "GET /api/github/repositories API",
+        "entryPoint": {
+          "kind": "api",
+          "routePath": "/api/github/repositories",
+          "method": "GET",
+          "filePath": "src/app/api/github/repositories/route.ts"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 24,
+          "edges": 31
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": true,
+          "database": true,
+          "responses": true
+        },
+        "unresolved": {
+          "count": 12,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_fb4fa525e8959b98ba369e6d",
+        "sourceFeatureId": "feature:api:src/app/api/github/repositories/route.ts:POST",
+        "name": "POST /api/github/repositories API",
+        "entryPoint": {
+          "kind": "api",
+          "routePath": "/api/github/repositories",
+          "method": "POST",
+          "filePath": "src/app/api/github/repositories/route.ts"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 22,
+          "edges": 29
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": true,
+          "database": true,
+          "responses": true
+        },
+        "unresolved": {
+          "count": 11,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_971b4b71195300b9d4a37ff6",
+        "sourceFeatureId": "feature:api:src/app/api/github/installations/callback/route.ts:GET",
+        "name": "GET /api/github/installations/callback API",
+        "entryPoint": {
+          "kind": "api",
+          "routePath": "/api/github/installations/callback",
+          "method": "GET",
+          "filePath": "src/app/api/github/installations/callback/route.ts"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 20,
+          "edges": 25
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": true,
+          "database": true,
+          "responses": true
+        },
+        "unresolved": {
+          "count": 11,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_1503fd895d5161fbb39f37f0",
+        "sourceFeatureId": "feature:page:src/app/page.tsx",
+        "name": "홈 페이지",
+        "entryPoint": {
+          "kind": "page",
+          "routePath": "/",
+          "filePath": "src/app/page.tsx"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 8,
+          "edges": 9
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": false,
+          "database": true,
+          "responses": false
+        },
+        "unresolved": {
+          "count": 1,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_cad3a5c3b9ddf39338c44b3f",
+        "sourceFeatureId": "feature:page:src/app/login/page.tsx",
+        "name": "로그인 페이지",
+        "entryPoint": {
+          "kind": "page",
+          "routePath": "/login",
+          "filePath": "src/app/login/page.tsx"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 7,
+          "edges": 9
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": false,
+          "database": true,
+          "responses": false
+        },
+        "unresolved": {
+          "count": 1,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      },
+      {
+        "id": "f_193336f4420db208b2a74dcb",
+        "sourceFeatureId": "feature:api:src/app/api/github/installations/start/route.ts:GET",
+        "name": "GET /api/github/installations/start API",
+        "entryPoint": {
+          "kind": "api",
+          "routePath": "/api/github/installations/start",
+          "method": "GET",
+          "filePath": "src/app/api/github/installations/start/route.ts"
+        },
+        "status": "indexed",
+        "flowStatus": "not-generated",
+        "sourceScopeCounts": {
+          "nodes": 2,
+          "edges": 1
+        },
+        "flowCounts": null,
+        "coreFlowCounts": null,
+        "presence": {
+          "events": false,
+          "http": false,
+          "database": false,
+          "responses": true
+        },
+        "unresolved": {
+          "count": 0,
+          "basis": "source-scope"
+        },
+        "truncation": {
+          "assessment": "not-generated",
+          "analysis": null,
+          "reasons": []
+        }
+      }
+    ],
+    "countsNotice": "Source-scope counts until selected Flow is generated; flowCounts remains null, truncation not assessed. No completeness claim."
+  },
+  "firstGraph": {
+    "snapshot": {
+      "analysisId": "a_222e2e4e3a311c3e6643c114",
+      "repository": "RepoTutor-working-tree",
+      "commitSha": null,
+      "version": "202a7afb55e98889159296b34a6781acc09c5cef5870677bc814119489560872",
+      "source": "connected",
+      "sourcePartial": false
+    },
+    "featureId": "f_b2217bb058e1b44c87ae5e6d",
+    "status": "partial",
+    "rootId": "n_e896144b7eb3039c19c65cf0",
+    "nodes": [
+      {
+        "id": "n_e463c6c7d16d20f32db7803c",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<form> onSubmit 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_5a11e0ceadedb1afd1c58d69",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<input> onChange 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_9c09b028bec1fecb937af0f3",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_7168ce6d03d3ba7c0d4d8043",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_8c8c2edeff71e43a30ffdea0",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_d49253abc0ae9d9c6b3026c0",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_db181ce3c97852a0136985b1",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_2c17eac1787d1ce283dae77f",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_09787824ca12209d4f116b5c",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_9f2ccc90200c91e92f0dc0a5",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<select> onChange 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_720199f65a3e6a39cfd88e8b",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<input> onChange 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_e086854e396baefb19be774c",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_42f7b6199f90352e841cd565",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_bbf92f7d16b2d902e73ad2fa",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_74e431b226d48a361a32103b",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_fd2028e4ac4df84d96c160f6",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_461e1d77ad67abb5278eb3f1",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "event",
+        "label": "<button> onClick 바인딩",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_e896144b7eb3039c19c65cf0",
+        "cfgSummary": {
+          "conditions": 0,
+          "unsupported": 1,
+          "returns": 1
+        },
+        "origin": "behavior",
+        "kind": "screen",
+        "label": "RepositoryPage",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": false,
+        "remainingNeighbors": 0
+      },
+      {
+        "id": "n_59c9c850eafbb37c67ff13e3",
+        "cfgSummary": {
+          "conditions": 0,
+          "unsupported": 2,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "function",
+        "label": "AppShell",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 3
+      },
+      {
+        "id": "n_a9482fb9897cdd40b67c4a07",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 8,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "function",
+        "label": "AiLearningPanel",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 8
+      },
+      {
+        "id": "n_7a609a44c7072376a61ae3df",
+        "cfgSummary": {
+          "conditions": 0,
+          "unsupported": 4,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "function",
+        "label": "FeaturePicker",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 10
+      },
+      {
+        "id": "n_a630aee3eb46fbe35bf76348",
+        "cfgSummary": {
+          "conditions": 0,
+          "unsupported": 1,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "function",
+        "label": "callback@355:33",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 1
+      },
+      {
+        "id": "n_08516716a69864eb202433be",
+        "cfgSummary": {
+          "conditions": 2,
+          "unsupported": 1,
+          "returns": 2
+        },
+        "origin": "behavior",
+        "kind": "function",
+        "label": "learningGraph.callback",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 3
+      },
+      {
+        "id": "n_839f5dc419ff216515524675",
+        "cfgSummary": {
+          "conditions": 1,
+          "unsupported": 26,
+          "returns": 0
+        },
+        "origin": "behavior",
+        "kind": "function",
+        "label": "RepositoryWorkspace",
+        "confidence": "confirmed",
+        "boundary": false,
+        "facts": {
+          "http": 0,
+          "database": 0,
+          "responses": 0
+        },
+        "cfgAvailable": true,
+        "expandable": true,
+        "remainingNeighbors": 30
+      }
+    ],
+    "edges": [
+      {
+        "id": "e_cf0b2f4d5f2042e9e54ead65",
+        "source": "n_e896144b7eb3039c19c65cf0",
+        "target": "n_59c9c850eafbb37c67ff13e3",
+        "relation": "component",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_c41e6c17498f3ca8d2299340",
+        "source": "n_e896144b7eb3039c19c65cf0",
+        "target": "n_839f5dc419ff216515524675",
+        "relation": "component",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_63d95519bd8051e899467330",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_e463c6c7d16d20f32db7803c",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_6a32010b57e881ef2b191f26",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_5a11e0ceadedb1afd1c58d69",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_b87b78e703050b74c1a474b4",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_9c09b028bec1fecb937af0f3",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_53d02999779dc9ee83d7c2a2",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_7168ce6d03d3ba7c0d4d8043",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_ab2bb299efbff5e36f37dafc",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_8c8c2edeff71e43a30ffdea0",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_a46d39772be168ba95c03df5",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_d49253abc0ae9d9c6b3026c0",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_e4bf77b3d46679abe1a1a14d",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_db181ce3c97852a0136985b1",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_072d205b6feee12547b458e7",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_2c17eac1787d1ce283dae77f",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_9b6f40b116b5b584e02d60f8",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_09787824ca12209d4f116b5c",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_450b7987c44fadfef93e5e3b",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_9f2ccc90200c91e92f0dc0a5",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_91626ee8a6a43027a2071888",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_720199f65a3e6a39cfd88e8b",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_b8d3c0c7985e09f30ee326b8",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_e086854e396baefb19be774c",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_88c4dfd9180d5d7ccf75e014",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_42f7b6199f90352e841cd565",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_e4950bb5aa19e77a6181ac9f",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_bbf92f7d16b2d902e73ad2fa",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_93456791dd8b191f8b5a66d3",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_74e431b226d48a361a32103b",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_598df57f0a8e0fd43c2c657b",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_fd2028e4ac4df84d96c160f6",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_362c67e23214e2cca6177f3f",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_461e1d77ad67abb5278eb3f1",
+        "relation": "event-binding",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_84ba4d5b9b14eea219b493e0",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_a9482fb9897cdd40b67c4a07",
+        "relation": "component",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_5342e9b28635eaad8f832b1e",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_7a609a44c7072376a61ae3df",
+        "relation": "component",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_ea941e1ff462608f5c8bd030",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_a630aee3eb46fbe35bf76348",
+        "relation": "reference",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      },
+      {
+        "id": "e_e25bf1bffc464c4f01e65a34",
+        "source": "n_839f5dc419ff216515524675",
+        "target": "n_08516716a69864eb202433be",
+        "relation": "reference",
+        "semantics": "static-relation",
+        "confidence": "confirmed",
+        "executionOrder": "not-established",
+        "conditional": false
+      }
+    ],
+    "visibleNodeIds": [
+      "n_e896144b7eb3039c19c65cf0",
+      "n_839f5dc419ff216515524675",
+      "n_59c9c850eafbb37c67ff13e3",
+      "n_09787824ca12209d4f116b5c",
+      "n_2c17eac1787d1ce283dae77f",
+      "n_42f7b6199f90352e841cd565",
+      "n_461e1d77ad67abb5278eb3f1",
+      "n_5a11e0ceadedb1afd1c58d69",
+      "n_7168ce6d03d3ba7c0d4d8043",
+      "n_720199f65a3e6a39cfd88e8b",
+      "n_74e431b226d48a361a32103b",
+      "n_8c8c2edeff71e43a30ffdea0",
+      "n_9c09b028bec1fecb937af0f3",
+      "n_9f2ccc90200c91e92f0dc0a5",
+      "n_bbf92f7d16b2d902e73ad2fa",
+      "n_d49253abc0ae9d9c6b3026c0",
+      "n_db181ce3c97852a0136985b1",
+      "n_e086854e396baefb19be774c",
+      "n_e463c6c7d16d20f32db7803c",
+      "n_fd2028e4ac4df84d96c160f6",
+      "n_7a609a44c7072376a61ae3df",
+      "n_a630aee3eb46fbe35bf76348",
+      "n_a9482fb9897cdd40b67c4a07",
+      "n_08516716a69864eb202433be"
+    ],
+    "available": {
+      "nodes": 203,
+      "edges": 220
+    },
+    "coreFlowCounts": {
+      "nodes": 200,
+      "edges": 217
+    },
+    "truncation": {
+      "analysis": true,
+      "reasons": [
+        "traversal-limit",
+        "server-traversal-limited"
+      ],
+      "omittedByAnalysis": "unknown",
+      "recoverableByExpansion": false,
+      "analysisRecoverableByExpansion": false,
+      "viewportCanExpand": true,
+      "projection": true,
+      "projectionReason": "page-limit",
+      "knownHiddenNodes": 179,
+      "knownHiddenEdges": 197
+    },
+    "unresolved": {
+      "relations": 976,
+      "events": 21,
+      "http": 3,
+      "database": 0,
+      "responses": 0
+    },
+    "unsupportedRegions": 147,
+    "metadata": {
+      "http": 3,
+      "database": 0,
+      "responses": 0
+    },
+    "limits": {
+      "initial": 24,
+      "maxPage": 64,
+      "maxVisible": 256,
+      "codeChars": 6000,
+      "factPage": 12,
+      "evidencePage": 8
+    },
+    "cacheHit": true
+  }
+}

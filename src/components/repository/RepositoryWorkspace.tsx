@@ -16,6 +16,7 @@ import { NodeInspector } from "./NodeInspector";
 import { RepositoryTree } from "./RepositoryTree";
 import { RepositoryOverviewInspector } from "./RepositoryOverviewInspector";
 import { AiLearningPanel } from "./AiLearningPanel";
+import { BehaviorWorkspace } from "@/components/behavior/BehaviorWorkspace";
 
 type ViewMode = "learning" | "developer";
 type DeveloperMode = "overview" | "feature";
@@ -46,7 +47,7 @@ function preferredNodeId(result: RepositoryAnalysis): string {
     ?? "";
 }
 
-export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialConnectedRepositoryId?: string }) {
+export function RepositoryWorkspace({ initialConnectedRepositoryId, initialSelectionId, initialSelectionType }: { initialConnectedRepositoryId?: string; initialSelectionId?: string; initialSelectionType?: string }) {
   const [analysis, setAnalysis] = useState<RepositoryAnalysis>();
   const [viewMode, setViewMode] = useState<ViewMode>("learning");
   const [selectedId, setSelectedId] = useState<string>();
@@ -65,11 +66,17 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
   const [expandedOverviewIds, setExpandedOverviewIds] = useState<Set<string>>(() => new Set());
   const [expandedCodeNodeIds, setExpandedCodeNodeIds] = useState<Set<string>>(() => new Set());
   const [selectedOverviewId, setSelectedOverviewId] = useState<string>();
+  const [behaviorMode, setBehaviorMode] = useState(false);
 
-  function applyAnalysis(result: RepositoryAnalysis): void {
+  const applyAnalysis = useMemo(() => (result: RepositoryAnalysis): void => {
     const discovery = result.source === "github" ? discoverRepositoryFeatures(result) : undefined;
-    const firstFeature = discovery?.primary[0] ?? discovery?.limited[0];
-    const preferred = firstFeature?.entryNodeId ?? preferredNodeId(result);
+    const features = [...(discovery?.primary ?? []), ...(discovery?.limited ?? []), ...(discovery?.hidden ?? [])];
+    const restoredFeature = features.find((feature) => initialSelectionType === "feature"
+      ? feature.id === initialSelectionId
+      : initialSelectionType === "function" && feature.nodeIds.includes(initialSelectionId ?? ""));
+    const firstFeature = restoredFeature ?? discovery?.primary[0] ?? discovery?.limited[0];
+    const restoredNode = initialSelectionType === "function" ? result.nodes.find((node) => node.id === initialSelectionId) : undefined;
+    const preferred = restoredNode?.id ?? firstFeature?.entryNodeId ?? preferredNodeId(result);
     setAnalysis(result);
     setViewMode("learning");
     setSelectedId(preferred);
@@ -81,7 +88,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
     setExpandedOverviewIds(new Set());
     setExpandedCodeNodeIds(new Set());
     setSelectedOverviewId(undefined);
-  }
+  }, [initialSelectionId, initialSelectionType]);
 
   async function runAnalysis(request: AnalysisRequest): Promise<void> {
     setLastRequest(request);
@@ -117,7 +124,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [initialConnectedRepositoryId]);
+  }, [initialConnectedRepositoryId, applyAnalysis]);
 
   const isGithub = analysis?.source === "github";
   const featureDiscovery = useMemo(() => analysis && analysis.source === "github"
@@ -256,7 +263,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
       {repositoryForm}
       <div className={`workspace-state ${error ? "error" : ""}`}>
         {error ? <AlertCircle /> : <LoaderCircle className="spin" />}
-        <p>{error ?? "샘플 코드를 AST로 분석하고 있어요."}</p>
+        <p>{error ?? (initialConnectedRepositoryId ? "연결된 저장소를 분석하고 있어요." : "샘플 코드를 AST로 분석하고 있어요.")}</p>
         {error && <button onClick={() => void runAnalysis(lastRequest)}>다시 시도</button>}
       </div>
     </main>
@@ -269,6 +276,9 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
   return (
     <main className={`repository-workspace ${viewMode}-view ${isGithub ? "github-repository" : ""}`}>
       {repositoryForm}
+      {initialSelectionId && !loading && (initialSelectionType === "feature"
+        ? !allFeatures.some((feature) => feature.id === initialSelectionId)
+        : !analysis.nodes.some((node) => node.id === initialSelectionId)) && <div className="analysis-alert warning" role="status">저장소 코드가 변경되어 이전 학습 위치를 찾지 못했습니다. 학습할 기능을 다시 선택해 주세요.</div>}
       {error && <div className="analysis-alert error"><AlertCircle size={15} /><span>{error}</span><button onClick={() => setError(undefined)}>닫기</button></div>}
       {analysis.collection?.partial && <div className="analysis-alert warning"><AlertCircle size={15} /><span>
         일부 파일만 분석했습니다. 경량 인덱스 {analysis.collection.indexedFiles ?? analysis.collection.discoveredFiles}개 중 {analysis.collection.collectedFiles}개 분석
@@ -279,18 +289,20 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
       <section className="repository-feature-header">
         <div className="feature-title-block">
           <span className="eyebrow">{isGithub ? "GITHUB REPOSITORY" : "LOGIN FEATURE"} · {analysis.repository}</span>
-          <h1>{isGithub && viewMode === "learning" ? "AI 코드 학습" : isGithub ? "저장소 코드 구조" : "로그인 기능 흐름"}</h1>
+          <h1>{behaviorMode ? "코드 동작 흐름" : isGithub && viewMode === "learning" ? "AI 코드 학습" : isGithub ? "저장소 코드 구조" : "로그인 기능 흐름"}</h1>
           <p>{isGithub && viewMode === "learning" ? "기능을 고르고 AI 설명부터 코드 흐름까지 순서대로 학습하세요." : isGithub ? `기본 브랜치 ${analysis.collection?.defaultBranch ?? "-"}의 실제 소스코드를 AST로 분석했습니다.` : "사용자가 로그인 버튼을 클릭했을 때 어떤 코드가 실행되는지 단계별로 살펴보세요."}</p>
         </div>
         <div className="header-actions">
           {viewMode === "developer" && <div className="analysis-status" title={analysis.stats.unresolvedRelations ? `대상 심벌을 확정하지 못한 관계 ${analysis.stats.unresolvedRelations}개 · 일치 Route가 없는 API 요청 ${analysis.stats.unmatchedApiRequests ?? 0}개` : undefined}><span /> AST 분석 완료 · 파일 {analysis.stats.files}{analysis.collection?.indexedFiles ? `/${analysis.collection.indexedFiles}` : ""} · 함수 {analysis.stats.functions} · 관계 {analysis.stats.relations}{analysis.stats.unresolvedRelations ? ` · 미해결 ${analysis.stats.unresolvedRelations}` : ""}{analysis.collection?.cached ? " · 캐시 결과" : ""}</div>}
           <div className="view-toggle" role="group" aria-label="그래프 보기 방식">
-            <button className={viewMode === "learning" ? "active" : ""} onClick={() => changeView("learning")}><GraduationCap size={15} /> 학습용 보기</button>
-            <button className={viewMode === "developer" ? "active" : ""} onClick={() => changeView("developer")}><Braces size={15} /> 개발자 보기</button>
+            <button className={!behaviorMode && viewMode === "learning" ? "active" : ""} onClick={() => { setBehaviorMode(false); changeView("learning"); }}><GraduationCap size={15} /> 학습용 보기</button>
+            <button className={!behaviorMode && viewMode === "developer" ? "active" : ""} onClick={() => { setBehaviorMode(false); changeView("developer"); }}><Braces size={15} /> 개발자 보기</button>
+            <button className={behaviorMode ? "active" : ""} onClick={() => setBehaviorMode(true)}>동작 흐름</button>
           </div>
         </div>
       </section>
 
+      {behaviorMode ? (loading || error ? <div className="workspace-state" role="status">{loading ? "저장소 분석이 완료되면 동작 흐름을 조회합니다." : "저장소를 다시 분석한 뒤 조회해 주세요."}</div> : <BehaviorWorkspace key={`${JSON.stringify(lastRequest)}:${analysis.collection?.durationMs ?? 0}`} source={lastRequest} />) : <>
       <section className="workspace-toolbar">
         {viewMode === "learning" && isGithub && <div className="learning-step-title"><span>1</span><div><strong>학습할 기능 선택</strong><small>먼저 알고 싶은 기능을 하나 골라주세요.</small></div></div>}
         <div className="current-view-copy">
@@ -401,6 +413,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId }: { initialC
           )}
         </aside>}
       </section>
+      </>}
     </main>
   );
 }

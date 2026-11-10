@@ -47,7 +47,7 @@ function isAxiosImport(node: Node): boolean {
   });
 }
 
-function localPath(value: string | undefined): string | undefined {
+export function localPath(value: string | undefined): string | undefined {
   if (!value?.startsWith("/") || value.startsWith("//")) return undefined;
   const pathname = value.split(/[?#]/, 1)[0];
   if (/[\\\s\u0000-\u001f]/.test(pathname) || pathname.includes("//")) return undefined;
@@ -106,6 +106,8 @@ function application(filePath: string): Application | undefined {
 }
 
 interface Route {
+  filePath: string;
+  routePath: string;
   app: Application;
   pattern: RegExp;
   specificity: number[];
@@ -135,7 +137,7 @@ function route(filePath: string): Omit<Route, "handlers"> | undefined {
       pattern += `/${part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`; specificity.push(4);
     }
   }
-  return { app, pattern: new RegExp(`${pattern}/?$`), specificity };
+  return { filePath, routePath: `/${parts.join("/")}`, app, pattern: new RegExp(`${pattern}/?$`), specificity };
 }
 
 function compareRoutes(a: Route, b: Route): number {
@@ -173,10 +175,10 @@ function hasRuntimeExport(file: SourceFile, name: string, visited = new Set<stri
   });
 }
 
-export function connectApiRequests(
-  files: FileAnalysis[], sources: Array<{ path: string; sourceFile: SourceFile }>,
+export function createApiRouteResolver(
+  sources: Array<{ path: string; sourceFile: SourceFile }>,
   resolveDeclaration: (node: Node) => string | undefined,
-): void {
+) {
   const applications = sources.flatMap(({ path }) => application(path) ?? []);
   const routes = sources.flatMap(({ path, sourceFile }) => {
     const descriptor = route(path);
@@ -191,18 +193,34 @@ export function connectApiRequests(
     }
     return [{ ...descriptor, handlers }];
   });
+  return (filePath: string, pathname: string, method: string, apiOnly = false) => {
+    const app = callerApp(filePath, applications);
+    const matches = routes.filter(candidate => candidate.app.root === app
+      && (!apiOnly || candidate.routePath === "/api" || candidate.routePath.startsWith("/api/"))
+      && candidate.pattern.test(pathname)).sort(compareRoutes);
+    const candidates = matches.map(item => ({ filePath: item.filePath, routePath: item.routePath, methods: [...item.handlers.keys()].sort() }));
+    const reason = app === undefined ? "unknown-application" : !matches[0] ? "route-not-found"
+      : matches[1] && compareRoutes(matches[0], matches[1]) === 0 ? "ambiguous-route"
+      : !matches[0].handlers.has(method) ? "method-not-exported" : undefined;
+    const selected = !reason ? matches[0] : undefined;
+    return { reason, candidates, targetId: selected?.handlers.get(method), filePath: selected?.filePath, routePath: selected?.routePath };
+  };
+}
+
+export function connectApiRequests(
+  files: FileAnalysis[], sources: Array<{ path: string; sourceFile: SourceFile }>,
+  resolveDeclaration: (node: Node) => string | undefined,
+): void {
+  const resolve = createApiRouteResolver(sources, resolveDeclaration);
   for (const fn of files.flatMap((file) => file.functions)) for (const relation of fn.relations ?? []) {
     if (relation.relation !== "api") continue;
     const eligible = relation.confidence === "confirmed";
     relation.targetId = undefined;
     relation.confidence = "inferred";
     const pathname = localPath(relation.requestPath);
-    const app = callerApp(fn.filePath, applications);
-    if (!eligible || !pathname || app === undefined || !relation.requestMethod) continue;
+    if (!eligible || !pathname || !relation.requestMethod) continue;
     // Select the URL's route before checking its method; a 405 is not a dynamic fallback.
-    const matches = routes.filter((candidate) => candidate.app.root === app && candidate.pattern.test(pathname)).sort(compareRoutes);
-    if (!matches[0] || (matches[1] && compareRoutes(matches[0], matches[1]) === 0)) continue;
-    const target = matches[0].handlers.get(relation.requestMethod);
+    const target = resolve(fn.filePath, pathname, relation.requestMethod).targetId;
     if (!target) continue;
     relation.targetId = target;
     relation.confidence = "confirmed";
