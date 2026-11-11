@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./vulnlab.css";
+import { site } from "@/lib/ui/site";
 
 export const metadata: Metadata = {
-  title: "RepoTutor — 코드 흐름을 이해하는 가장 빠른 방법",
-  description: "Repository의 구조와 실행 흐름을 시각적으로 탐색하는 코드 학습 도구",
+  title: { default: `${site.name} — ${site.tagline}`, template: `%s | ${site.name}` },
+  description: site.description,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

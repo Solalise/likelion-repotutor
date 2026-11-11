@@ -56,10 +56,12 @@ describe("repository management UI", () => {
     expect(html.indexOf("beta")).toBeLessThan(html.indexOf("alpha"));
   });
 
-  it("marks the current route and exposes upcoming features without links", () => {
+  it("keeps legacy repository tools out of the six main security navigation items", () => {
     const html = renderToStaticMarkup(<Sidebar name="Learner"><button>로그아웃</button></Sidebar>);
-    expect(html).toMatch(/<a(?=[^>]*href="\/repositories")(?=[^>]*aria-current="page")[^>]*>/);
-    expect(html.match(/aria-disabled="true"/g)).toHaveLength(4);
+    expect(html).toMatch(/<a(?=[^>]*href="\/settings")(?=[^>]*aria-current="page")[^>]*>/);
+    expect(html).not.toContain('href="/repositories"');
+    expect(html).not.toContain('href="/repository"');
+    expect(html).toContain('href="/practice"');
     expect(html).not.toContain('href="/teach-back"');
   });
 });

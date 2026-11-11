@@ -2,6 +2,7 @@
 import { SignInButton, SignOutButton } from "@/components/auth/AuthButtons";
 import { Sidebar } from "./Sidebar";
 import { db } from "@/lib/db";
+import { LabTopbar } from "./LabTopbar";
 
 export async function AppShell({ children, workspace = false }: { children: React.ReactNode; workspace?: boolean }) {
   const session = await auth();
@@ -13,7 +14,7 @@ export async function AppShell({ children, workspace = false }: { children: Reac
       <Sidebar name={session?.user?.name ?? "게스트"} login={profile?.githubLogin ?? undefined}>
         {session?.user ? <SignOutButton /> : <SignInButton />}
       </Sidebar>
-      <div className="tutor-content"><a className="skip-content" href="#main-content">본문으로 이동</a>{children}</div>
+      <div className="tutor-content"><a className="skip-content" href="#main-content">본문으로 이동</a>{!workspace && <LabTopbar />}{children}</div>
     </div>
   );
 }

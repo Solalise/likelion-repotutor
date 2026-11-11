@@ -10,13 +10,13 @@ export async function AppHeader({ landing = false }: { landing?: boolean } = {})
       <Brand />
       <nav className="header-nav" aria-label="주 메뉴">
         {landing ? <>
-          <a href="#learning-process">학습 방법</a>
-          <Link href="/repository">데모 체험</Link>
-          {session?.user ? <><Link href="/dashboard">학습 홈</Link><SignOutButton /></> : <SignInButton />}
+          <a href="#how-it-works">실습 방법</a>
+          <Link href="/learn">취약점 학습</Link>
+          {session?.user ? <><Link href="/dashboard">대시보드</Link><SignOutButton /></> : <SignInButton />}
         </> : <>
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/repository">Code map</Link>
-          {session?.user ? <><Link href="/repositories">Repositories</Link><SignOutButton /></> : <SignInButton />}
+          <Link href="/practice">공격 실습</Link>
+          <Link href="/learn">취약점 학습</Link>
+          {session?.user ? <><Link href="/dashboard">대시보드</Link><SignOutButton /></> : <SignInButton />}
         </>}
       </nav>
     </header>

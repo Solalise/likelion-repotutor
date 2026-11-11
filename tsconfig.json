@@ -37,6 +37,7 @@
   ],
   "exclude": [
     "node_modules",
-    "sample-repository"
+    "sample-repository",
+    "labs/basic-site"
   ]
 }
