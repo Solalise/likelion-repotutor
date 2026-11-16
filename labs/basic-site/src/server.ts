@@ -4,10 +4,10 @@ import { pathToFileURL } from "node:url";
 import { HttpError, sendJson } from "./http.ts";
 import { route } from "./routes.ts";
 import { createStore } from "./store.ts";
-import { readLessonCode } from "./lessonCode.ts";
+import { readLessonCode, readSqliLessonCode } from "./lessonCode.ts";
 import { createSearchDatabase } from "./features/search.ts";
 
-export async function createBasicSite(options: { port?: number; enableIdorLab?: boolean; enableSqliLab?: boolean } = {}) {
+export async function createBasicSite(options: { port?: number; enableIdorLab?: boolean; enableSqliLab?: boolean; enableXssLab?: boolean; enableAuthzLab?: boolean } = {}) {
   if (process.env.NODE_ENV === "production") throw new Error("기본 실습 서버는 로컬 개발 전용입니다. production 실행은 지원하지 않습니다.");
   const enableIdorLab = options.enableIdorLab ?? process.env.BASIC_SITE_ENABLE_IDOR === "1";
   const enableSqliLab = options.enableSqliLab ?? process.env.BASIC_SITE_ENABLE_SQLI === "1";
@@ -17,16 +17,23 @@ export async function createBasicSite(options: { port?: number; enableIdorLab?: 
   if (enableIdorLab && process.env.NODE_ENV !== undefined && !["development", "test"].includes(process.env.NODE_ENV)) {
     throw new Error("IDOR 실습은 로컬 development/test 환경에서만 활성화할 수 있습니다.");
   }
+  const enableXssLab = options.enableXssLab ?? process.env.BASIC_SITE_ENABLE_XSS === "1";
+  const enableAuthzLab = options.enableAuthzLab ?? process.env.BASIC_SITE_ENABLE_AUTHZ === "1";
+  if ((enableXssLab || enableAuthzLab) && !["development", "test"].includes(process.env.NODE_ENV ?? "")) throw new Error("실습은 명시적인 development/test 환경에서만 활성화할 수 있습니다.");
   const requestedPort = options.port ?? 4400;
   if (!Number.isInteger(requestedPort) || (requestedPort !== 0 && (requestedPort < 1024 || requestedPort > 65535))) throw new Error("포트는 1024~65535 정수여야 합니다.");
   const store = createStore();
   const assets = {
+    practice: await readFile(new URL("../public/practice.js", import.meta.url), "utf8"),
+    extra: await readFile(new URL("../public/extra-labs.js", import.meta.url), "utf8"),
     script: await readFile(new URL("../public/app.js", import.meta.url), "utf8"),
     style: await readFile(new URL("../public/site.css", import.meta.url), "utf8"),
     lab: await readFile(new URL("../public/lab.js", import.meta.url), "utf8"),
     httpClient: await readFile(new URL("../public/http-client.js", import.meta.url), "utf8"),
     lesson: await readFile(new URL("../public/lesson.js", import.meta.url), "utf8"),
+    sqliLesson: await readFile(new URL("../public/sqli-lesson.js", import.meta.url), "utf8"),
     lessonCode: await readLessonCode(),
+    sqliCode: await readSqliLessonCode(),
   };
   let port = requestedPort;
   const searchDb = createSearchDatabase();
@@ -35,14 +42,15 @@ export async function createBasicSite(options: { port?: number; enableIdorLab?: 
     response.setHeader("X-Content-Type-Options", "nosniff");
     response.setHeader("Referrer-Policy", "no-referrer");
     response.setHeader("X-Frame-Options", "DENY");
-    response.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    response.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; frame-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     try {
       // Loopback binding alone does not prevent DNS rebinding or cross-site POSTs.
       const host = request.headers.host;
       if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(request.socket.remoteAddress ?? "")) throw new HttpError(403, "LOOPBACK_REQUIRED", "루프백 접근만 허용합니다.");
       if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) throw new HttpError(403, "INVALID_HOST", "로컬 개발 주소로 접속해주세요.");
       if (request.method !== "GET" && request.headers.origin !== `http://${host}`) throw new HttpError(403, "INVALID_ORIGIN", "동일한 로컬 Origin에서만 요청할 수 있습니다.");
-      await route(request, response, store, assets, enableIdorLab, searchDb, enableSqliLab);
+      if (new URL(request.url ?? "/", "http://localhost").pathname === "/lab/xss") response.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+      await route(request, response, store, assets, enableIdorLab, searchDb, enableSqliLab, enableXssLab, enableAuthzLab);
     } catch (error) {
       if (response.headersSent || response.destroyed) { response.end(); return; }
       if (error instanceof HttpError) sendJson(response, error.status, { error: error.code, message: error.message });

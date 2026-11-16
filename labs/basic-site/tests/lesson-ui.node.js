@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createBasicSite } from "../src/server.ts";
 import { page } from "../src/pages.ts";
+import { readSqliLessonCode } from "../src/lessonCode.ts";
 
 // Minimal DOM contract harness: exercise the actual event handlers against real HTTP.
 // This does not verify layout, browser focus or native form validation.
@@ -15,6 +16,238 @@ class Element {
   reset() {}
   async fire(type) { await this.listeners[type]?.({ preventDefault() {}, currentTarget: this }); }
 }
+
+test("SQLi observes only real normal community searches and gates later stages on evidence", async () => {
+  const site = await createBasicSite({ port: 0, enableIdorLab: false, enableSqliLab: false });
+  const original = Object.fromEntries(["document", "location", "fetch", "FormData", "window"].map(name => [name, globalThis[name]]));
+  let dispose;
+  try {
+    const html = page("posts", undefined, undefined, false, "sqli");
+    const nodes = new Map();
+    for (const match of html.matchAll(/<[^>]*\bid="([^"]+)"[^>]*>/g)) nodes.set(`#${match[1]}`, new Element());
+    const stages = Array.from({ length: 6 }, (_, index) => { const e = new Element("button"); e.dataset.stage = String(index + 1); return e; });
+    const panels = [1, 2, 3, 4, 5, 6].map(index => { const e = new Element(); e.dataset.stages = String(index); return e; });
+    const dynamic = [];
+    const find = selector => /^\[data-stage="\d"\]$/.test(selector) ? stages[Number(selector.match(/\d/)[0]) - 1] : nodes.get(selector) || dynamic.find(element => `#${element.id}` === selector);
+    const root = { dataset: {}, querySelector: find, querySelectorAll: selector => selector === "[data-stage]" ? stages : selector === "[data-quiz-answer]" ? dynamic.filter(element => element.dataset.quizAnswer) : selector === "[data-quiz-explanation]" ? dynamic.filter(element => element.dataset.quizExplanation) : panels };
+    nodes.set("#integrated-sqli", root);
+    const disclosure = new Element("details"); disclosure.open = true;
+    const button = new Element("button"); nodes.get("#search-form").querySelector = () => button;
+    const sent = [];
+    globalThis.location = { origin: site.url };
+    globalThis.document = { body: { dataset: { page: "posts", guide: "sqli" } },
+      querySelector: selector => selector === ".guide-panel" ? disclosure : nodes.get(selector),
+      createElement: tag => { const element = new Element(tag); dynamic.push(element); return element; },
+      createTextNode: text => ({ textContent: String(text) }), addEventListener() {},
+    };
+    globalThis.window = { addEventListener() {} };
+    globalThis.fetch = (input, options) => {
+      const url = typeof input === "string" ? new URL(input, site.url) : new URL(input.url);
+      sent.push({ url: url.href, method: typeof input === "string" ? "GET" : input.method });
+      return original.fetch(typeof input === "string" ? url : input, options);
+    };
+    let query = "산책";
+    globalThis.FormData = class { get() { return query; } };
+    const { initSqliLesson, isNormalSearchObservation } = await import("../public/sqli-lesson.js");
+    const { publishCommunityPost, publishCommunitySearch, publishCommunitySession, requestPost, requestSearch } = await import("../public/http-client.js");
+    dispose = initSqliLesson(root);
+    await import("../public/app.js?sqli-observation");
+    const waitFor = async predicate => {
+      for (let i = 0; i < 300; i++) { if (predicate()) return; await new Promise(resolve => setTimeout(resolve, 5)); }
+      assert.fail("normal search UI did not finish");
+    };
+    await waitFor(() => nodes.get("#posts").attributes["aria-busy"] === "false");
+    assert.equal(nodes.get("#sqli-search-record").textContent, "아직 관찰된 검색 요청이 없습니다");
+    assert.equal(sent.some(record => new URL(record.url).pathname.includes("search")), false);
+    await nodes.get("#sqli-start").fire("click");
+    assert.equal(stages[1].attributes["aria-current"], "step");
+    assert.equal(stages[1].attributes["data-complete"], undefined);
+    publishCommunityPost(await requestPost("201", "normal", globalThis.fetch, site.url));
+    assert.equal(stages[1].attributes["data-complete"], undefined);
+    assert.equal(nodes.get("#sqli-search-record").textContent, "아직 관찰된 검색 요청이 없습니다");
+
+    await nodes.get("#search-form").fire("submit");
+    const actual = sent.find(record => new URL(record.url).pathname === "/api/search");
+    assert.ok(actual);
+    assert.equal(actual.method, "GET");
+    assert.equal(new URL(actual.url).searchParams.get("q"), query);
+    assert.ok(nodes.get("#sqli-search-record").textContent.includes(actual.url));
+    assert.match(nodes.get("#sqli-search-record").textContent, /검색어: 산책/);
+    assert.match(nodes.get("#sqli-search-record").textContent, /HTTP 200/);
+    assert.equal(stages[1].attributes["data-complete"], "true");
+    assert.match(nodes.get("#sqli-search-feedback").textContent, /2단계 완료/);
+    assert.equal(nodes.get("#sqli-search-results").children.length, 2);
+    assert.match(nodes.get("#sqli-search-results").children[1].textContent, /동네 산책 안내[\s\S]*public/);
+    assert.equal(nodes.get("#search-status").textContent, "검색 결과 1개");
+    assert.equal(sent.some(record => new URL(record.url).pathname.startsWith("/api/lab/")), false);
+    disclosure.open = false;
+    await stages[0].fire("click"); await stages[1].fire("click");
+    disclosure.open = true;
+    assert.equal(stages[1].attributes["data-complete"], "true");
+    for (const stage of stages.slice(2)) {
+      assert.equal(stage.disabled, true); await stage.fire("click");
+      assert.equal(stages[1].attributes["aria-current"], "step");
+    }
+    const successful = await requestSearch(query, globalThis.fetch, site.url);
+    assert.equal(isNormalSearchObservation(successful), true);
+    for (const invalid of [{ ...successful, status: 403 }, { ...successful, query: "different" }, { ...successful, data: { dataset: "other", posts: [] } }, { ...successful, data: { dataset: "sqli-practice", posts: [{ id: 1, title: "x", body: "x", visibility: "private" }] } }]) assert.equal(isNormalSearchObservation(invalid), false);
+    const before = nodes.get("#sqli-search-record").textContent;
+    publishCommunitySearch({ ...successful, path: "/api/lab/vulnerable/search" });
+    assert.equal(nodes.get("#sqli-search-record").textContent, before);
+    query = "x".repeat(201);
+    await nodes.get("#search-form").fire("submit");
+    assert.match(nodes.get("#sqli-search-record").textContent, /HTTP 400/);
+    assert.equal(stages[1].attributes["data-complete"], undefined);
+    query = "없는검색결과";
+    await nodes.get("#search-form").fire("submit");
+    assert.equal(nodes.get("#search-status").textContent, "검색 결과 0개");
+    assert.equal(stages[1].attributes["data-complete"], "true");
+    publishCommunitySession();
+    assert.equal(stages[1].attributes["data-complete"], undefined);
+    assert.equal(nodes.get("#sqli-search-record").textContent, "아직 관찰된 검색 요청이 없습니다");
+  } finally { dispose?.(); Object.assign(globalThis, original); await site.close(); }
+});
+
+test("SQLi stages 3-6 use actual responses, source code, retryable quiz and separate completion state", async () => {
+  const priorNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = "test";
+  const site = await createBasicSite({ port: 0, enableIdorLab: false, enableSqliLab: true });
+  if (priorNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = priorNodeEnv;
+  const original = Object.fromEntries(["document", "location", "fetch"].map(name => [name, globalThis[name]]));
+  let dispose;
+  try {
+    const login = await fetch(`${site.url}/api/auth/login`, { method: "POST", headers: { Origin: site.url, "Content-Type": "application/json" }, body: JSON.stringify({ userId: "user-a", password: "practice-a" }) });
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const html = page("posts", { id: "user-a", name: "A", role: "user" }, undefined, false, "sqli");
+    const nodes = new Map();
+    for (const match of html.matchAll(/<[^>]*\bid="([^"]+)"[^>]*>/g)) nodes.set(`#${match[1]}`, new Element());
+    const stages = Array.from({ length: 6 }, (_, index) => { const e = new Element("button"); e.dataset.stage = String(index + 1); return e; });
+    const panels = [1, 2, 3, 4, 5, 6].map(index => { const e = new Element(); e.dataset.stages = String(index); return e; });
+    const dynamic = [];
+    const find = selector => /^\[data-stage="\d"\]$/.test(selector) ? stages[Number(selector.match(/\d/)[0]) - 1] : nodes.get(selector) || dynamic.find(element => `#${element.id}` === selector);
+    const root = { dataset: {}, querySelector: find, querySelectorAll: selector => selector === "[data-stage]" ? stages : selector === "[data-quiz-answer]" ? dynamic.filter(element => element.dataset.quizAnswer) : selector === "[data-quiz-explanation]" ? dynamic.filter(element => element.dataset.quizExplanation) : panels };
+    nodes.set("#integrated-sqli", root);
+    const disclosure = new Element("details"); disclosure.open = true;
+    let failPath;
+    let invalidNormal = false;
+    const sent = [];
+    globalThis.location = { origin: site.url };
+    globalThis.document = { body: { dataset: { page: "posts", guide: "sqli" } },
+      querySelector: selector => selector === ".guide-panel" ? disclosure : nodes.get(selector),
+      createElement: tag => { const element = new Element(tag); dynamic.push(element); return element; },
+      createTextNode: text => ({ textContent: String(text) }), addEventListener() {},
+    };
+    globalThis.fetch = async (input, options) => {
+      const request = input instanceof Request ? input : new Request(new URL(input, site.url), options);
+      const path = new URL(request.url).pathname;
+      sent.push(request);
+      if (path === failPath) throw new Error("simulated connection failure");
+      if (invalidNormal && path === "/api/search") return Response.json({ error: "TEMPORARY" }, { status: 503 });
+      const headers = new Headers(request.headers); headers.set("Cookie", cookie);
+      return original.fetch(request, { headers });
+    };
+    const { initSqliLesson } = await import("../public/sqli-lesson.js");
+    const { publishCommunitySearch, requestSearch } = await import("../public/http-client.js");
+    dispose = initSqliLesson(root);
+    const waitFor = async predicate => {
+      for (let i = 0; i < 300; i++) { if (predicate()) return; await new Promise(resolve => setTimeout(resolve, 5)); }
+      assert.fail("SQLi stages 3-4 did not reach the expected state");
+    };
+    const stage = () => stages.findIndex(item => item.attributes["aria-current"] === "step") + 1;
+    const normal = await requestSearch("산책", globalThis.fetch, site.url);
+    publishCommunitySearch(normal);
+    assert.equal(stages[1].attributes["data-complete"], "true");
+    await nodes.get("#sqli-edit-start").fire("click");
+    assert.equal(stage(), 3);
+    assert.equal(nodes.get("#sqli-request-query").value, "산책");
+
+    const payload = "' OR 1=1 --";
+    nodes.get("#sqli-request-query").value = payload;
+    nodes.get("#sqli-request-query").fire("input");
+    assert.ok(nodes.get("#sqli-request-url").value.startsWith(`${site.url}/api/lab/vulnerable/search?q=`));
+    failPath = "/api/lab/vulnerable/search";
+    await nodes.get("#sqli-request-form").fire("submit");
+    await waitFor(() => nodes.get("#sqli-replay-feedback").textContent.includes("다시 시도하세요"));
+    assert.equal(stages[2].attributes["data-complete"], undefined);
+    assert.match(nodes.get("#sqli-replay-record").textContent, /실제 HTTP 응답을 받지 못했습니다/);
+    assert.equal(nodes.get("#sqli-request-fields").disabled, false);
+
+    failPath = undefined;
+    await nodes.get("#sqli-request-form").fire("submit");
+    await waitFor(() => stages[2].attributes["data-complete"] === "true");
+    assert.equal(stage(), 3);
+    assert.match(nodes.get("#sqli-replay-record").textContent, /GET .*\/api\/lab\/vulnerable\/search\?q=/);
+    assert.match(nodes.get("#sqli-replay-record").textContent, /검색어: ' OR 1=1 --/);
+    assert.match(nodes.get("#sqli-replay-record").textContent, /HTTP 200/);
+    assert.match(nodes.get("#sqli-education-results").children.map(item => item.textContent).join("\n"), /visibility: private/);
+    assert.ok(sent.some(request => new URL(request.url).pathname === "/api/lab/vulnerable/search" && new URL(request.url).searchParams.get("q") === payload));
+    assert.equal(nodes.get("#sqli-analysis-start").disabled, false);
+
+    await nodes.get("#sqli-analysis-start").fire("click");
+    assert.equal(stage(), 4);
+    invalidNormal = true;
+    await nodes.get("#sqli-compare").fire("click");
+    await waitFor(() => nodes.get("#sqli-comparison-record").textContent.includes("HTTP 503"));
+    assert.equal(stages[3].attributes["data-complete"], undefined);
+    assert.match(nodes.get("#sqli-reproduction-state").textContent, /판정하지 않았습니다/);
+    assert.equal(nodes.get("#sqli-compare").disabled, false);
+
+    invalidNormal = false;
+    await nodes.get("#sqli-compare").fire("click");
+    await waitFor(() => stages[3].attributes["data-complete"] === "true");
+    assert.equal(stage(), 4);
+    assert.match(nodes.get("#sqli-education-record").textContent, /HTTP 200/);
+    assert.match(nodes.get("#sqli-comparison-record").textContent, /GET .*\/api\/search\?q=/);
+    assert.match(nodes.get("#sqli-comparison-record").textContent, /HTTP 200/);
+    assert.match(nodes.get("#sqli-education-results").children.map(item => item.textContent).join("\n"), /visibility: private/);
+    assert.equal(nodes.get("#sqli-comparison-results").children.length, 1);
+    assert.match(nodes.get("#sqli-comparison-results").children[0].textContent, /실제 검색 결과 0개/);
+    assert.match(nodes.get("#sqli-reproduction-state").textContent, /조건 우회 재현 확인/);
+    assert.equal(stages[4].disabled, false);
+    assert.equal(stages[5].disabled, true);
+
+    await nodes.get("#sqli-code-start").fire("click");
+    assert.equal(stage(), 5);
+    await waitFor(() => nodes.get("#sqli-code-confirm").disabled === false);
+    const expectedCode = await readSqliLessonCode();
+    assert.match(nodes.get("#sqli-code-source").textContent, /labs\/basic-site\/src\/features\/search.ts:/);
+    assert.equal(nodes.get("#sqli-code-snippet").textContent, expectedCode.snippet);
+    assert.match(expectedCode.snippet, /vulnerable \?/);
+    assert.match(expectedCode.snippet, /ESCAPE '!'/);
+    assert.equal(nodes.get("#sqli-quiz-start").disabled, true);
+    await nodes.get("#sqli-code-confirm").fire("click");
+    assert.equal(stages[4].attributes["data-complete"], "true");
+    assert.equal(nodes.get("#sqli-quiz-start").disabled, false);
+    disclosure.open = false; disclosure.open = true;
+    assert.equal(stage(), 5);
+    await nodes.get("#sqli-quiz-start").fire("click");
+    assert.equal(stage(), 6);
+    const answerInputs = dynamic.filter(element => element.dataset.quizAnswer);
+    assert.equal(answerInputs.length, 12);
+    answerInputs.forEach(input => { input.checked = input.value === "3"; });
+    await nodes.get("#sqli-quiz-form").fire("submit");
+    assert.match(nodes.get("#sqli-quiz-feedback").textContent, /0\/3/);
+    assert.equal(nodes.get("#sqli-learning-complete").hidden, true);
+    assert.ok(dynamic.filter(element => element.dataset.quizExplanation).every(element => element.textContent.startsWith("오답 ·")));
+    const correct = ["0", "1", "1"];
+    answerInputs.forEach(input => { input.checked = input.value === correct[Number(input.dataset.quizQuestion)]; });
+    await nodes.get("#sqli-quiz-form").fire("submit");
+    assert.equal(stages[5].attributes["data-complete"], "true");
+    assert.equal(nodes.get("#sqli-learning-complete").hidden, false);
+    assert.match(nodes.get("#sqli-completion-reproduction").textContent, /취약점 재현/);
+    assert.match(nodes.get("#sqli-quiz-feedback").textContent, /3문제 모두 정답/);
+    disclosure.open = false; disclosure.open = true;
+    assert.equal(nodes.get("#sqli-learning-complete").hidden, false);
+    const { publishCommunitySession } = await import("../public/http-client.js");
+    publishCommunitySession();
+    assert.equal(stage(), 1);
+    assert.equal(nodes.get("#sqli-learning-complete").hidden, true);
+    assert.equal(stages[4].attributes["data-complete"], undefined);
+  } finally {
+    dispose?.(); Object.assign(globalThis, original); await site.close();
+  }
+});
 
 test("community detail loads without a request inspector and search feedback contains no lab labels", async () => {
   const site = await createBasicSite({ port: 0, enableIdorLab: false, enableSqliLab: false });

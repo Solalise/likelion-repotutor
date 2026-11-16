@@ -24,6 +24,7 @@ async function search(q: string, vulnerable = false) {
 }
 
 test("real SQLite normal search binds literal input and returns only public fixtures", async () => {
+  assert.deepEqual(await (await fetch(`${site.url}/api/health`)).json(), { service: "vulnlab-basic-site", idorEnabled: true, sqliEnabled: true, xssEnabled: false, authzEnabled: false });
   const { response, body } = await search("산책");
   assert.equal(response.status, 200);
   assert.deepEqual(body.posts.map(post => post.id), [1001]);

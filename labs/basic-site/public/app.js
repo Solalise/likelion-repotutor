@@ -1,12 +1,20 @@
-import { requestPost, requestText, publishCommunityPost, publishCommunitySession } from "./http-client.js";
-const integratedGuide = document.body.dataset.guide === "idor" && document.querySelector("#integrated-idor");
+import { requestPost, requestSearch, requestText, publishCommunityPost, publishCommunitySession, publishCommunitySearch } from "./http-client.js";
+import { initPractice } from "./practice.js";
+import { initModes } from "./modes.js";
+initModes();
+const guideKind = ["idor", "sqli"].includes(document.body.dataset.guide) ? document.body.dataset.guide : undefined;
+const guideSelector = `#integrated-${guideKind}`;
+const integratedGuide = guideKind && document.querySelector(guideSelector);
+if (guideKind || document.body.dataset.page === "lab") initPractice(guideKind || "idor");
 const lessonReady = integratedGuide
-  ? import("./lab.js").then(({ initIdorLesson }) => initIdorLesson(integratedGuide, true))
+  ? guideKind === "idor"
+    ? import("./lab.js").then(({ initIdorLesson }) => initIdorLesson(integratedGuide, true))
+    : import("./sqli-lesson.js").then(({ initSqliLesson }) => initSqliLesson(integratedGuide))
   : Promise.resolve();
 let navigationVersion = 0;
 function communityPath(path) {
   const guide = document.body.dataset.guide;
-  return ["idor", "sqli"].includes(guide) ? `${path}?lab=${guide}` : path;
+  return ["idor", "sqli"].includes(guide) ? `${path}?lab=${guide}${document.body.dataset.mode ? `&mode=${document.body.dataset.mode}` : ""}` : path;
 }
 function notify(text) { document.querySelector("#message").textContent = text; }
 async function api(path, options = {}) {
@@ -70,7 +78,7 @@ async function load(version = navigationVersion) {
     try {
       const record = await requestPost(document.body.dataset.postId);
       if (version !== navigationVersion) return;
-      publishCommunityPost(record);
+      if (document.body.dataset.mode !== "free") publishCommunityPost(record);
       const observed = document.querySelector("#observed-request");
       if (observed && !integratedGuide) observed.textContent = requestText(record);
       if (record.status !== 200) throw new Error(record.data?.message || "조회에 실패했습니다.");
@@ -92,9 +100,14 @@ searchForm?.addEventListener("submit", async event => {
   button.disabled = true;
   status.textContent = "게시글을 검색하고 있습니다…";
   results.replaceChildren();
+  const version = navigationVersion;
   try {
-    const query = new URLSearchParams({ q: new FormData(searchForm).get("q") || "" });
-    const { posts } = await api(`/api/search?${query}`);
+    const query = new FormData(searchForm).get("q") || "";
+    const record = await requestSearch(query);
+    if (version !== navigationVersion) return;
+    if (document.body.dataset.mode !== "free") publishCommunitySearch(record);
+    if (record.status !== 200) throw new Error(record.data?.message || "검색하지 못했습니다.");
+    const { posts } = record.data;
     for (const post of posts) {
       const article = element("article", "", "post-row");
       article.append(element("span", "공개", "badge"), element("h3", post.title), element("p", post.body));
@@ -109,7 +122,7 @@ searchForm?.addEventListener("submit", async event => {
 /** Replace only community surfaces. The guide DOM and its in-memory lesson stay mounted. */
 export async function navigateCommunity(path, push = true) {
   const url = new URL(path, location.origin);
-  if (url.origin !== location.origin || !/^\/(?:posts(?:\/\d{1,12})?|login)?$/.test(url.pathname) || url.searchParams.get("lab") !== "idor") return;
+  if (url.origin !== location.origin || !/^\/(?:posts(?:\/\d{1,12})?|login)?$/.test(url.pathname) || url.searchParams.get("lab") !== guideKind) return;
   const version = ++navigationVersion;
   try {
     await lessonReady;
@@ -119,7 +132,7 @@ export async function navigateCommunity(path, push = true) {
     if (version !== navigationVersion) return;
     const main = parsed.querySelector("main");
     const header = parsed.querySelector(".topbar");
-    if (!main || !header || !parsed.querySelector("#integrated-idor")) throw new Error("페이지 구성을 확인하지 못했습니다.");
+    if (!main || !header || !parsed.querySelector(guideSelector)) throw new Error("페이지 구성을 확인하지 못했습니다.");
     document.querySelector("main").replaceWith(document.importNode(main, true));
     document.querySelector(".topbar").replaceWith(document.importNode(header, true));
     document.body.dataset.page = parsed.body.dataset.page;
@@ -134,13 +147,15 @@ if (integratedGuide) {
     const link = event.target.closest("a");
     if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target || link.hasAttribute("download")) return;
     const url = new URL(link.href, location.origin);
-    if (url.origin !== location.origin || url.searchParams.get("lab") !== "idor" || !/^\/(?:posts(?:\/\d{1,12})?|login)?$/.test(url.pathname)) return;
+    if (link.hasAttribute("data-mode-link")) return;
+    if (url.origin !== location.origin || url.searchParams.get("lab") !== guideKind || !/^\/(?:posts(?:\/\d{1,12})?|login)?$/.test(url.pathname)) return;
     event.preventDefault();
+    if (document.body.dataset.mode) url.searchParams.set("mode", document.body.dataset.mode);
     void navigateCommunity(url.href);
   });
   window.addEventListener("popstate", () => {
     const url = new URL(location.href);
-    if (url.searchParams.get("lab") !== "idor" || !/^\/(?:posts(?:\/\d{1,12})?|login)?$/.test(url.pathname)) {
+    if (url.searchParams.get("lab") !== guideKind || !/^\/(?:posts(?:\/\d{1,12})?|login)?$/.test(url.pathname)) {
       location.reload();
     } else void navigateCommunity(location.href, false);
   });

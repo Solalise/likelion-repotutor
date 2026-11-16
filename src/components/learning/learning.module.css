@@ -1,0 +1,402 @@
+﻿.root {
+  color:#30352e;
+  --olive:#596b3c;
+  --cream:#faf9f3;
+  --line:#dedfd3;
+  font-size:15px;
+  line-height:1.85}
+.root h1,.root h2,.root h3 {
+  color:#292f27;
+  line-height:1.4;
+  letter-spacing:-.035em}
+.root h1 {
+  font-size:clamp(30px,3.3vw,46px);
+  margin:14px 0 20px}
+.root h2 {
+  font-size:26px;
+  margin:12px 0 25px}
+.root h3 {
+  font-size:17px;
+  margin:0 0 12px}
+.root p {
+  margin:0 0 20px;
+  word-break:keep-all;
+  overflow-wrap:anywhere}
+.root small {
+  font-size:11px;
+  letter-spacing:.09em;
+  color:#626c55}
+.root button,.root a {
+  transition:background .15s,border-color .15s}
+.root button {
+  cursor:pointer}
+.root button:disabled {
+  opacity:.5;
+  cursor:not-allowed}
+.root :is(button,a,input,pre):focus-visible {
+  outline:3px solid #81945b;
+  outline-offset:4px}
+.hero {
+  padding:25px 0 40px;
+  max-width:790px}
+.hero>p {
+  color:#666c60}
+.hero .meter {
+  max-width:440px;
+  margin-top:30px}
+.meter>div {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-size:12px}
+.meter progress {
+  width:100%;
+  height:7px;
+  display:block;
+  margin-top:10px;
+  accent-color:var(--olive);
+  border:0;
+  border-radius:10px;
+  overflow:hidden;
+  background:#e6e7dc}
+.meter progress::-webkit-progress-bar {
+  background:#e6e7dc}
+.meter progress::-webkit-progress-value {
+  background:var(--olive)}
+.sectionHeading {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  border-top:1px solid var(--line);
+  padding-top:25px}
+.sectionHeading h2 {
+  font-size:21px}
+.sectionHeading>span,.muted {
+  color:#697060;
+  font-size:13px}
+.grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:22px}
+.course {
+  display:flex;
+  flex-direction:column;
+  padding:30px;
+  background:var(--cream);
+  border:1px solid var(--line);
+  border-radius:16px;
+  text-decoration:none}
+.course:hover {
+  border-color:var(--olive);
+  background:#f2f3e8}
+.course>small {
+  display:flex;
+  justify-content:space-between}
+.course h2 {
+  margin:25px 0 10px}
+.course p {
+  margin-bottom:12px}
+.course .meter {
+  margin-top:auto;
+  padding-top:22px}
+.course>strong {
+  font-size:13px;
+  color:var(--olive);
+  margin-top:22px}
+.callout {
+  padding:24px 26px;
+  background:#edf0e3;
+  border-left:3px solid #7b8b58;
+  border-radius:4px;
+  margin:28px 0}
+.callout p:last-child {
+  margin-bottom:0}
+.callout p {
+  font-size:14px}
+.callout a:not(.primary) {
+  text-decoration:underline}
+.back {
+  font-size:13px;
+  color:var(--olive)}
+.courseHeader {
+  padding:25px 0}
+.courseHeader h1 {
+  margin:8px 0}
+.courseHeader p {
+  color:#697060}
+.layout {
+  display:grid;
+  grid-template-columns:235px minmax(0,1fr);
+  gap:38px;
+  align-items:start}
+.sidebar {
+  position:sticky;
+  top:24px;
+  background:#f5f5ed;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:20px 15px}
+.sidebar .meter {
+  padding:0 8px 20px}
+.sidebar nav {
+  display:grid;
+  gap:7px}
+.sidebar button {
+  display:flex;
+  align-items:center;
+  text-align:left;
+  gap:12px;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:8px;
+  padding:12px 8px;
+  color:#515948;
+  font-size:13px;
+  line-height:1.6}
+.sidebar button>span:first-child {
+  font-size:12px;
+  font-weight:700}
+.sidebar button[aria-current] {
+  background:#e3e9d5;
+  border-color:#c9d2b8;
+  color:#344626;
+  font-weight:700}
+.sidebar button small {
+  display:block;
+  font-weight:400;
+  font-size:10px;
+  letter-spacing:0;
+  margin-top:3px}
+.sidebar>p {
+  font-size:11px;
+  color:#737966;
+  margin:20px 8px 0}
+.lesson {
+  min-width:0;
+  border-top:3px solid #758253;
+  padding-top:25px}
+.lesson>h2 {
+  scroll-margin-top:25px}
+.summary {
+  background:#f6f5ee;
+  padding:24px;
+  margin:25px 0;
+  border:1px solid var(--line);
+  border-radius:8px}
+.question {
+  border-top:1px solid var(--line);
+  padding-top:22px;
+  color:var(--olive);
+  font-size:14px}
+.compare {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:16px;
+  margin:25px 0}
+.compare>section {
+  min-width:0;
+  background:#f4f5ec;
+  border:1px solid var(--line);
+  padding:22px;
+  border-radius:9px}
+.compare p {
+  font-size:14px;
+  margin:0}
+.warning {
+  background:#faf1e6!important;
+  border-left:3px solid #a57c49!important;
+  padding:22px;
+  border-radius:5px}
+.flow {
+  list-style:none;
+  padding:0;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin:26px 0}
+.flow li {
+  padding:16px 12px;
+  background:#edf0e3;
+  border-top:2px solid #7b8b58;
+  font-size:13px}
+.flow small {
+  display:block;
+  margin-bottom:10px}
+.flow strong {
+  font-weight:600}
+.http pre {
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  font-size:12px;
+  line-height:1.9;
+  margin:0}
+.compare>.codePanel {
+  padding:0;
+  background:#292e29;
+  border-color:#292e29;
+  overflow:hidden}
+.codePanel h3 {
+  color:#e4e6d8;
+  font-size:13px;
+  padding:15px 18px;
+  border-bottom:1px solid #454b40;
+  margin:0}
+.codePanel pre {
+  overflow-x:auto;
+  color:#e0e3d8;
+  font-size:12px;
+  line-height:1.9;
+  padding:16px 0;
+  margin:0;
+  tab-size:2}
+.codeLine {
+  display:flex;
+  min-width:max-content;
+  padding-right:18px}
+.lineNumber {
+  display:inline-block;
+  width:34px;
+  flex-shrink:0;
+  text-align:right;
+  padding-right:10px;
+  color:#9ba58f;
+  user-select:none}
+.danger {
+  background:#653e2f}
+.flag {
+  font-size:10px;
+  color:#ffd3a1}
+.string {
+  color:#d3d7a6}
+.keyword {
+  color:#b3ceef}
+.explanations {
+  padding-left:24px;
+  counter-reset:items}
+.explanations li {
+  padding-left:8px;
+  margin:0 0 20px}
+.explanations li::marker {
+  color:var(--olive);
+  font-weight:700}
+.quiz {
+  min-width:0;
+  margin:25px 0;
+  padding:20px;
+  border:1px solid var(--line);
+  border-radius:10px}
+.quiz legend {
+  font-weight:650;
+  padding:0 6px;
+  line-height:1.7}
+.quiz label {
+  display:flex;
+  gap:12px;
+  align-items:baseline;
+  background:#f6f5ee;
+  padding:12px;
+  margin:8px 0;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:14px}
+.quiz input {
+  accent-color:var(--olive)}
+.correct,.incorrect {
+  padding:18px;
+  border-radius:6px;
+  margin-top:18px;
+  font-size:14px}
+.correct {
+  background:#eaf0de;
+  color:#3c542c}
+.incorrect {
+  background:#f8ece3;
+  color:#7f4932}
+.correct p,.incorrect p {
+  margin:8px 0 0}
+.root .primary {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#52643b;
+  color:#fff;
+  border:1px solid #52643b;
+  border-radius:7px;
+  padding:11px 17px;
+  font-size:13px;
+  font-weight:600;
+  text-decoration:none;
+  line-height:1.7}
+.footer {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  border-top:1px solid var(--line);
+  padding-top:24px;
+  margin-top:35px}
+.footer>div {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap}
+.footer button:not(.primary) {
+  padding:10px 14px;
+  border:1px solid #cbd0bf;
+  background:#faf9f3;
+  color:#455334;
+  border-radius:7px;
+  font-size:13px}
+@media(min-width:1400px) {
+  .root {
+  max-width:1500px;
+  margin:auto}
+}
+@media(max-width:1100px) {
+  .layout {
+  grid-template-columns:200px minmax(0,1fr);
+  gap:24px}
+.compare {
+  grid-template-columns:1fr}
+.flow {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:750px) {
+  .grid {
+  grid-template-columns:1fr}
+.layout {
+  grid-template-columns:1fr}
+.sidebar {
+  position:static}
+.sidebar nav {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+.sidebar>p {
+  margin-top:12px}
+.sectionHeading {
+  align-items:flex-start;
+  flex-direction:column;
+  gap:0;
+  margin-bottom:20px}
+.sectionHeading h2 {
+  margin-bottom:8px}
+.hero {
+  padding-top:15px}
+.course {
+  padding:24px}
+.callout {
+  padding:20px}
+.root {
+  font-size:14px}
+.lesson h2 {
+  font-size:24px}
+.footer {
+  gap:20px}
+.footer>.primary {
+  margin-left:auto}
+}
+@media(prefers-reduced-motion:reduce) {
+  .root * {
+  scroll-behavior:auto!important;
+  transition:none!important}
+}
+

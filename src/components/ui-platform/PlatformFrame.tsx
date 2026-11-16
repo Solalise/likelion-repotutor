@@ -12,7 +12,7 @@ export function PlatformBrand({ home = "/" }: { home?: string }) {
 }
 export function PlatformFrame({ children, account }: { children: ReactNode; account?: { name: string } }) {
   const pathname = usePathname();
-  const activePath = pathname === "/overview" || pathname === "/dashboard" ? "/" : pathname;
+  const activePath = pathname.startsWith("/learn/") ? "/learn" : pathname === "/overview" || pathname === "/dashboard" ? "/" : pathname;
   const current = securityNavigation.find(item => item.href === activePath);
   return <div className="vl-shell"><a href="#main-content" className="vl-skip">본문으로 이동</a>
     <aside className="vl-sidebar"><PlatformBrand/><p className="vl-sidebar-caption">나의 서비스를 이해하는 실습 공간</p><span className="vl-nav-label">WORKSPACE</span>

@@ -1,12 +1,20 @@
+export function httpRequestEditor({ prefix = "request", inputSuffix = "id", label = "게시글 ID", attributes = 'name="postId" inputmode="numeric" pattern="[0-9]{1,12}" maxlength="12" required autocomplete="off"', button = "수정한 요청 실행" } = {}) {
+  return `<form id="${prefix}-form"><fieldset id="${prefix}-fields" disabled><legend>수집한 요청 수정</legend><label>HTTP 메서드<input value="GET" readonly></label><label>${label}<input id="${prefix}-${inputSuffix}" ${attributes}></label><label>실행할 URL<input id="${prefix}-url" readonly></label><p>요청 경로: <code id="${prefix}-path">아직 요청이 없습니다.</code></p><button class="primary" type="submit">${button}</button></fieldset></form>`;
+}
+
 export function requestWorkshop(integrated = false) {
   return `<div class="lab-grid" data-stages="2 3" hidden>${integrated ? "" : `<section class="card"><h2>실습용 게시판</h2><p>목록에는 정상 권한 검사로 볼 수 있는 글만 표시됩니다. 먼저 자신의 비공개 글을 선택하세요.</p><div id="lab-posts" class="post-list" aria-busy="true">목록을 불러오는 중입니다.</div><article id="lab-post"><p>글을 열면 여기에서 내용을 확인할 수 있습니다.</p></article></section>`}
     <section class="card"><h2>HTTP 요청 편집기</h2><p>글을 조회한 실제 GET 요청에서 게시글 ID만 편집할 수 있습니다. 세션 쿠키는 브라우저가 전송하며 도구에 표시하거나 저장하지 않습니다.</p>
-    <form id="request-form"><fieldset id="request-fields" disabled><legend>수집한 요청 수정</legend><label>HTTP 메서드<input value="GET" readonly></label><label>게시글 ID<input id="request-id" name="postId" inputmode="numeric" pattern="[0-9]{1,12}" maxlength="12" required autocomplete="off"></label><label>실행할 URL<input id="request-url" readonly></label><p>요청 경로: <code id="request-path">아직 요청이 없습니다.</code></p><button class="primary" type="submit">수정한 요청 실행</button></fieldset></form>
+    ${httpRequestEditor()}
     <h3>마지막 실제 요청과 응답</h3><pre id="request-result" tabindex="0">글을 조회하면 메서드·URL·HTTP 상태·실제 응답 본문이 표시됩니다.</pre><p id="lab-feedback" role="status" aria-live="polite"></p></section></div>`;
 }
 
+export function lessonSteps(titles: readonly string[], implemented = titles.length) {
+  return `<ol class="lab-steps" aria-label="실습 진행 단계">${titles.map((label, i) => `<li><button type="button" data-stage="${i + 1}" ${i ? "disabled" : 'aria-current="step"'}>${i + 1} · ${label}${i >= implemented ? " · 미구현" : ""}</button></li>`).join("")}</ol>`;
+}
+
 export function lessonPage(workshop: string, integrated = false) {
-  return `<ol class="lab-steps" aria-label="실습 진행 단계">${["개념과 목표", "게시판·정상 요청", "요청 수정·발견", "응답 분석", "코드·방어 비교", "이해도·완료"].map((label, i) => `<li><button type="button" data-stage="${i + 1}" ${i ? "disabled" : 'aria-current="step"'}>${i + 1} · ${label}</button></li>`).join("")}</ol>
+  return `${lessonSteps(["개념과 목표", "게시판·정상 요청", "요청 수정·발견", "응답 분석", "코드·방어 비교", "이해도·완료"])}
     <p class="lesson-notice">학습 기록은 이 화면에서만 유지됩니다. 새로고침하면 단계·공격 결과·퀴즈·완료 상태가 초기화됩니다.</p>
     <p id="lab-progress" role="status" aria-live="polite">1단계 · IDOR 개념과 학습 목표를 확인하세요.</p>
     <section class="card" data-stages="1"><h2>1 · IDOR란 무엇일까요?</h2>

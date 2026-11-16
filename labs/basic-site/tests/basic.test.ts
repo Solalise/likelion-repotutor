@@ -8,7 +8,7 @@ import type { Post, User } from "../src/types.ts";
 import { readFile } from "node:fs/promises";
 import { readLessonCode } from "../src/lessonCode.ts";
 // @ts-expect-error Browser module shared with real HTTP tests.
-import { questions, gradeQuiz, learningComplete, isNormalComparison, analyzeDiscovery } from "../public/lesson.js";
+import { questions, gradeQuiz, learningComplete, isNormalComparison, analyzeDiscovery, sqliQuestions, gradeAnswers, sqliLearningComplete } from "../public/lesson.js";
 // @ts-expect-error Browser ES module is shared with these real HTTP tests without a build step.
 import { postPath, requestPost, isOwnBaseline, isIdorDiscovery } from "../public/http-client.js";
 
@@ -36,7 +36,7 @@ async function json(path: string, cookie?: string) {
 
 test("public health identifies the lab and exposes only status cross-origin", async () => {
   const response = await fetch(`${site.url}/api/health`, { headers: { Origin: "http://localhost:3000" } });
-  assert.deepEqual(await response.json(), { service: "vulnlab-basic-site", idorEnabled: true });
+  assert.deepEqual(await response.json(), { service: "vulnlab-basic-site", idorEnabled: true, sqliEnabled: false, xssEnabled: false, authzEnabled: false });
   assert.equal(response.headers.get("access-control-allow-origin"), "*");
   assert.equal(response.headers.get("access-control-allow-credentials"), null);
   assert.equal(response.headers.get("cache-control"), "no-store");
@@ -45,7 +45,7 @@ test("public health identifies the lab and exposes only status cross-origin", as
   }
   const disabled = await createBasicSite({ port: 0, enableIdorLab: false });
   try {
-    assert.deepEqual(await (await fetch(`${disabled.url}/api/health`)).json(), { service: "vulnlab-basic-site", idorEnabled: false });
+    assert.deepEqual(await (await fetch(`${disabled.url}/api/health`)).json(), { service: "vulnlab-basic-site", idorEnabled: false, sqliEnabled: false, xssEnabled: false, authzEnabled: false });
   } finally { await disabled.close(); }
 });
 
@@ -341,6 +341,26 @@ test("code excerpts match the real implementation, require login and respect act
   const disabled = await createBasicSite({ port: 0, enableIdorLab: false });
   try { assert.equal((await fetch(`${disabled.url}/api/lab/idor-code`)).status, 404); }
   finally { await disabled.close(); }
+});
+
+test("SQLi quiz has three four-option questions and completion requires each learning condition", () => {
+  const quizQuestions = sqliQuestions as { options: string[]; answer: string }[];
+  assert.equal(quizQuestions.length, 3);
+  assert.ok(quizQuestions.every(question => question.options.length === 4));
+  const answers = quizQuestions.map(question => question.answer);
+  const graded = gradeAnswers(quizQuestions, answers) as { correct: boolean; explanation: string }[];
+  assert.ok(graded.every(result => result.correct && result.explanation.length > 0));
+  const retry = gradeAnswers(quizQuestions, answers.map(() => "3")) as { correct: boolean; explanation: string }[];
+  assert.ok(retry.some(result => !result.correct));
+  assert.ok(retry.every(result => result.explanation.length > 0));
+  const required = { normalObserved: true, educationResponse: true, comparisonDone: true, codeViewed: true, quizPassed: true };
+  assert.equal(sqliLearningComplete(required), true);
+  assert.equal(sqliLearningComplete({ ...required, normalObserved: false }), false);
+  assert.equal(sqliLearningComplete({ ...required, educationResponse: false }), false);
+  assert.equal(sqliLearningComplete({ ...required, comparisonDone: false }), false);
+  assert.equal(sqliLearningComplete({ ...required, codeViewed: false }), false);
+  assert.equal(sqliLearningComplete({ ...required, quizPassed: false }), false);
+  assert.equal(sqliLearningComplete({ ...required, reproduced: false }), true, "learning completion is independent from vulnerability reproduction");
 });
 
 test("learning completion requires real discovery, matching normal comparison and a passing quiz", async () => {

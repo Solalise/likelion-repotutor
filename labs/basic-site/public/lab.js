@@ -1,5 +1,5 @@
 import { postPath, requestPost, requestText, isOwnBaseline, isIdorDiscovery, observeCommunityPost, observeCommunitySession } from "./http-client.js";
-import { questions, gradeQuiz, isNormalComparison, learningComplete, analyzeDiscovery } from "./lesson.js";
+import { questions, gradeQuiz, isNormalComparison, learningComplete, analyzeDiscovery, renderLessonStep, renderMultipleChoiceQuiz } from "./lesson.js";
 
 export function initIdorLesson(root = document, integrated = false) {
 if (integrated && root.dataset.initialized === "true") return () => {};
@@ -30,12 +30,7 @@ const hints = [
 ];
 function step(index, text) {
   unlocked = Math.max(unlocked, index);
-  $("#lab-progress").textContent = text || `${index}단계 · ${["개념과 목표", "게시판·정상 요청", "요청 수정·발견", "실제 응답 분석", "코드·방어 비교", "이해도 확인"][index - 1]}`;
-  root.querySelectorAll("[data-stage]").forEach(item => {
-    item.disabled = Number(item.dataset.stage) > unlocked;
-    if (Number(item.dataset.stage) === index) item.setAttribute("aria-current", "step"); else item.removeAttribute("aria-current");
-  });
-  root.querySelectorAll("[data-stages]").forEach(item => { item.hidden = !item.dataset.stages.split(" ").includes(String(index)); });
+  renderLessonStep(root, index, { titles: ["개념과 목표", "게시판·정상 요청", "요청 수정·발견", "실제 응답 분석", "코드·방어 비교", "이해도 확인"], unlocked, text });
   $("#request-form").hidden = index !== 3;
   $("#edit-start").disabled = !baseline && !observedNormal;
 }
@@ -217,18 +212,7 @@ async function loadCode() {
 $("#study-code").addEventListener("click", () => { if (discovered) { step(5); void loadCode(); } });
 $("#retry-code").addEventListener("click", () => { if (discovered) void loadCode(); });
 $("#quiz-start").addEventListener("click", () => { if (learning.comparisonDone) step(6); });
-for (const [index, question] of questions.entries()) {
-  const fieldset = document.createElement("fieldset");
-  const legend = document.createElement("legend"); legend.textContent = `${index + 1}. ${question.prompt}`;
-  fieldset.append(legend);
-  question.options.forEach((option, value) => {
-    const label = document.createElement("label");
-    const input = document.createElement("input"); input.type = "radio"; input.name = `q${index}`; input.value = String(value); input.required = true;
-    label.append(input, document.createTextNode(option)); fieldset.append(label);
-  });
-  const explanation = document.createElement("p"); explanation.id = `quiz-explanation-${index}`; explanation.className = "quiz-explanation";
-  fieldset.append(explanation); $("#quiz-questions").append(fieldset);
-}
+renderMultipleChoiceQuiz($("#quiz-questions"), questions);
 $("#quiz-form").addEventListener("submit", async event => {
   event.preventDefault();
   const form = event.currentTarget;

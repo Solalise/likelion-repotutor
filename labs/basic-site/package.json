@@ -8,7 +8,7 @@
     "start": "node src/server.ts",
     "dev": "node --watch src/server.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --test --test-isolation=none tests/basic.test.ts tests/lesson-ui.node.js tests/search.node.ts tests/guide.node.ts"
+    "test": "node --test --test-isolation=none tests/basic.test.ts tests/lesson-ui.node.js tests/search.node.ts tests/guide.node.ts tests/extra.node.ts tests/free-practice.node.js"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

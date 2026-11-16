@@ -1,6 +1,7 @@
 import { lessonPage, requestWorkshop } from "./lessonPage.ts";
 import type { User } from "./types.ts";
 import { communityHref, guidePanel, type GuideLab } from "./guide.ts";
+import { practicePanel } from "./practicePanel.ts";
 
 export function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!);
@@ -20,7 +21,7 @@ export function page(kind: "posts" | "post" | "login" | "lab", user?: User, post
     : `<a href="${href("/login")}">로그인</a>`;
   let content: string;
   if (kind === "lab") {
-    content = labContent(enableIdorLab, user);
+    content = `${practicePanel("idor")}${labContent(enableIdorLab, user)}`;
   } else if (kind === "login") {
     content = `<section class="card login"><span class="eyebrow">WELCOME BACK</span><h1>로그인</h1><p>동네 이야기 계정으로 로그인해주세요.</p>
       <form id="login-form"><label>아이디<input name="userId" autocomplete="username" maxlength="80" required></label><label>비밀번호<input name="password" type="password" autocomplete="current-password" maxlength="128" required></label><button class="primary" type="submit">로그인</button></form>
@@ -35,5 +36,5 @@ export function page(kind: "posts" | "post" | "login" | "lab", user?: User, post
   const footer = kind === "lab"
     ? `VulnLab 독립 실습 사이트 · 가상 데이터 · 로컬 개발 전용<br>정상 게시판 접근 제어 유지 · IDOR 실습 ${enableIdorLab ? "활성화" : "비활성화"}`
     : "동네 이야기 · 함께 나누는 우리 동네 소식";
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="/assets/site.css"><script type="module" src="/assets/app.js"></script>${kind === "lab" && enableIdorLab && user?.id === "user-a" ? '<script type="module" src="/assets/lab.js"></script>' : ""}</head><body data-page="${kind}"${activeGuide ? ` data-guide="${activeGuide}"` : ""}${postId === undefined ? "" : ` data-post-id="${postId}"`}><header class="topbar"><a class="brand" href="${href("/posts")}">동네 이야기<span>${kind === "lab" ? "LOCAL PRACTICE" : "COMMUNITY"}</span></a><nav aria-label="주 메뉴"><a href="${href("/posts")}">게시글</a>${account}</nav></header>${activeGuide ? '<div class="community-layout">' : ""}<main>${content}<p id="message" role="status" aria-live="polite"></p></main>${activeGuide ? `${guidePanel(activeGuide, enableIdorLab)}</div>` : ""}<footer>${footer}</footer></body></html>`;
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="/assets/site.css"><script type="module" src="/assets/app.js"></script>${kind === "lab" && enableIdorLab && user?.id === "user-a" ? '<script type="module" src="/assets/lab.js"></script>' : ""}</head><body data-page="${kind}"${activeGuide ? ` data-guide="${activeGuide}"` : ""}${postId === undefined ? "" : ` data-post-id="${postId}"`}><header class="topbar"><a class="brand" href="${href("/posts")}">동네 이야기<span>${kind === "lab" ? "LOCAL PRACTICE" : "COMMUNITY"}</span></a><nav aria-label="주 메뉴"><a href="${href("/posts")}">게시글</a>${account}</nav></header>${activeGuide ? '<div class="community-layout">' : ""}<main>${kind === "lab" ? '<a class="back" href="http://localhost:3000/learn">← VulnLab 학습으로 돌아가기</a>' : ""}${content}<p id="message" role="status" aria-live="polite"></p></main>${activeGuide ? `${guidePanel(activeGuide, enableIdorLab)}</div>` : ""}<footer>${footer}</footer></body></html>`;
 }

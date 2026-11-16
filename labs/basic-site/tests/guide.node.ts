@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createBasicSite } from "../src/server.ts";
 import { selectedGuide } from "../src/guide.ts";
+import { readSqliLessonCode } from "../src/lessonCode.ts";
 
 const mainContent = (html: string) => html.match(/<main>([\s\S]*?)<\/main>/)![1];
 const withoutGuide = (html: string) => html.replace(/<aside class="learning-guide"[\s\S]*?<\/aside>/, "");
@@ -56,7 +57,7 @@ test("both guides wrap the same board, use a native disclosure, and preserve nav
       const html = await (await fetch(`${site.url}/?lab=${lab}`)).text();
       assert.equal(mainContent(html), mainContent(normal));
       assert.match(html, /<aside class="learning-guide" aria-label="학습 가이드">/);
-      assert.match(html, /<details class="guide-panel" open>\s*<summary>/);
+      assert.match(html, /<details class="guide-panel">\s*<summary>/);
       assert.match(html, /접기/);
       assert.match(html, /펼치기/);
       assert.ok(html.includes(`data-guide="${lab}"`));
@@ -75,9 +76,23 @@ test("both guides wrap the same board, use a native disclosure, and preserve nav
         assert.match(html, /id="quiz-form"/);
       } else {
         assert.match(html, /SQL Injection/);
-        assert.match(html, /아직 제공하지 않습니다/);
-        assert.match(html, /href="\/\?lab=sqli#search-form"/);
+        assert.match(html, /id="integrated-sqli"/);
+        assert.match(html, /아직 관찰된 검색 요청이 없습니다/);
+        assert.match(html, /파라미터 바인딩/);
+        for (let stage = 1; stage <= 6; stage++) assert.ok(html.includes(`data-stage="${stage}"`));
+        assert.match(html, /id="sqli-request-form"/);
+        assert.match(html, /id="sqli-compare"/);
+        assert.match(html, /id="sqli-code-start"/);
+        assert.match(html, /id="sqli-quiz-form"/);
+        assert.match(html, /id="sqli-learning-complete"/);
+        assert.equal(html.includes("' OR 1=1 --"), false);
         assert.equal(html.includes('id="request-form"'), false);
+        assert.equal(html.includes('id="quiz-form"'), false);
+        assert.equal(html.includes('id="learning-complete"'), false);
+        const script = await fetch(`${site.url}/assets/sqli-lesson.js`);
+        assert.equal(script.status, 200);
+        assert.match(script.headers.get("content-type")!, /text\/javascript/);
+        assert.match(await script.text(), /export function initSqliLesson/);
       }
     }
     const css = await (await fetch(`${site.url}/assets/site.css`)).text();
@@ -101,6 +116,7 @@ test("guide entries cannot enable vulnerable APIs without server flags, includin
       assert.ok(html.includes('id="logout"'));
       assert.equal((await fetch(`${site.url}/api/lab/vulnerable/posts/102?lab=${lab}`, { headers: { Cookie: cookie } })).status, 404);
       assert.equal((await fetch(`${site.url}/api/lab/vulnerable/search?q=x&lab=${lab}`, { headers: { Cookie: cookie } })).status, 404);
+      assert.equal((await fetch(`${site.url}/api/lab/sqli-code`, { headers: { Cookie: cookie } })).status, 404);
       const posts = await (await fetch(`${site.url}/api/posts`, { headers: { Cookie: cookie } })).json() as { posts: { id: number }[] };
       assert.deepEqual(posts.posts.map(post => post.id), [101, 201, 202]);
       assert.equal((await fetch(`${site.url}/api/posts/101`, { headers: { Cookie: cookie } })).status, 200);
@@ -112,4 +128,24 @@ test("guide entries cannot enable vulnerable APIs without server flags, includin
     if (previous.idor === undefined) delete process.env.BASIC_SITE_ENABLE_IDOR; else process.env.BASIC_SITE_ENABLE_IDOR = previous.idor;
     if (previous.sqli === undefined) delete process.env.BASIC_SITE_ENABLE_SQLI; else process.env.BASIC_SITE_ENABLE_SQLI = previous.sqli;
   }
+});
+
+test("SQLi code comparison returns an exact source excerpt only when enabled and logged in", async () => {
+  const prior = process.env.NODE_ENV;
+  process.env.NODE_ENV = "test";
+  let enabled: Awaited<ReturnType<typeof createBasicSite>>;
+  try { enabled = await createBasicSite({ port: 0, enableSqliLab: true }); }
+  finally { if (prior === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = prior; }
+  try {
+    const source = await readSqliLessonCode();
+    assert.ok(source.snippet.includes("const prefix = \"SELECT id, title, body, visibility FROM search_posts WHERE visibility = 'public' AND title LIKE \";"));
+    assert.ok(source.snippet.includes("vulnerable ? `${prefix}'%${query}%' ORDER BY id LIMIT 20` : `${prefix}? ESCAPE '!' ORDER BY id LIMIT 20`"));
+    assert.ok(source.snippet.includes("return vulnerable ? statement.all() : statement.all(literalPattern);"));
+    assert.equal((await fetch(`${enabled.url}/api/lab/sqli-code`)).status, 401);
+    const login = await fetch(`${enabled.url}/api/auth/login`, { method: "POST", headers: { Origin: enabled.url, "Content-Type": "application/json" }, body: JSON.stringify({ userId: "user-a", password: "practice-a" }) });
+    const cookie = login.headers.get("set-cookie")!.split(";")[0];
+    const response = await fetch(`${enabled.url}/api/lab/sqli-code`, { headers: { Cookie: cookie } });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), source);
+  } finally { await enabled.close(); }
 });
