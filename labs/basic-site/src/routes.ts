@@ -1,4 +1,5 @@
-import { extraLabPage, xssDocument } from "./extraLabs.ts";
+import { xssDocument } from "./extraLabs.ts";
+import { practiceSite } from "./practiceSite.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { getPost, getVulnerablePost, listPosts } from "./features/posts.ts";
 import { HttpError, readJson, sendJson } from "./http.ts";
@@ -6,22 +7,32 @@ import { page } from "./pages.ts";
 import type { Store } from "./store.ts";
 import type { SearchDatabase } from "./features/search.ts";
 import { selectedGuide } from "./guide.ts";
+import { selectedMode } from "./modes.ts";
 
-export type Assets = { practice: string; extra: string; script: string; style: string; lab: string; httpClient: string; lesson: string; sqliLesson: string; lessonCode: Record<string, string>; sqliCode: { file: string; line: number; snippet: string } };
+export type Assets = { practiceSite: string; practiceState: string; practice: string; extra: string; script: string; style: string; lab: string; httpClient: string; lesson: string; sqliLesson: string; lessonCode: Record<string, string>; sqliCode: { file: string; line: number; snippet: string } };
 export async function route(request: IncomingMessage, response: ServerResponse, store: Store, assets: Assets, enableIdorLab = false, searchDb?: SearchDatabase, enableSqliLab = false, enableXssLab = false, enableAuthzLab = false) {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   const path = url.pathname;
   const user = store.auth.current(request.headers.cookie);
   if (request.method === "GET") {
+    if (path === "/assets/practice-site.js" || path === "/assets/practice-state.js") {
+      response.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8" });
+      response.end(path.endsWith("practice-site.js") ? assets.practiceSite : assets.practiceState); return;
+    }
+    const selected = selectedGuide(url.searchParams);
+    const postId = /^\/posts\/(\d{1,12})$/.exec(path);
+    const websiteLab = path === "/lab/xss" ? "xss" : path === "/lab/authz" ? "authz"
+      : path === "/lab/idor" ? "idor" : (["/", "/posts", "/login"].includes(path) || postId) ? selected : undefined;
+    if (websiteLab) {
+      const enabled = websiteLab === "idor" ? enableIdorLab : websiteLab === "sqli" ? enableSqliLab : websiteLab === "xss" ? enableXssLab : enableAuthzLab;
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(practiceSite(websiteLab, enabled, selectedMode(url.searchParams), postId ? Number(postId[1]) : undefined)); return;
+    }
     if (path === "/assets/practice.js") {
       response.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8" }); response.end(assets.practice); return;
     }
     if (path === "/assets/extra-labs.js") {
       response.writeHead(200, { "Content-Type": "text/javascript; charset=utf-8" }); response.end(assets.extra); return;
-    }
-    if (path === "/lab/xss" || path === "/lab/authz") {
-      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      response.end(extraLabPage(path.endsWith("xss") ? "xss" : "authz", path.endsWith("xss") ? enableXssLab : enableAuthzLab)); return;
     }
     if (path === "/api/lab/authz" && enableAuthzLab) {
       if (!user) throw new HttpError(401, "LOGIN_REQUIRED", "로그인 후 실습하세요.");
@@ -73,7 +84,7 @@ export async function route(request: IncomingMessage, response: ServerResponse, 
     const postPage = /^\/posts\/(\d{1,12})$/.exec(path);
     if (["/", "/posts", "/login", "/lab/idor"].includes(path) || postPage) {
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      response.end(page(path === "/lab/idor" ? "lab" : path === "/login" ? "login" : postPage ? "post" : "posts", user, postPage ? Number(postPage[1]) : undefined, enableIdorLab, selectedGuide(url.searchParams))); return;
+      response.end(page(path === "/lab/idor" ? "lab" : path === "/login" ? "login" : postPage ? "post" : "posts", user, postPage ? Number(postPage[1]) : undefined, enableIdorLab, selectedGuide(url.searchParams), selectedMode(url.searchParams))); return;
     }
   }
   if (request.method === "POST" && path === "/api/lab/xss" && enableXssLab) {

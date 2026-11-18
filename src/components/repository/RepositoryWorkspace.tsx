@@ -17,6 +17,7 @@ import { RepositoryTree } from "./RepositoryTree";
 import { RepositoryOverviewInspector } from "./RepositoryOverviewInspector";
 import { AiLearningPanel } from "./AiLearningPanel";
 import { BehaviorWorkspace } from "@/components/behavior/BehaviorWorkspace";
+import { SqlInjectionFindings } from "./SqlInjectionFindings";
 
 type ViewMode = "learning" | "developer";
 type DeveloperMode = "overview" | "feature";
@@ -302,6 +303,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId, initialSelec
         </div>
       </section>
 
+      {isGithub && !loading && !error && <SqlInjectionFindings key={`${analysis.repository}:${analysis.collection?.commitSha ?? ""}`} analysis={analysis} connectionId={lastRequest.source === "connected" ? lastRequest.connectionId : undefined} />}
       {behaviorMode ? (loading || error ? <div className="workspace-state" role="status">{loading ? "저장소 분석이 완료되면 동작 흐름을 조회합니다." : "저장소를 다시 분석한 뒤 조회해 주세요."}</div> : <BehaviorWorkspace key={`${JSON.stringify(lastRequest)}:${analysis.collection?.durationMs ?? 0}`} source={lastRequest} />) : <>
       <section className="workspace-toolbar">
         {viewMode === "learning" && isGithub && <div className="learning-step-title"><span>1</span><div><strong>학습할 기능 선택</strong><small>먼저 알고 싶은 기능을 하나 골라주세요.</small></div></div>}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BASIC_SITE_URL, checkBasicSite, type BasicSiteHealth, type BasicSiteStatus } from "@/lib/security-lab/basicSiteConnection";
+import { BASIC_SITE_URL, checkBasicSite, localPracticeAvailable, type BasicSiteHealth, type BasicSiteStatus } from "@/lib/security-lab/basicSiteConnection";
+import { localPracticeUnavailableMessage } from "./LocalPracticeLink";
 
 type Status = BasicSiteStatus | "ready";
 const stateLabel = (state: Status, health: BasicSiteHealth | null) => {
@@ -11,6 +12,11 @@ const stateLabel = (state: Status, health: BasicSiteHealth | null) => {
 };
 
 export function LocalPracticeStatus() {
+  if (!localPracticeAvailable()) return <section className="vl-card" id="local-lab-status"><h2>기초 실습 · 로컬 개발 전용</h2><p role="status">{localPracticeUnavailableMessage}</p></section>;
+  return <LocalPracticeStatusDevelopment />;
+}
+
+function LocalPracticeStatusDevelopment() {
   const [status, setStatus] = useState<Status>("checking");
   const [health, setHealth] = useState<BasicSiteHealth | null>(null);
   const [attempt, setAttempt] = useState(0);

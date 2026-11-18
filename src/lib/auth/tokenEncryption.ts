@@ -10,6 +10,10 @@ function encryptionKey(): Buffer {
   return key;
 }
 
+export function tokenEncryptionReady(): boolean {
+  try { encryptionKey(); return true; } catch { return false; }
+}
+
 export function encryptToken(value: string | null | undefined): string | null | undefined {
   if (!value || value.startsWith(`${PREFIX}:`)) return value;
   const iv = randomBytes(12);

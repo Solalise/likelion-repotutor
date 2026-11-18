@@ -11,6 +11,8 @@ import { extractFunctionControlFlow } from "./controlFlowExtractor";
 import { collectHttpRequests } from "./httpRequests";
 import { collectDatabaseAccess } from "./databaseAccess";
 import { collectServerResponses } from "./serverResponses";
+import { collectSqlInjection } from "./sqlInjection";
+import { collectXss } from "./xss";
 
 type FunctionNode = Node & { getStartLineNumber(): number; getEndLineNumber(): number; getText(): string };
 interface Candidate { node: FunctionNode; declaration: Node; name: string; qualifiedName: string; kind: FunctionInfo["kind"] }
@@ -294,6 +296,14 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
     httpRequests,
     databaseAccess,
     serverResponses,
+    sqlInjection: collectSqlInjection(sourceFiles, {
+      entries: entryPoints,
+      resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
+    }),
+    xss: collectXss(sourceFiles, {
+      entries: entryPoints, responses: serverResponses,
+      resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
+    }),
     stats: {
       files: files.length,
       functions: files.flatMap((file) => file.functions).length,

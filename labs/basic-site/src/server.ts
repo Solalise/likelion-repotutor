@@ -24,6 +24,8 @@ export async function createBasicSite(options: { port?: number; enableIdorLab?: 
   if (!Number.isInteger(requestedPort) || (requestedPort !== 0 && (requestedPort < 1024 || requestedPort > 65535))) throw new Error("포트는 1024~65535 정수여야 합니다.");
   const store = createStore();
   const assets = {
+    practiceSite: await readFile(new URL("../public/practice-site.js", import.meta.url), "utf8"),
+    practiceState: await readFile(new URL("../public/practice-state.js", import.meta.url), "utf8"),
     practice: await readFile(new URL("../public/practice.js", import.meta.url), "utf8"),
     extra: await readFile(new URL("../public/extra-labs.js", import.meta.url), "utf8"),
     script: await readFile(new URL("../public/app.js", import.meta.url), "utf8"),

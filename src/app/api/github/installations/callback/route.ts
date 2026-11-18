@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   try {
     const { installation, token } = await findAccessibleInstallation(userId, installationId);
     await saveAndSyncInstallation(userId, installation, token);
-    const response = NextResponse.redirect(new URL("/repositories?installed=1", request.url));
+    const response = NextResponse.redirect(new URL("/services?installed=1", request.url));
     response.cookies.delete("repotutor_install_state");
     return response;
   } catch (error: unknown) {

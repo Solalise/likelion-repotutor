@@ -12,7 +12,7 @@ export function githubAnalysisCacheKey(namespace: string, repository: string, co
 export function getGithubAnalysisCache(key: string): RepositoryAnalysis | undefined {
   const entry = cache.get(key);
   if (!entry) return undefined;
-  if (!Array.isArray(entry.entryPoints)) {
+  if (!Array.isArray(entry.entryPoints) || entry.sqlInjection?.version !== "sqli-static-v1" || entry.xss?.version !== "xss-static-v1") {
     cache.delete(key);
     return undefined;
   }

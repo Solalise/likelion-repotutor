@@ -24,6 +24,7 @@ function requireMetadata(subject:QuerySubject,key:string){
 export async function resolveQuerySubject(params:URLSearchParams):Promise<{subject:QuerySubject;revalidate:()=>Promise<void>}> {
  const source=params.get("source")??"sample";
  if(source==="sample"){
+  if(process.env.NODE_ENV==="production")throw new QueryError("LOCAL_ONLY","Sample source analysis is available only in local development",403);
   if(params.has("url")||params.has("connectionId"))throw new QueryError("INVALID_INPUT","Sample does not accept repository identifiers");
   const {analysis,version,key}=await loadSampleAnalysis();
   observeVersion("sample",version);retainGithubAnalysisVersion("behavior-sample@",key);
@@ -54,6 +55,7 @@ export async function resolveQuerySubject(params:URLSearchParams):Promise<{subje
   }};
  }
  if(source==="github"){
+  if(process.env.NODE_ENV==="production"){try{await requireUserId();}catch{throw new QueryError("AUTH_REQUIRED","Login required",401);}}
   if(params.has("connectionId"))throw new QueryError("INVALID_INPUT","Public source does not accept connectionId");
   const url=params.get("url");if(!url||url.length>2048)throw new QueryError("INVALID_INPUT","Public GitHub URL required");
   const coordinates=parseGithubRepositoryUrl(url);await requirePublicRepositoryAccess(url);

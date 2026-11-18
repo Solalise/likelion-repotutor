@@ -29,6 +29,11 @@ enum AnalysisSource {
   CONNECTED_REPOSITORY
 }
 
+enum DeploymentOwnershipStatus {
+  UNVERIFIED
+  VERIFIED
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String?
@@ -46,6 +51,7 @@ model User {
   repositories   UserRepository[]
   analysisRuns   AnalysisRun[]
   learningRecords LearningRecord[]
+  deploymentVerificationRateLimit DeploymentVerificationRateLimit?
 
   @@map("users")
 }
@@ -66,6 +72,8 @@ model Account {
   session_state          String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  vercelDeployments UserRepository[] @relation("VercelDeploymentAccount")
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -148,6 +156,19 @@ model UserRepository {
   active         Boolean  @default(true)
   connectedAt    DateTime @default(now()) @map("connected_at")
   lastAccessedAt DateTime? @map("last_accessed_at")
+  vercelUrl      String?  @map("vercel_url")
+  deploymentOwnershipStatus DeploymentOwnershipStatus @default(UNVERIFIED) @map("deployment_ownership_status")
+  deploymentVerifiedAt DateTime? @map("deployment_verified_at")
+  deploymentVersion Int @default(0) @map("deployment_version")
+  deploymentTokenHash String? @map("deployment_token_hash")
+  deploymentTokenExpiresAt DateTime? @map("deployment_token_expires_at")
+  deploymentTokenIssuedAt DateTime? @map("deployment_token_issued_at")
+  deploymentVerificationAttempts Int @default(0) @map("deployment_verification_attempts")
+  deploymentNextVerificationAt DateTime? @map("deployment_next_verification_at")
+  vercelAccountId String? @map("vercel_account_id")
+  vercelTeamId String? @map("vercel_team_id")
+  vercelProjectId String? @map("vercel_project_id")
+  vercelAccount Account? @relation("VercelDeploymentAccount", fields: [vercelAccountId], references: [id], onDelete: SetNull)
 
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   repository   Repository         @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
@@ -157,6 +178,16 @@ model UserRepository {
   @@index([userId, active])
   @@index([installationId])
   @@map("user_repositories")
+}
+
+model DeploymentVerificationRateLimit {
+  userId String @id @map("user_id")
+  windowStartedAt DateTime @default(now()) @map("window_started_at")
+  issuanceCount Int @default(0) @map("issuance_count")
+  checkCount Int @default(0) @map("check_count")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("deployment_verification_rate_limits")
 }
 
 model AnalysisRun {

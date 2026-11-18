@@ -28,7 +28,7 @@ describe("tab-scoped actual results and session lifecycle",()=>{
     expect(state.data.records).toHaveLength(10);expect(state.data.records[0].id).toBe("14");
   });
   it("expires connection but keeps tab results and ignores late callbacks from the expired session",()=>{
-    let state={epoch:0,data:{...initialLabData(),session:{token:"secret",port:"4317",expiresAt:1}}};
+    const state={epoch:0,data:{...initialLabData(),session:{token:"secret",port:"4317",expiresAt:1}}};
     const withRecord=labSessionReducer(state,{type:"record",epoch:0,plan:observedPlan,observedAt:1});
     const expired=labSessionReducer(withRecord,{type:"expire",epoch:0});
     expect(expired.data.session).toBeUndefined();expect(expired.data.records).toHaveLength(1);
@@ -43,7 +43,7 @@ describe("tab-scoped actual results and session lifecycle",()=>{
 });
 describe("six primary destinations and local-first entry",()=>{
   it("exposes exactly the six requested menus and maps preserved routes to auxiliary sections",()=>{
-    expect(securityNavigation.map(item=>item.label)).toEqual(["대시보드","내 웹서비스","공격 실습","검증 결과","취약점 학습","설정"]);
+    expect(securityNavigation.map(item=>item.label)).toEqual(["대시보드","내 웹서비스","취약점 학습","공격 실습","검증 결과","설정"]);
     expect(new Set(securityNavigation.map(item=>item.href)).size).toBe(6);
     expect(activeSecurityPath("/security-lab/project")).toBe("/practice");expect(activeSecurityPath("/repository")).toBe("/settings");
   });

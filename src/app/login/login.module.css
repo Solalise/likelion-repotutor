@@ -1,0 +1,21 @@
+.content {
+  display: grid;
+  align-content: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.card :global(.github-button:not(:disabled)) {
+  width: 100%;
+  min-height: 44px;
+  justify-content: center;
+  background: var(--vl-accent);
+  border-color: var(--vl-accent);
+  color: var(--vl-card);
+  font: inherit;
+  font-weight: 650;
+}

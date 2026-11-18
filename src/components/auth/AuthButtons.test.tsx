@@ -4,7 +4,7 @@ const mocks=vi.hoisted(()=>({signIn:vi.fn(),signOut:vi.fn(),redirect:vi.fn()}));
 vi.mock("@/auth",()=>({signIn:mocks.signIn,signOut:mocks.signOut}));
 vi.mock("next/navigation",()=>({redirect:mocks.redirect}));
 import { SignInButton,SignOutButton } from "./AuthButtons";
-function formAction(element:ReactElement){const form=(element.props as {children:ReactElement}).children;return (form.props as {action:()=>Promise<void>}).action;}
+function formAction(element:ReactElement){return (element.props as {action:()=>Promise<void>}).action;}
 beforeEach(()=>vi.resetAllMocks());
 describe("preserved GitHub account actions",()=>{
   it("uses the original GitHub sign-in and redirect flow",async()=>{
@@ -13,8 +13,8 @@ describe("preserved GitHub account actions",()=>{
     expect(mocks.signIn).toHaveBeenCalledWith("github",{redirect:false,redirectTo:"/dashboard"});
     expect(mocks.redirect).toHaveBeenCalledWith("https://github.com/login/oauth/authorize?client_id=test");
   });
-  it("uses the original sign-out redirect while the client boundary clears ephemeral lab state",async()=>{
-    const element=SignOutButton();expect(typeof element.type).toBe("function");
+  it("uses the original sign-out form action and redirect",async()=>{
+    const element=SignOutButton();expect(element.type).toBe("form");
     await formAction(element)();expect(mocks.signOut).toHaveBeenCalledWith({redirectTo:"/"});
   });
 });

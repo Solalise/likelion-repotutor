@@ -22,10 +22,22 @@ export default function RunnerLab({ apiPath, resourceA, resourceB, children, mod
   const input = { apiPath, resourceA, resourceB, policy };
   const planMatches = plan && JSON.stringify(plan.input) === JSON.stringify(input);
   const preview = createRequestPreview(apiPath, resourceA, resourceB);
+  const approvalKey = JSON.stringify([apiPath, resourceA, resourceB, policy, plan?.id]);
+  const [approvalContext, setApprovalContext] = useState(approvalKey);
+  const expiresAt = plan?.expiresAt;
+  const expirationKey = JSON.stringify([plan?.id, expiresAt]);
+  const [expiredPlanKey, setExpiredPlanKey] = useState<string>();
 
-  useEffect(() => {
+  // Adjust local confirmation before rendering changed inputs, rather than in an effect.
+  if (approvalContext !== approvalKey) {
+    setApprovalContext(approvalKey);
     setReadyToExecute(false);
-  }, [apiPath, resourceA, resourceB, policy, plan?.id]);
+  }
+  useEffect(() => {
+    if (expiresAt === undefined) return;
+    const timer = setTimeout(() => setExpiredPlanKey(expirationKey), Math.max(0, expiresAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [expiresAt, expirationKey]);
 
   async function rpc(path: string, data: unknown, pairing = false) {
     const targetPort = pairing ? runnerPort : session?.port;
@@ -69,7 +81,7 @@ export default function RunnerLab({ apiPath, resourceA, resourceB, children, mod
         {!planMatches && <p className={styles.error}>입력 조건이 변경되었습니다. 새 계획을 등록하고 다시 승인해주세요.</p>}
         <div className={styles.actions}><button className={styles.refresh} disabled={busy || !session} onClick={() => void action(async () => { const next = await rpc("state", {}); setState(next); setPlan(next.plan); setReadyToExecute(false); setMessage(next.plan?.approved ? "로컬 승인이 확인되었습니다. 최종 실행 확인 후 전송할 수 있습니다." : "아직 승인되지 않았거나 계획이 만료되었습니다."); })}>로컬 승인 상태 확인</button></div>
         <label className={styles.label}><input type="checkbox" checked={readyToExecute} onChange={event => setReadyToExecute(event.target.checked)} disabled={busy || !planMatches || !plan.approved || plan.used} /> 승인된 테스트 대상에 위 GET 요청을 실제 전송합니다.</label>
-        <button className={styles.refresh} disabled={busy || !session || !planMatches || !plan.approved || plan.used || !readyToExecute || plan.expiresAt <= Date.now()} onClick={() => void action(async () => { const executed = await rpc("execute", { planId: plan.id }); setPlan(executed); setReadyToExecute(false); setMessage("실제 HTTP 검증이 완료되었습니다. 아래 결과와 근거를 확인하세요."); })}>{busy ? "처리 중…" : "승인된 계획 실제 실행"}</button></>}
+        <button className={styles.refresh} disabled={busy || !session || !planMatches || !plan.approved || plan.used || !readyToExecute || expiredPlanKey === expirationKey} onClick={() => void action(async () => { if (plan.expiresAt <= Date.now()) throw new Error("실행 계획이 만료되었습니다. 새 계획을 등록하고 다시 승인해 주세요."); const executed = await rpc("execute", { planId: plan.id }); setPlan(executed); setReadyToExecute(false); setMessage("실제 HTTP 검증이 완료되었습니다. 아래 결과와 근거를 확인하세요."); })}>{busy ? "처리 중…" : "승인된 계획 실제 실행"}</button></>}
       {plan?.result && <><div className="bp-result-link"><Link href="/results">현재 세션의 검증 결과에서 자세히 보기 →</Link></div><ResultPanel result={plan.result} previous={previous} /></>}
     </section>
     </>}

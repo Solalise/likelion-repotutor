@@ -27,6 +27,11 @@ export default function ProjectLab({ embedded = false }: { embedded?: boolean })
   const [listError, setListError] = useState("");
   const [selection, setSelection] = useState<Selection>();
   const [reload, setReload] = useState(0);
+  const [selectionContext, setSelectionContext] = useState(connectionId);
+  if (selectionContext !== connectionId) {
+    setSelectionContext(connectionId);
+    setSelection(undefined);
+  }
   const { apiPath, resourceA, resourceB } = data;
   const setApiPath = (value: string) => update({ apiPath: value });
   const setResourceA = (value: string) => update({ resourceA: value });
@@ -34,8 +39,6 @@ export default function ProjectLab({ embedded = false }: { embedded?: boolean })
 
   useEffect(() => {
     const controller = new AbortController();
-    setListState("loading");
-    setRepositories([]);
     void (async () => {
       try {
         // Reuse the existing authenticated, user-scoped GitHub connection list.
@@ -55,7 +58,6 @@ export default function ProjectLab({ embedded = false }: { embedded?: boolean })
   useEffect(() => {
     if (!connectionId || invalidSelection || listState !== "ready") return;
     const controller = new AbortController();
-    setSelection({ id: connectionId, status: "loading" });
     void (async () => {
       try {
         const response = await fetch(`/api/security-lab/repositories/${encodeURIComponent(connectionId)}`, { cache: "no-store", signal: controller.signal, redirect: "error" });
@@ -102,7 +104,7 @@ export default function ProjectLab({ embedded = false }: { embedded?: boolean })
         {!invalidSelection && connectionId && listState === "ready" && (!current || current.status === "loading") && <p role="status">선택한 저장소의 접근권한을 다시 확인하고 있습니다…</p>}
         {current?.status === "error" && <p className={styles.error} role="alert">{current.message}</p>}
         {authorized && <p role="status" className={styles.confirmed}>접근권한 확인 완료 · {current?.repository?.repository.fullName}</p>}
-        <div className={styles.actions}><button type="button" className={styles.refresh} disabled={listState === "loading"} onClick={() => { setListState("loading"); setSelection(undefined); setReload((value) => value + 1); }}>저장소 목록 다시 불러오기</button><Link href="/repositories">GitHub 연결 관리 →</Link></div>
+        <div className={styles.actions}><button type="button" className={styles.refresh} disabled={listState === "loading"} onClick={() => { setListState("loading"); setRepositories([]); setListError(""); setSelection(undefined); setReload((value) => value + 1); }}>저장소 목록 다시 불러오기</button><Link href="/repositories">GitHub 연결 관리 →</Link></div>
         <small>선택한 저장소는 주소의 connectionId로 유지됩니다. API 경로와 리소스 ID는 이 탭의 메모리에만 있으며 새로고침하면 예시값으로 돌아갑니다.</small>
       </section></details>
 

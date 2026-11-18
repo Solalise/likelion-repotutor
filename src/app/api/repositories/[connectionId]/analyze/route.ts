@@ -1,5 +1,6 @@
 import { wantsAnalysisReceipt } from "@/lib/repository/sampleAnalysis";
 import { coalesceAnalysis } from "@/lib/repository/analysisWork";
+import { reserveAnalysisRun, AnalysisAdmissionError } from "@/lib/repository/analysisAdmission";
 import type { Prisma } from "@prisma/client";
 import { analyzeSourceFiles } from "@/lib/ast/analyzer";
 import { requireUserId } from "@/lib/auth/currentUser";
@@ -20,15 +21,12 @@ export async function GET(_request: Request, context: RouteContext) {
   let connection;
   try { connection = await requireRepositoryAccess(userId, connectionId); }
   catch (error) { return repositoryAccessResponse(error); }
-  const run = await db.analysisRun.create({
-    data: {
-      repositoryId: connection.repositoryId,
-      requestedByUserId: userId,
-      repositoryFullName: connection.repository.fullName,
-      source: "CONNECTED_REPOSITORY",
-      status: "RUNNING",
-    },
-  });
+  let run;
+  try { run = await reserveAnalysisRun({ userId, repositoryId: connection.repositoryId,
+    repositoryFullName: connection.repository.fullName, source: "CONNECTED_REPOSITORY" }); }
+  catch (error) { return repositoryJson({ message: error instanceof AnalysisAdmissionError ? error.message : "분석 요청을 시작할 수 없습니다." },
+    { status: error instanceof AnalysisAdmissionError ? error.status : 503,
+      headers: error instanceof AnalysisAdmissionError && error.retryAfterSeconds ? { "Retry-After": String(error.retryAfterSeconds) } : undefined }); }
   try {
     const token = await getInstallationAccessToken(connection.installation.installationId);
     const namespace = `installation:${connection.installation.installationId}`;
@@ -50,7 +48,22 @@ export async function GET(_request: Request, context: RouteContext) {
     await db.$transaction([
       db.analysisRun.update({
         where: { id: run.id },
-        data: { status: "COMPLETED", commitSha: loaded.collection.commitSha, stats: JSON.parse(JSON.stringify(analysis.stats)) as Prisma.InputJsonValue, completedAt: new Date() },
+        data: { status: "COMPLETED", commitSha: loaded.collection.commitSha, stats: JSON.parse(JSON.stringify({
+          ...analysis.stats,
+          sqlInjection: analysis.sqlInjection ? {
+            version: analysis.sqlInjection.version, candidates: analysis.sqlInjection.findings.length,
+            inputFlowObserved: analysis.sqlInjection.findings.filter(finding => finding.relationship === "input-flow-observed").length,
+            suspected: analysis.sqlInjection.findings.filter(finding => finding.relationship === "suspected").length,
+            truncated: analysis.sqlInjection.truncated,
+          } : null,
+          xss: analysis.xss ? {
+            version: analysis.xss.version,
+            candidates: analysis.xss.findings.filter(finding => finding.disposition === "candidate").length,
+            protectedOutputs: analysis.xss.findings.filter(finding => finding.disposition === "protected").length,
+            inputFlowObserved: analysis.xss.findings.filter(finding => finding.disposition === "candidate" && finding.relationship === "input-flow-observed").length,
+            truncated: analysis.xss.truncated,
+          } : null,
+        })) as Prisma.InputJsonValue, completedAt: new Date() },
       }),
       db.userRepository.update({ where: { id: connection.id }, data: { lastAccessedAt: new Date() } }),
     ]);

@@ -1,0 +1,6 @@
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.grid > * { min-width: 0; border: 1px solid #dfe8d4; border-radius: 10px; padding: 16px; }
+.grid label { display: grid; gap: 8px; }
+.grid input { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px; border: 1px solid #bcccae; border-radius: 6px; background: #fff; color: #35472c; }
+.body, .preview { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; max-height: 320px; overflow: auto; padding: 12px; border-radius: 6px; background: #f3f6ee; }
+@media (max-width: 720px) { .grid { grid-template-columns: minmax(0, 1fr); } }
