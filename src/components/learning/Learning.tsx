@@ -9,6 +9,13 @@ function Meter({ value, label }: {
     value: number;
     label: string;
 }) { return <div className={styles.meter}><div><span>{label}</span><strong>{Math.round(value)}%</strong></div><progress aria-label={label} max={100} value={value}/></div>; }
+const courseDescriptions: Record<string, { summary: string; detail: string }> = {
+    idor: { summary: "다른 사용자의 데이터 접근", detail: "게시글 접근 권한을 확인하고 보호하는 방법을 배웁니다." },
+    sqli: { summary: "SQL 쿼리 조작", detail: "검색 입력으로 생기는 취약점과 안전한 쿼리 작성법을 배웁니다." },
+    xss: { summary: "웹페이지에 삽입된 악성 스크립트", detail: "사용자 입력이 코드로 실행되는 원인과 방어 방법을 배웁니다." },
+    authz: { summary: "사용자별 기능 접근 권한", detail: "일반 사용자와 관리자의 권한을 구분하는 방법을 배웁니다." },
+};
+
 export function LearningDashboard() {
     const [saved, setSaved] = useState<Record<string, Progress>>({});
     useEffect(() => {
@@ -30,7 +37,7 @@ export function LearningDashboard() {
         return () => { cancelAnimationFrame(frame); window.removeEventListener("storage", refresh); window.removeEventListener("pageshow", refresh); };
     }, []);
     const count = courses.reduce((sum, c) => sum + (saved[c.id]?.completed.length ?? 0), 0);
-    return <main id="main-content" className={`vl-main ${styles.root}`}><ProductionPracticeNotice/><header className={styles.hero}><small>VULNLAB / SECURITY FOUNDATIONS</small><h1>원리를 이해하고,<br />직접 확인하는 보안 학습</h1><p>한 번에 하나의 취약점, 여섯 단계의 여정.<br />개념부터 요청 흐름과 코드 분석을 거쳐 로컬 실습으로 이어집니다.</p><Meter value={count / 24 * 100} label={`전체 학습 · ${count}/24단계`}/></header><div className={styles.sectionHeading}><h2>학습 과정 선택</h2><span>입문 · 4개 과정 · 순서 없이 시작 가능</span></div><div className={styles.grid}>{courses.map((c, i) => { const p = saved[c.id]; return <Link id={c.id} key={c.id} href={`/learn/${c.id}`} className={styles.course}><small>COURSE 0{i + 1} <span>약 {c.minutes}분</span></small><h2>{c.title}</h2><p>{c.subtitle}</p><p className={styles.muted}>{c.id === "idor" ? "객체의 소유권과 공개 정책을 확인합니다." : c.id === "sqli" ? "문자열 결합과 파라미터 바인딩을 비교합니다." : c.id === "xss" ? "HTML 해석과 안전한 텍스트 출력을 이해합니다." : "인증과 인가를 구분하고 서버 역할을 검사합니다."}</p><Meter value={(p?.completed.length ?? 0) / 6 * 100} label={`${p?.completed.length ?? 0}/6단계 완료`}/><strong>{p?.completed.length === 6 ? "완료한 과정 복습하기" : p?.completed.length || p?.step ? "이어서 학습하기" : "학습 시작하기"} →</strong></Link>; })}</div><aside className={styles.callout}><strong>학습과 실습은 별도의 과정입니다</strong><p>이곳의 6단계와 퀴즈는 원리를 익히는 기초 과정입니다. 로컬 실습 서버의 기존 6단계 가이드와 진행 상태는 연동되지 않습니다. 학습 내용은 이 브라우저에 저장됩니다.</p></aside></main>;
+    return <main id="main-content" className={`vl-main ${styles.root}`}><ProductionPracticeNotice/><header className={styles.hero}><small>기초 보안 학습</small><h1>웹 보안의 기초,<br />취약점부터 배워보세요</h1><p>IDOR, SQL Injection, XSS, 권한 검증을 배웁니다.<br />예시 코드로 취약점의 원인과 수정 방법을 살펴보고, 퀴즈로 확인해보세요.</p><Meter value={count / 24 * 100} label={`전체 학습 · ${count}/24단계`}/></header><div className={styles.sectionHeading}><h2>학습 과정 선택</h2><span>입문 · 4개 과정 · 순서 없이 시작 가능</span></div><div className={styles.grid}>{courses.map((c, i) => { const p = saved[c.id]; return <Link id={c.id} key={c.id} href={`/learn/${c.id}`} className={styles.course}><small>COURSE 0{i + 1} <span>약 {c.minutes}분</span></small><h2>{c.title}</h2><p>{courseDescriptions[c.id].summary}</p><p className={styles.muted}>{courseDescriptions[c.id].detail}</p><Meter value={(p?.completed.length ?? 0) / 6 * 100} label={`${p?.completed.length ?? 0}/6단계 완료`}/><strong>{p?.completed.length === 6 ? "완료한 과정 복습하기" : p?.completed.length || p?.step ? "이어서 학습하기" : "학습 시작하기"} →</strong></Link>; })}</div><aside className={styles.callout}><strong>학습과 실습은 별도의 과정입니다</strong><p>이곳의 6단계와 퀴즈는 원리를 익히는 기초 과정입니다. 로컬 실습 서버의 기존 6단계 가이드와 진행 상태는 연동되지 않습니다. 학습 내용은 이 브라우저에 저장됩니다.</p></aside></main>;
 }
 function Highlight({ line }: {
     line: string;

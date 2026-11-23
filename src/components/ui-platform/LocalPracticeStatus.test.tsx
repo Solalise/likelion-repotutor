@@ -17,5 +17,7 @@ it("shows failure, launch instructions and an enabled retry without blocking any
   expect(html).toContain("상태 확인에 실패해도");
   expect(html).toMatch(/<button[^>]*>상태 다시 확인<\/button>/);
   expect(html).not.toMatch(/<button[^>]*disabled[^>]*>상태 다시 확인/);
-  expect((html.match(/target="_blank"/g) ?? [])).toHaveLength(4);
+  // Four independent labs, each with guided and free practice.
+  expect((html.match(/target="_blank"/g) ?? [])).toHaveLength(8);
+  expect((html.match(/rel="noopener noreferrer"/g) ?? [])).toHaveLength(8);
 });

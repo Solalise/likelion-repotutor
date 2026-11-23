@@ -1,4 +1,4 @@
-# SQLi 실행 승인·제한된 전송 1단계
+# SQLi 후보·제한 실행·관찰·수동 기록 흐름
 
 ## 현재 상태
 
@@ -24,7 +24,7 @@ SQLi 편집기에서 `서버 실행 승인 확인`을 선택하면 내부 API가
 
 API: `POST /api/repositories/[connectionId]/practice/sqli`
 
-요청은 `{action:"status"|"execute",draft:SqliRequestDraft,confirmed?:true}`. 로그인, 정확한 동일 Origin, JSON, 최대 8KB/수신 5초, URL 연결 ID와 draft 연결 ID 일치를 검사한다. execute에는 명시적 확인이 필요하다. draft는 알려진 필드만 복사하며 쿠키·헤더·토큰·추가 요청 옵션을 실행기에 전달하지 않는다. 각 입력은 UTF-8 512바이트 이하·제어문자 제외다.
+요청은 `{action:"status"|"execute",draft:SqliRequestDraft,confirmed?:true}`. 로그인, 정확한 동일 Origin, JSON, 최대 8KB/수신 5초, URL 연결 ID와 draft 연결 ID 일치를 검사한다. execute에는 명시적 확인이 필요하다. draft는 알려진 필드만 복사하며 쿠키·헤더·토큰·추가 요청 옵션을 실행기에 전달하지 않는다. 기존 512바이트·제어문자 제한에 더해 정상값은 합성 식별자의 영문·숫자·밑줄 1~128자, 테스트값은 `quote-marker-v1`의 고정 따옴표 마커만 허용한다. 조건식·SQL 문장·지연·데이터 추출 기능은 제공하지 않는다. 마커 정책 버전과 값도 승인 fingerprint에 포함하므로 프로브 변경으로 기존 승인 예산을 재사용하지 않는다.
 
 실행 가능 여부는 다음 근거를 서버에서 확인한다.
 
@@ -40,6 +40,7 @@ API: `POST /api/repositories/[connectionId]/practice/sqli`
 새 DB 모델/마이그레이션 없이 기존 `AnalysisRun.stats.sqliExecution`에 승인 fingerprint·누적 요청 수·마지막 예약 시각만 추가한다. 원래 정적 분석 통계는 유지하고 응답 본문은 저장하지 않는다.
 
 - 사용자 행 `FOR UPDATE`와 DB 시각을 사용하는 트랜잭션으로 정상/테스트 **2회 예산을 원자적으로 선예약**한다.
+- XSS 연결 이후 승인·실행·API·편집기 코드는 `managedProbe*`와 `ManagedProbeEditor`로 공통화했다. SQLi의 공개 진입점과 정책은 유지하며, 사용자 시간당 6회는 SQLi/XSS 합산으로 제한한다. XSS 별도 승인은 [XSS 검사 문서](./xss-inspection.md)를 참고한다.
 - 승인별 최대치와 사용자별 시간당 최대 6회를 함께 적용한다. 계정의 다른 분석 이력도 합산한다.
 - 같은 분석 이력의 승인 ID/범위 변경으로 누적 예산을 초기화하지 않는다. 새 승인은 새 분석 이력과 운영자 검토가 필요하다.
 - 최근 예약 이력의 누적 요청 수를 보수적으로 합산하므로 정확한 sliding window보다 더 엄격하게 차단될 수 있다.
@@ -62,13 +63,18 @@ API: `POST /api/repositories/[connectionId]/practice/sqli`
 
 기존 `/services` → 저장소 분석 → SQLi 후보 → GET/query 대상 확인 → 실습 준비 → SQLi 요청 편집 흐름을 유지한다.
 
-1. 정상값·테스트값을 편집하고 두 URL 미리보기를 확인한다.
+1. 정상값을 편집하고 사전 정의된 읽기 전용 테스트 마커와 두 URL 미리보기를 확인한다. 브라우저 변조로 다른 테스트값을 보내도 서버가 거부한다.
 2. `서버 실행 승인 확인`으로 등록 대상·승인·만료·남은 요청 수를 조회한다. 이 단계는 테스트 대상 API에 요청하지 않는다.
 3. 허용 상태일 때만 요청 내용 확인 체크와 전송 버튼을 사용할 수 있다. 실제 전송 시 모든 조건을 다시 확인한다.
-4. 실제 응답의 상태·시간·본문·오류를 비교한다. 요청 변경 시 과거 결과를 지운다. 서버 응답 대기 시간 초과는 이미 실행됐을 가능성을 안내하고 자동 재시도하지 않는다.
+4. 실제 응답의 상태·시간·본문·오류를 비교한다. 완전한 응답에만 본문 동일/차이 표시를 사용하며 잘림·실패·차단은 비교 불가다. 결과의 대상·SHA·후보·입력쌍·관찰 형식을 제출한 요청과 대조하고 불일치 응답은 버린다. 입력 변경 시 최초·후속 결과와 동의를 초기화하고 승인 재확인을 요구한다. 서버 응답 대기 시간 초과는 이미 실행됐을 가능성을 안내하고 자동 재시도하지 않는다. 실행 요청 후 결과가 없으면 미실행으로 단정하지 않고 판정 불가로 표시한다.
 5. 결과는 항상 판정 불가다. HTTP 비교만으로 취약점 확인/미관찰을 활성화하지 않는다. HTML 본문은 React 텍스트로 렌더링한다.
 
-결과·편집 초안은 현재 화면에서만 유지한다. 사용량 카운터 외의 승인/실행 관리 화면, 결과 영구 보관, 자동 판정·수정 후 재검증은 구현하지 않았다.
+6. 동일 대상·SHA·입력쌍의 최초 결과를 보존하면서 후속 결과와 비교한다. 재실행도 매번 승인·동의·남은 예산이 필요하다. 후속 실패 시 최초 관찰은 남긴다.
+7. `/services`와 저장소 분석 화면의 페이지 수명 내 최근 10회 HTTP 관찰을 보관한다. 수정으로 SHA가 달라지면 재분석·새 대상 확정·새 서버 승인이 필요하다. 독립적으로 실행한 현재 결과가 있을 때만 같은 저장소 연결의 다른 SHA 실행을 사용자가 직접 선택하여 읽기 전용으로 비교한다. URL·API·파라미터·입력쌍·SHA·실행 ID를 각각 표시하며 이전 결과를 새 요청 상태나 검증 결과로 복원하지 않는다. 새로고침·페이지 이탈 시 이 HTTP 이력은 사라진다.
+8. 편집기의 `검사 결과 기록으로 이동`은 기존 후보 화면과 같은 확정 대상 버전의 `SecurityTestRecord`를 연다. 사용자가 선택한 최초·후속 HTTP 요약을 수동 메모로 복사할 수 있다. 각 요약은 SHA·대상·입력쌍·실행 ID를 포함하지만 서버 실행 근거의 영구 저장은 아니다. 상태·직접 수행 확인·수정 완료·재검증 완료를 자동 선택하지 않는다. 사용자 판단과 수정 내역, 수행 일시를 작성한 뒤 기존 수정 전후 수동 비교를 사용한다.
+9. 수동 기록은 기존 `/api/results`에 저장한다. `P2021`/`P2022`는 `503 RESULTS_SCHEMA_UNAVAILABLE`과 미저장 안내를 반환하고, 연결 오류도 저장 완료로 처리하지 않는다. UI는 성공 응답의 기록 ID·수정 버전·저장소·SHA·대상 키·종류까지 일치해야 저장 완료를 표시한다. 중복 클릭은 차단하고 화면 이탈 후 늦은 응답은 반영하지 않는다.
+
+정적 후보, 서버가 수집한 HTTP 관찰, 사용자의 수동 판단을 분리한다. DB의 `MANUAL` CHECK를 유지하며 서버 HTTP 본문·실행 근거의 영구 보관 모델은 추가하지 않았다. 자동 SQLi 확정 판정, 중앙 승인 발급/취소 화면은 미구현이다. 관리형 테스트 환경 미등록, DB TLS 인증서 및 환경 구분 미해결 상태를 우회하지 않으며 이번 작업에서는 DB에 연결하거나 마이그레이션을 적용하지 않았다.
 
 ## 등록 전 최소 작업
 
@@ -80,9 +86,23 @@ API: `POST /api/repositories/[connectionId]/practice/sqli`
 
 정적 registry 변경은 새 서버 배포가 필요하다. 구버전 배포의 승인이 자동으로 폐기되는 중앙 승인 관리 시스템은 없다. 실제 운영 전 구버전 배포 접근 차단과 중앙 취소/감사 요구를 검토하고, 즉시 중단 시에는 대상 API 자체를 차단하거나 연결 버전을 변경해야 한다. 사용자 임의 배포 URL 지원은 별도 후속 작업이다.
 
-## 검증 결과
+## 검증 범위
 
-- `npx.cmd vitest run src/lib/security-lab/sqliExecution.test.tsx`: **관련 테스트 2개 통과**. DNS·HTTPS·Vercel·DB는 대역이다. 대상 없음/변조/만료/Production 거부, 승인 예산 및 실제 소켓 옵션, 사설 IP·redirect·응답 크기·네트워크 오류·타임아웃 처리 등을 검사했다. 테스트 응답은 테스트 파일 안에만 있고 제품 화면에는 생성하지 않는다.
-- 타입 검사에서 신규 테스트의 자기참조 타입 1건을 발견해 수정했다. 수정 후 `npx.cmd tsc --noEmit --incremental false`는 exit 0이다.
-- 실제 테스트 사이트 요청, 운영 DB 통합 검증, 로그인 브라우저 동작 확인은 하지 않았다. 테스트 통과를 실제 HTTPS 통합 성공으로 해석하지 않는다.
-- 전체 빌드·ESLint·전체 테스트·마이그레이션·commit/push는 실행하지 않았다. 기초 학습/실습 서버 및 XSS 실행 코드는 수정하지 않았다.
+- DNS·HTTPS·Vercel·DB는 대역이다. 대상 없음/변조/만료/Production 거부, 승인 예산, 사설 IP·redirect·응답 크기·네트워크 오류·타임아웃 처리와 고정 프로브·API 입력 차단을 검사한다. 테스트 응답은 테스트 파일 안에만 있고 제품 화면에 생성하지 않는다.
+- 편집기의 중복 클릭·뒤로 이동·대상 변경·늦은 응답·타임아웃·최초 관찰 보존·후속 비교와 커밋 간 명시적 비교를 검사한다. 메모 복사가 사용자 판단이나 재검증 완료로 승격되지 않는지 확인한다.
+- DB 미적용·연결 실패·변조된 성공 응답이 저장 성공으로 표시되지 않는지 검사한다.
+- TypeScript·ESLint·관련 테스트·프로덕션 빌드로 로컬 변경을 검증한다. 전체 테스트를 실행했다는 의미는 아니다.
+- 실제 테스트 사이트 요청, 원격 DB 통합 검증, 로그인 브라우저 동작 확인은 하지 않는다. 테스트 통과를 실제 HTTPS 통합 성공으로 해석하지 않는다. 배포·마이그레이션·commit/push 및 기초 학습/실습 서버 변경은 하지 않는다.
+
+2026-11-19 최종 검증: TypeScript, ESLint, 프로덕션 빌드 통과. 관련 13개 테스트 파일의 48개 테스트 통과. 마이그레이션 테스트는 오프라인 SQL 생성·비교만 수행했다.
+
+## 이번 연결 작업의 수정 파일
+
+- 실행 입력·관찰 계약: `src/lib/security-lab/sqliProbe.ts`, `sqliPolicy.ts`, `sqliTypes.ts`.
+- 검사 UI와 기록: `src/components/repository/SqliRequestEditor.tsx`, `PracticeTargetEditor.tsx`, `SecurityTestRecord.tsx`, `SqlInjectionFindings.tsx`.
+- 커밋 간 관찰 이력: `src/components/repository/SqliObservationHistory.tsx`, `RepositoryWorkspace.tsx`, `src/components/services/ServiceAnalysis.tsx`.
+- DB 미적용 대응: `src/lib/results/handlers.ts`, `src/components/results/RecordPersistence.tsx`, `recordClient.ts`.
+- 테스트: `src/lib/security-lab/sqliFlow.test.ts`, `sqliExecution.test.tsx`, `src/components/repository/SqliRequestEditor.state.test.tsx`, `SecurityTestRecord.test.tsx`, `src/lib/results/handlers.test.ts`, `src/components/results/recordClient.test.ts`.
+- 문서: `docs/sqli-execution-mvp.md`.
+
+실행 registry·전송기·기초 실습 서버·Prisma 스키마·마이그레이션·실제 DB 연결 설정은 이번 작업에서 변경하지 않았다. 이전 작업의 미커밋 변경은 보존한다.

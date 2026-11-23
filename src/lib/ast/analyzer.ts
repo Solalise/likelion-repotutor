@@ -13,6 +13,7 @@ import { collectDatabaseAccess } from "./databaseAccess";
 import { collectServerResponses } from "./serverResponses";
 import { collectSqlInjection } from "./sqlInjection";
 import { collectXss } from "./xss";
+import { collectAccessControl, failedAccessControlAnalysis } from "./accessControl";
 
 type FunctionNode = Node & { getStartLineNumber(): number; getEndLineNumber(): number; getText(): string };
 interface Candidate { node: FunctionNode; declaration: Node; name: string; qualifiedName: string; kind: FunctionInfo["kind"] }
@@ -286,7 +287,7 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
   const serverResponses = collectServerResponses(sourceFiles, { entries: entryPoints, controlFlows: functionControlFlows, database: databaseAccess,
     resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
   });
-  return {
+  const analysis: RepositoryAnalysis = {
     repository,
     files,
     ...graph,
@@ -312,4 +313,14 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
       unmatchedApiRequests: unresolvedRelations.filter(({ relation }) => relation.relation === "api").length,
     },
   };
+  try {
+    analysis.accessControl = collectAccessControl(sourceFiles, {
+      analysis, definitions: new Map([...ids].map(([candidate, id]) => [id, candidate.node])),
+      resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
+    });
+  } catch {
+    // This additive review must never discard the existing SQLi/XSS/graph results.
+    analysis.accessControl = failedAccessControlAnalysis();
+  }
+  return analysis;
 }

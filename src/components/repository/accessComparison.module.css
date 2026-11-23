@@ -1,0 +1,5 @@
+.scroll { overflow-x: auto; margin-block: 1rem; }
+.table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table th, .table td { padding: .75rem; border: 1px solid var(--border, #d1d5db); vertical-align: top; min-width: 9rem; text-align: left; }
+.table input, .table select, .table textarea { width: 100%; min-width: 7rem; }
+.table pre { white-space: pre-wrap; overflow-wrap: anywhere; }

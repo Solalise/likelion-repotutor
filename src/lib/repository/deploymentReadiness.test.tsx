@@ -63,7 +63,7 @@ it("reserves a durable bounded analysis budget atomically and refuses production
 
 it("disables production loopback links and probes while preserving learning, local links and the repository redirect", async () => {
   const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher); vi.stubEnv("NODE_ENV", "production");
-  for (const element of [<PracticeDashboard />, <DashboardUI />, <LearningUI />, <LearningDashboard />, <LearningCourse course={courses[0]} />]) {
+  for (const element of [<PracticeDashboard key="practice" />, <DashboardUI key="dashboard" />, <LearningUI key="learning" />, <LearningDashboard key="courses" />, <LearningCourse key="course" course={courses[0]} />]) {
     const markup = renderToStaticMarkup(element);
     expect(markup).not.toMatch(/href="http:\/\/(?:127\.0\.0\.1|localhost)/);
     expect(markup).toContain("공개 사이트에서는 로컬 실습 서버에 연결하지 않습니다");

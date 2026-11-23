@@ -36,7 +36,7 @@ it("reuses user-scoped permission checks and deployment UI without exposing find
   const markup = html(await Page(params("connection-a")));
   expect(mocks.sync).toHaveBeenCalledWith("user-a");
   expect(mocks.access).toHaveBeenCalledWith("user-a", "connection-a");
-  expect(mocks.list.mock.calls[0][0].where).toEqual({ userId: "user-a", active: true });
+  expect(mocks.list.mock.calls[0][0].where).toEqual({ userId: "user-a", active: true, removedAt: null });
   expect(markup).toContain("org/app"); expect(markup).toContain("https://test.vercel.app");
   expect(markup).toContain("Vercel 계정 및 프로젝트 연결");
   expect(markup).toContain("분석 완료");

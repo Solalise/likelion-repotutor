@@ -41,3 +41,17 @@ it("uses the existing authorized full-result API and handles zero candidates wit
   fetcher.mockResolvedValue(new Response(null, { status: 403 }));
   await expect(requestServiceFindings("denied", fetcher)).rejects.toThrow("GitHub 권한");
 });
+
+it("connects a real AST XSS candidate and requires reflection confirmation without sending requests", () => {
+  const analysis = analyzeSourceFiles([{ path: "src/app/api/echo/route.ts", content: `
+export function GET(req: Request) {
+ const q = new URL(req.url).searchParams.get('q');
+ return new Response('<p>' + q + '</p>', { headers: { 'Content-Type': 'text/html' } });
+}` }], "org/app");
+  const finding = analysis.xss!.findings.find(row => row.disposition === "candidate")!;
+  expect(finding).toBeDefined(); expect(finding.id).toMatch(/^xss:/); expect(finding.evidence.length).toBeGreaterThan(0);
+  expect(practiceTarget(analysis, finding)).toMatchObject({ path: "/api/echo", method: "GET", status: "STATIC_HANDLER" });
+  const markup = renderToStaticMarkup(<PracticeTargetEditor analysis={analysis} finding={finding} baseUrl="https://sandbox.vercel.app" ownership={true} />);
+  expect(markup).toContain("반영 위치"); expect(markup).toContain("예상 HTML 문맥"); expect(markup).toContain("실행 승인 아님");
+  expect(markup).toMatch(/disabled=""[^>]*>실습 준비 화면으로 이동/);
+});

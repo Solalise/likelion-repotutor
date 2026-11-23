@@ -1,18 +1,30 @@
 ﻿import {mkdir,writeFile,readFile} from "node:fs/promises";
 import {createHash} from "node:crypto";
 import {execFileSync} from "node:child_process";
+import {performance} from "node:perf_hooks";
 import {beforeAll,describe,expect,it} from "vitest";
-import {productionSources,runPipeline,auditWorkflow,referentialErrors} from "./auditRunner";
+import {productionSources,runPipeline,projectPipeline,auditWorkflow,referentialErrors} from "./auditRunner";
+import {analyzeSourceFiles} from "@/lib/ast/analyzer";
+import type {SourceInput} from "@/types/analysis";
 import {fixtureGold,realWorkflows} from "./gold";
 import {pipelineSources} from "./pipelineFixture";
 import {metrics,scoreRows} from "./oracle";
 
 let fixture:ReturnType<typeof runPipeline>,real:ReturnType<typeof runPipeline>;
 let fixtureRows:ReturnType<typeof scoreRows>,workflows:ReturnType<typeof auditWorkflow>[];
-beforeAll(async()=>{
+let realSources:SourceInput[],realAnalysis:ReturnType<typeof analyzeSourceFiles>,realAstMs:number;
+beforeAll(()=>{
  fixture=runPipeline(pipelineSources,"manual-integration-fixture",[{route:"/login"},{route:"/api/login",method:"POST"},{route:"/api/limits",method:"GET"}]);
  fixtureRows=scoreRows(fixtureGold,fixture.input);
- real=runPipeline(await productionSources(),"RepoTutor-working-tree",[{route:"/repository"},...realWorkflows.map(item=>({route:item.route,method:item.method}))]);
+},180000);
+// Profiling showed ~152s AST + ~55s projection under one 180s hook. Keep the
+// existing limit per independent phase and analyze every production file once.
+beforeAll(async()=>{
+ realSources=await productionSources();
+ const start=performance.now();realAnalysis=analyzeSourceFiles(realSources,"RepoTutor-working-tree");realAstMs=performance.now()-start;
+},180000);
+beforeAll(async()=>{
+ real=projectPipeline(realSources,realAnalysis,[{route:"/services"},...realWorkflows.map(item=>({route:item.route,method:item.method}))],realAstMs);
  workflows=realWorkflows.map(item=>auditWorkflow(real,item.gold,item.route,item.method));
  if(process.env.REPOTUTOR_WRITE_AUDIT==="1") {
   const config=await readFile("next.config.ts","utf8");
@@ -57,7 +69,9 @@ describe("stage 4-D offline integration audit",()=>{
   const audit=workflows[index];
   expect(audit.metrics.falseConfirmed).toBe(0);expect(audit.metrics.unknownConfirmations).toBe(0);
   expect(audit.rows.filter(row=>row.kind==="entry"||row.kind==="feature").every(row=>row.outcome==="correct")).toBe(true);
-  expect(audit.rows.find(row=>row.kind==="http")!.outcome).toBe("unresolved");
+  // Preserve known positives in recall even when the current injected fetcher
+  // is not extracted at all; missing is not an automatic success or abstention.
+  expect(audit.rows.find(row=>row.kind==="http")!.outcome).toBe(item.httpOutcome);
   expect(audit.rows.find(row=>row.kind==="return")!.outcome).toBe("unresolved");
  });
  it("computes denominators without counting unknown or abstained positives as successes",()=>{

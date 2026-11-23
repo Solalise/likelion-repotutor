@@ -1,3 +1,5 @@
+"use client";
+
 import type { AnchorHTMLAttributes } from "react";
 import { localPracticeAvailable } from "@/lib/security-lab/basicSiteConnection";
 
@@ -10,5 +12,13 @@ export function ProductionPracticeNotice() {
 export function LocalPracticeLink({ children, className, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
   if (!localPracticeAvailable()) return <button type="button" disabled className={className}
     aria-label={props["aria-label"]} title={localPracticeUnavailableMessage}>{children}</button>;
-  return <a {...props} className={className}>{children}</a>;
+  return <a {...props} className={className} onClick={event => {
+    props.onClick?.(event);
+    if (event.defaultPrevented || !props.href) return;
+    try {
+      const url = new URL(props.href);
+      const topic = url.searchParams.get("lab") ?? url.pathname.match(/\/lab\/(idor|sqli|xss|authz)(?:\/|$)/)?.[1];
+      if (topic && ["idor", "sqli", "xss", "authz"].includes(topic)) localStorage.setItem("vulnlab:last-practice", topic);
+    } catch { /* Navigation still works when storage is unavailable. */ }
+  }}>{children}</a>;
 }

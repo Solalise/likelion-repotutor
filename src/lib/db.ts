@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { checkedDatabaseUrl } from "./databaseTls";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -8,7 +9,7 @@ function createPrismaClient(): PrismaClient {
   if (!connectionString) {
     throw new Error("DATABASE_URL 환경변수가 필요합니다.");
   }
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString: checkedDatabaseUrl(connectionString, "pg") }) });
 }
 
 export const db = globalForPrisma.prisma ?? createPrismaClient();

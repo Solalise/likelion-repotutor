@@ -18,6 +18,8 @@ import { RepositoryOverviewInspector } from "./RepositoryOverviewInspector";
 import { AiLearningPanel } from "./AiLearningPanel";
 import { BehaviorWorkspace } from "@/components/behavior/BehaviorWorkspace";
 import { SqlInjectionFindings } from "./SqlInjectionFindings";
+import { SqliObservationHistoryProvider } from "./SqliObservationHistory";
+import { XssObservationHistoryProvider } from "./XssObservationHistory";
 
 type ViewMode = "learning" | "developer";
 type DeveloperMode = "overview" | "feature";
@@ -275,6 +277,8 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId, initialSelec
   const visibleEdgeCount = viewMode === "learning" ? visibleLearningGraph.edges.length : showingOverview ? overviewGraph.edges.length : technicalGraph.edges.length;
 
   return (
+    <SqliObservationHistoryProvider>
+    <XssObservationHistoryProvider>
     <main className={`repository-workspace ${viewMode}-view ${isGithub ? "github-repository" : ""}`}>
       {repositoryForm}
       {initialSelectionId && !loading && (initialSelectionType === "feature"
@@ -417,5 +421,7 @@ export function RepositoryWorkspace({ initialConnectedRepositoryId, initialSelec
       </section>
       </>}
     </main>
+    </XssObservationHistoryProvider>
+    </SqliObservationHistoryProvider>
   );
 }

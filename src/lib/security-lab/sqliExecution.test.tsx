@@ -17,6 +17,8 @@ vi.mock("@/lib/db", () => ({ db: { $transaction: mocks.transaction, analysisRun:
 vi.mock("@/lib/repository/githubAnalysisCache", () => ({ getGithubAnalysisCache: mocks.cache, githubAnalysisCacheKey: (...parts: string[]) => parts.join(":") }));
 vi.mock("@/lib/vercel/deploymentCommit", async original => ({ ...await original<typeof import("@/lib/vercel/deploymentCommit")>(), loadVercelAccount: mocks.loadAccount,
   verifyVercelProject: mocks.project, vercelJson: mocks.vercel }));
+import { safeSqliProbe } from "./sqliProbe";
+import { safeXssProbe } from "./xssProbe";
 import { selectSqliApproval } from "./sqliPolicy";
 import { executeSqliPair, sqliExecutionStatus } from "./sqliExecution";
 import { observeManagedSqli } from "./sqliTransport";
@@ -26,7 +28,7 @@ import { SqliRequestEditor } from "@/components/repository/SqliRequestEditor";
 const target: ManagedSqliTarget = { id: "managed-one", origin: "https://fixture-only.vercel.app", path: "/api/search", method: "GET", parameter: "q",
   projectId: "prj_fixture", deploymentId: "dpl_fixture", isolatedTestOnly: true, syntheticDataOnly: true, readOnlyDatabase: true, sideEffectFreeApi: true, reviewReference: "test-fixture-not-a-live-deployment" };
 const draft: SqliRequestDraft = { version: "sqli-practice-v1", connectionId: "connection-one", repository: "org/test", commitSha: "a".repeat(40), findingId: "sqli:route:1",
-  target: { deploymentOrigin: target.origin, apiPath: target.path, method: "GET", inputLocation: "query", parameter: "q" }, baseline: { value: "normal" }, test: { value: "test & other=value" } };
+  target: { deploymentOrigin: target.origin, apiPath: target.path, method: "GET", inputLocation: "query", parameter: "q" }, baseline: { value: "normal" }, test: { value: safeSqliProbe.value } };
 const approval = (): SqliExecutionApproval => ({ id: "approval-one", targetId: target.id, userId: "user-a", connectionId: "connection-one", analysisRunId: "analysis-one",
   repository: draft.repository, commitSha: draft.commitSha!, findingId: draft.findingId, deploymentVersion: 7,
   issuedAt: new Date(Date.now() - 1000).toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(), maxRequests: 2 });
@@ -45,6 +47,19 @@ function serve(status = 200, text = '{"observed":"fixture response"}', headers: 
   });
 }
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); mocks.registry.target = null; mocks.registry.approvals = []; });
+
+it("rejects unauthenticated, cross-origin, unconfirmed, malformed and custom-probe API calls before target transport", async () => {
+  const make = (payload: unknown, origin = "https://vulnlab.example") => new Request("https://vulnlab.example/api/repositories/connection-one/practice/sqli", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const context = { params: Promise.resolve({ connectionId: "connection-one" }) };
+  mocks.user.mockRejectedValueOnce(new Error("AUTH_REQUIRED")); expect((await POST(make({ action: "execute", draft }), context)).status).toBe(401);
+  mocks.user.mockResolvedValue("user-a");
+  expect((await POST(make({ action: "status", draft }, "https://other.example"), context)).status).toBe(403);
+  expect((await POST(make({ action: "execute", draft }), context)).status).toBe(400);
+  expect((await POST(make({ action: "unknown", draft }), context)).status).toBe(400);
+  expect((await POST(make({ action: "execute", confirmed: true, draft: { ...draft, test: { value: "custom-probe" } } }), context)).status).toBe(400);
+  expect((await POST(make({ action: "status", draft: { ...draft, connectionId: "other" } }), context)).status).toBe(403);
+  expect(mocks.access).not.toHaveBeenCalled(); expect(mocks.dns).not.toHaveBeenCalled(); expect(mocks.request).not.toHaveBeenCalled();
+});
 
 it("blocks an empty registry and tampering, validates the managed preview grant, and durably reserves only an approved pair", async () => {
   mocks.user.mockResolvedValue("user-a");
@@ -111,6 +126,9 @@ it("pins checked IPv4 and blocks private DNS, rebinding, redirects, oversized bo
   expect(observed.body).toBe("<script>fixture</script>");
   const tlsCheck = mocks.request.mock.calls.at(-1)![0].checkServerIdentity;
   expect(tlsCheck("ignored-ip", {})).toBeInstanceOf(Error);
+  serve(200, safeXssProbe.value, { "content-type": "text/html; charset=utf-8" });
+  expect(await observeManagedSqli(target, safeXssProbe.value, check, Date.now() + 60000, "XSS")).toMatchObject({ outcome: "RESPONSE", contentType: "text/html; charset=utf-8", body: safeXssProbe.value });
+  expect(mocks.request.mock.calls.at(-1)![0]).toMatchObject({ rejectUnauthorized: true, headers: { Accept: "text/html, application/xhtml+xml, text/plain, application/json", "User-Agent": "VulnLab-Managed-XSS/1.0" } });
   mocks.request.mockImplementation(() => { const req = new EventEmitter(); Object.assign(req, { destroy: vi.fn(), end: () => queueMicrotask(() => req.emit("error", new Error("TLS fixture"))) }); return req; });
   expect((await observeManagedSqli(target, "x", check)).outcome).toBe("NETWORK_ERROR");
   vi.useFakeTimers();

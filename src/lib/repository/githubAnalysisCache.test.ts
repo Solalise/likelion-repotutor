@@ -6,6 +6,13 @@ const analysis = analyzeSourceFiles([{ path: "app/settings/page.tsx", content: "
 afterEach(clearGithubAnalysisCacheForTests);
 
 describe("entrypoint metadata cache compatibility", () => {
+  it("rejects legacy access snapshots and retries failed additive analyses", () => {
+    const legacy = { ...analysis }; delete legacy.accessControl;
+    setGithubAnalysisCache("legacy-access", legacy);
+    expect(getGithubAnalysisCache("legacy-access")).toBeUndefined();
+    setGithubAnalysisCache("failed-access", { ...analysis, accessControl: { ...analysis.accessControl!, status: "failed" } });
+    expect(getGithubAnalysisCache("failed-access")).toBeUndefined();
+  });
   it("rejects snapshots produced before file-route metadata was available", () => {
     const legacy = { ...analysis };
     delete legacy.entryPoints;

@@ -19,7 +19,7 @@ describe("evidence based learning roles", () => {
     const paths = ["src/app/page.tsx", "src/app/api/analyze/route.ts", "src/lib/repository/sampleAnalysis.ts"];
     const actual = { ...analyzeSourceFiles(paths.map((path) => ({ path, content: readFileSync(path, "utf8") })), "RepoTutor"), source: "github" as const };
     const result = buildRepositoryLearningGraph(actual);
-    expect(result.nodes.find((node) => node.technicalName === "HomePage")).toMatchObject({ title: "페이지 진입점", roleConfidence: "confirmed", filePath: paths[0] });
+    expect(result.nodes.find((node) => node.technicalName === "Page" && node.filePath === paths[0])).toMatchObject({ title: "페이지 진입점", roleConfidence: "confirmed", filePath: paths[0] });
     expect(result.nodes.find((node) => node.technicalName === "GET")).toMatchObject({ title: "서버 요청 처리", roleConfidence: "confirmed", filePath: paths[1] });
     const helper = result.nodes.find((node) => node.technicalName === "loadSampleAnalysis")!;
     expect(helper).toMatchObject({ title: "함수 코드 살펴보기", roleConfidence: "unknown" });

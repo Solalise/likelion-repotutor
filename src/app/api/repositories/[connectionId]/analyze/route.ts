@@ -63,6 +63,12 @@ export async function GET(_request: Request, context: RouteContext) {
             inputFlowObserved: analysis.xss.findings.filter(finding => finding.disposition === "candidate" && finding.relationship === "input-flow-observed").length,
             truncated: analysis.xss.truncated,
           } : null,
+          accessControl: analysis.accessControl ? {
+            version: analysis.accessControl.version, status: analysis.accessControl.status,
+            idorCandidates: analysis.accessControl.findings.filter(finding => finding.type === "IDOR").length,
+            authorizationCandidates: analysis.accessControl.findings.filter(finding => finding.type === "AUTHORIZATION").length,
+            boundaries: analysis.accessControl.boundaries.length, truncated: analysis.accessControl.truncated,
+          } : null,
         })) as Prisma.InputJsonValue, completedAt: new Date() },
       }),
       db.userRepository.update({ where: { id: connection.id }, data: { lastAccessedAt: new Date() } }),

@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+vi.mock("@/lib/auth/currentUser", () => ({ requireUserId: vi.fn(async () => { throw new Error("AUTH_REQUIRED"); }) }));
+vi.mock("@/lib/db", () => ({ db: {} }));
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), analyze: vi.fn() }));
 vi.mock("@/lib/repository/loadGithubRepository", async (importOriginal) => ({
@@ -18,7 +20,11 @@ beforeEach(() => {
   vi.stubEnv("GITHUB_TOKEN", "server-private-repository-token");
   fetchMock.mockImplementation(async () => Response.json({ private: false, full_name: "org/project" }));
   mocks.load.mockResolvedValue({ repository: "org/project", sources: [], collection: { commitSha: "sha" } });
-  mocks.analyze.mockReturnValue({ repository: "org/project", nodes: [], edges: [], entryPoints: [], stats: {} });
+  mocks.analyze.mockReturnValue({ repository: "org/project", nodes: [], edges: [], entryPoints: [], stats: {},
+    sqlInjection: { version: "sqli-static-v1", findings: [], truncated: false, limitations: [] },
+    xss: { version: "xss-static-v1", findings: [], truncated: false, limitations: [] },
+    accessControl: { version: "access-control-static-v1", status: "completed", findings: [], boundaries: [], truncated: false, limitations: [] },
+  });
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 

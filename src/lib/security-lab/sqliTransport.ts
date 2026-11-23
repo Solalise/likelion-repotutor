@@ -11,11 +11,12 @@ const MAX_CHARS = 4000;
 const TOTAL_TIMEOUT_MS = 8000;
 
 /** Server-internal transport: no URL/header/cookie options from the browser. Never follows redirects/retries. */
-export async function observeManagedSqli(target: ManagedSqliTarget, value: string, assertApproval: () => void, validUntil = Number.POSITIVE_INFINITY): Promise<SqliResponseEvidence> {
+export async function observeManagedSqli(target: ManagedSqliTarget, value: string, assertApproval: () => void, validUntil = Number.POSITIVE_INFINITY, kind: "SQLI" | "XSS" = "SQLI"): Promise<SqliResponseEvidence> {
   const started = performance.now(), requestId = randomUUID();
+  let contentType: string | null = null;
   const record = (outcome: SqliResponseEvidence["outcome"], errorMessage: string | null, statusCode: number | null = null,
     body: string | null = null, bodyTruncated = false): SqliResponseEvidence => ({ requestId, observedAt: new Date().toISOString(),
-    outcome, errorMessage, statusCode, body, bodyTruncated, durationMs: Math.round(performance.now() - started) });
+    outcome, errorMessage, statusCode, body, bodyTruncated, contentType, durationMs: Math.round(performance.now() - started) });
   const url = new URL(target.path, target.origin);
   url.searchParams.set(target.parameter, value);
   const lifetimeMs = Math.min(TOTAL_TIMEOUT_MS, validUntil - Date.now());
@@ -42,8 +43,8 @@ export async function observeManagedSqli(target: ManagedSqliTarget, value: strin
       protocol: "https:", hostname: pinned, family: 4, port: 443, servername: url.hostname,
       rejectUnauthorized: true, checkServerIdentity: (_host, cert) => checkServerIdentity(url.hostname, cert),
       method: "GET", path: url.pathname + url.search, agent: false, maxHeaderSize: 8192,
-      headers: { Host: url.hostname, Accept: "application/json, text/plain", "Accept-Encoding": "identity",
-        "Cache-Control": "no-store", "User-Agent": "VulnLab-Managed-SQLi/1.0" },
+      headers: { Host: url.hostname, Accept: kind === "XSS" ? "text/html, application/xhtml+xml, text/plain, application/json" : "application/json, text/plain", "Accept-Encoding": "identity",
+        "Cache-Control": "no-store", "User-Agent": kind === "XSS" ? "VulnLab-Managed-XSS/1.0" : "VulnLab-Managed-SQLi/1.0" },
     });
     const finish = (outcome: SqliResponseEvidence["outcome"], message: string | null, truncated = false) => {
       if (settled) return;
@@ -60,6 +61,7 @@ export async function observeManagedSqli(target: ManagedSqliTarget, value: strin
     req.on("error", () => finish("NETWORK_ERROR", "HTTPS/TLS 연결 또는 응답 수신에 실패했습니다."));
     req.on("response", response => {
       status = response.statusCode ?? null;
+      contentType = typeof response.headers["content-type"] === "string" ? response.headers["content-type"].slice(0, 200) : null;
       if (status !== null && status >= 300 && status < 400) {
         finish("BLOCKED", "리다이렉트 응답을 차단했습니다. 이동하지 않았습니다."); response.destroy(); return;
       }

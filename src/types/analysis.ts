@@ -2,7 +2,7 @@ import type { FunctionControlFlow } from "./controlFlow";
 import type { HttpRequestSite } from "./http";
 import type { DatabaseAnalysis } from "./database";
 import type { ServerResponseAnalysis } from "./response";
-import type { SqlInjectionAnalysis, XssAnalysis } from "./security";
+import type { SqlInjectionAnalysis, XssAnalysis, AccessControlAnalysis } from "./security";
 
 export type CodeNodeType = "file" | "function" | "api" | "component";
 export type CodeRelation = "import" | "call" | "component" | "reference" | "api";
@@ -127,6 +127,7 @@ export interface RepositoryAnalysis {
   serverResponses?: ServerResponseAnalysis;
   sqlInjection?: SqlInjectionAnalysis;
   xss?: XssAnalysis;
+  accessControl?: AccessControlAnalysis;
 }
 
 export type ReactEventBindingReason = "component-prop" | "custom-element" | "unsupported-element" | "unsupported-event"

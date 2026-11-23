@@ -45,6 +45,7 @@ model User {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
+  securityTestRecords SecurityTestRecord[]
   accounts       Account[]
   sessions       Session[]
   installations  GitHubInstallation[]
@@ -154,6 +155,7 @@ model UserRepository {
   installationId String   @map("installation_id")
   permission     RepositoryPermission
   active         Boolean  @default(true)
+  removedAt      DateTime? @map("removed_at")
   connectedAt    DateTime @default(now()) @map("connected_at")
   lastAccessedAt DateTime? @map("last_accessed_at")
   vercelUrl      String?  @map("vercel_url")
@@ -191,6 +193,7 @@ model DeploymentVerificationRateLimit {
 }
 
 model AnalysisRun {
+  securityTestRecords SecurityTestRecord[]
   id                String         @id @default(cuid())
   repositoryId      String?        @map("repository_id")
   requestedByUserId String?        @map("requested_by_user_id")
@@ -237,4 +240,27 @@ model LearningRecord {
   @@index([userId, createdAt])
   @@index([repositoryId, commitSha])
   @@map("learning_records")
+}
+
+model SecurityTestRecord {
+  id String @id @default(cuid())
+  userId String @map("user_id")
+  analysisRunId String @map("analysis_run_id")
+  repositoryFullName String @map("repository_full_name")
+  commitSha String @map("commit_sha")
+  recordKey String @map("record_key")
+  targetIdentity String @map("target_identity") @db.Text
+  kind String
+  status String
+  source String @default("MANUAL")
+  draft Json
+  revision Int @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  analysisRun AnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([userId, updatedAt])
+  @@index([userId, repositoryFullName, kind, status], map: "security_test_records_user_id_repository_full_name_kind_sta_idx")
+  @@map("security_test_records")
 }

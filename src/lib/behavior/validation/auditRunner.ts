@@ -25,6 +25,11 @@ export async function productionSources():Promise<SourceInput[]> {
 export const bytes=(value:unknown)=>Buffer.byteLength(JSON.stringify(value),"utf8");
 export function runPipeline(sources:SourceInput[],repository:string,selections:Array<{route:string;method?:string}>) {
  const start=performance.now(),analysis=analyzeSourceFiles(sources,repository),astMs=performance.now()-start;
+ return projectPipeline(sources,analysis,selections,astMs);
+}
+/** Same full analysis, separately timed projection phase. No cached/fake AST or reduced inputs. */
+export function projectPipeline(sources:SourceInput[],analysis:RepositoryAnalysis,selections:Array<{route:string;method?:string}>,astMs:number) {
+ const start=performance.now();
  const featureStart=performance.now(),discovery=discoverRepositoryFeatures(analysis),discoveryMs=performance.now()-featureStart;
  const entries=selections.map(selection=>{
   const matches=(analysis.entryPoints??[]).filter(entry=>entry.routePath===selection.route&&entry.method===selection.method);
@@ -38,7 +43,7 @@ export function runPipeline(sources:SourceInput[],repository:string,selections:A
  const features=[...discovery.primary,...discovery.limited,...discovery.hidden];
  const input={analysis,entries,flows:measured.map(item=>item.flow)};
  const sizingStart=performance.now(),astBytes=bytes(analysis),featuresBytes=bytes(discovery),selectedFlowsBytes=bytes(input.flows),sizingMs=performance.now()-sizingStart;
- return {input,measured,features,performance:{astIncludingAllExtractorsMs:astMs,featureDiscoveryMs:discoveryMs,totalMs:performance.now()-start,finalSizingMs:sizingMs,
+ return {input,measured,features,performance:{astIncludingAllExtractorsMs:astMs,featureDiscoveryMs:discoveryMs,totalMs:astMs+performance.now()-start,finalSizingMs:sizingMs,
   astBytes,featuresBytes,selectedFlowsBytes,inputBytes:sources.reduce((sum,item)=>sum+Buffer.byteLength(item.content,"utf8"),0),
   files:sources.length,functions:analysis.stats.functions,rawEdges:analysis.edges.length,entryPoints:analysis.entryPoints?.length??0,
   note:"Single local run after the fixture in the same process, not a cold-start/p95 benchmark. File I/O, process startup and manifest hashing excluded. Compact uncompressed UTF-8 JSON sizes. AST time includes event/CFG/HTTP/DB/response extraction; those stages are not individually instrumented."},

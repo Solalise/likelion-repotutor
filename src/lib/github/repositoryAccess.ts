@@ -16,7 +16,7 @@ export async function requireRepositoryAccess(userId: string, connectionId: stri
     where: { id: connectionId, userId, active: true },
     include: { repository: true, installation: true },
   });
-  if (!connection || connection.installation.userId !== userId) {
+  if (!connection || connection.removedAt || connection.installation.userId !== userId) {
     throw new RepositoryAccessError("접근 가능한 연결 저장소를 찾을 수 없습니다.", 404);
   }
   try {

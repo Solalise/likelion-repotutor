@@ -1,4 +1,7 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
+// The opt-in integration checks anonymous GitHub collection, not platform DB/OAuth.
+vi.mock("@/lib/auth/currentUser", () => ({ requireUserId: vi.fn(async () => { throw new Error("AUTH_REQUIRED"); }) }));
+vi.mock("@/lib/db", () => ({ db: {} }));
 import { discoverRepositoryFeatures, traverseRepositoryFeature } from "@/lib/features/featureDiscovery";
 import { buildRepositoryOverview, findOverviewFeature } from "@/lib/graph/repositoryOverview";
 import { buildLearningStages, buildRepositoryLearningGraph, selectLearningStageGraph, traverseLearningGraph } from "@/lib/learning/learningGraphBuilder";

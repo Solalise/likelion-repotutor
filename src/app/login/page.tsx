@@ -12,15 +12,16 @@ export default async function LoginPage() {
     <PlatformFrame>
       <main id="main-content" className={`vl-main ${styles.content}`}>
         <section className={`vl-card ${styles.card}`} aria-labelledby="login-heading">
-          <header className="vl-page-heading"><div>
-            <span className="vl-eyebrow">GITHUB ACCOUNT</span>
+          <header className={styles.heading}>
             <h1 id="login-heading">{site.name}에 로그인</h1>
-            <p>GitHub 계정으로 로그인하고 내 저장소의 코드를 살펴보세요.</p>
-          </div></header>
-          <p className="vl-description">로그인은 사용자 확인만 수행합니다. 저장소 접근은 로그인 후 별도의 GitHub App 설치 과정에서 선택합니다.</p>
+            <p>GitHub 계정으로 간편하게 시작하세요.</p>
+          </header>
           <SignInButton />
-          <p className="vl-small">기초 학습과 로컬 실습은 GitHub 로그인 없이 시작할 수 있습니다.</p>
-          <div className="vl-actions"><Link className="vl-text-link" href="/learn">취약점 학습 둘러보기 →</Link><Link className="vl-text-link" href="/practice">로그인 없이 실습 시작 →</Link></div>
+          <p className={styles.note}>저장소 접근 권한은 로그인 후 선택할 수 있어요.</p>
+          <div className={styles.guest}>
+            <span>로그인 없이도 이용할 수 있어요</span>
+            <div><Link href="/learn">기초 학습</Link><span aria-hidden="true">·</span><Link href="/practice">공격 실습</Link></div>
+          </div>
         </section>
       </main>
     </PlatformFrame>

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { traverseGraph } from "@/lib/graph/dfs";
 import type { RepositoryAnalysis } from "@/types/analysis";
+// These route unit tests run without a live session or database. Production
+// admission/authorization is exercised separately by deploymentReadiness.test.
+vi.mock("@/lib/auth/currentUser", () => ({ requireUserId: vi.fn(async () => { throw new Error("AUTH_REQUIRED"); }) }));
+vi.mock("@/lib/db", () => ({ db: {} }));
 
 const { loadGithubRepositoryMock, analyzeSourceFilesMock } = vi.hoisted(() => ({
   loadGithubRepositoryMock: vi.fn(),

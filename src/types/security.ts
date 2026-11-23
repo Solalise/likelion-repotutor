@@ -46,3 +46,31 @@ export interface XssAnalysis {
   truncated: boolean;
   limitations: string[];
 }
+
+export interface AccessCheckEvidence extends SqlInjectionEvidence {
+  kind: "authentication" | "ownership" | "role" | "middleware" | "external-check";
+  relation: "confirmed" | "inferred";
+  control: "guard-before-operation" | "query-filter" | "after-operation" | "conditional-or-unused" | "unresolved";
+  functionId?: string;
+}
+export interface AccessControlFinding extends Omit<SqlInjectionFinding, "type"> {
+  type: "IDOR" | "AUTHORIZATION";
+  ownerFunctionId: string;
+  functionName: string;
+  api: { path: string; method: string; filePath: string; relation: "confirmed" } | null;
+  operationRelation: "confirmed" | "inferred";
+  reviewState: "CHECKS_OBSERVED" | "UNCONFIRMED";
+  inputSources: SqlInjectionEvidence[];
+  checks: AccessCheckEvidence[];
+  callPath: SqlInjectionEvidence[];
+  manualChecks: string[];
+  assessment: "STATIC_REVIEW_ONLY";
+}
+export interface AccessControlAnalysis {
+  version: "access-control-static-v1";
+  status: "completed" | "partial" | "failed";
+  findings: AccessControlFinding[];
+  boundaries: SqlInjectionEvidence[];
+  truncated: boolean;
+  limitations: string[];
+}

@@ -1,7 +1,10 @@
 import {afterEach,beforeEach,describe,expect,it,vi} from "vitest";
-const m=vi.hoisted(()=>({user:vi.fn(),connection:vi.fn(),latest:vi.fn(),token:vi.fn(),github:vi.fn(),fetch:vi.fn(),revoke:vi.fn(),sources:vi.fn(),create:vi.fn(),update:vi.fn(),load:vi.fn()}));
+const m=vi.hoisted(()=>({user:vi.fn(),connection:vi.fn(),latest:vi.fn(),token:vi.fn(),github:vi.fn(),fetch:vi.fn(),revoke:vi.fn(),sources:vi.fn(),create:vi.fn(),update:vi.fn(),load:vi.fn(),queryRaw:vi.fn(),countRuns:vi.fn()}));
 vi.mock("@/lib/auth/currentUser",()=>({requireUserId:m.user}));
-vi.mock("@/lib/db",()=>({db:{userRepository:{findFirst:m.connection,updateMany:m.revoke,update:vi.fn()},analysisRun:{findFirst:m.latest,create:m.create,update:m.update},$transaction:(items:Promise<unknown>[])=>Promise.all(items)}}));
+vi.mock("@/lib/db",()=>{
+ const tx={$queryRaw:m.queryRaw,analysisRun:{count:m.countRuns,create:m.create}};
+ return {db:{userRepository:{findFirst:m.connection,updateMany:m.revoke,update:vi.fn()},analysisRun:{findFirst:m.latest,create:m.create,update:m.update},$transaction:(work:Promise<unknown>[]|((transaction:typeof tx)=>Promise<unknown>))=>Array.isArray(work)?Promise.all(work):work(tx)}};
+});
 vi.mock("@/lib/github/api",async importOriginal=>({...await importOriginal<typeof import("@/lib/github/api")>(),getGitHubUserAccessToken:m.token,githubJson:m.github}));
 vi.mock("@/lib/github/appAuthentication",()=>({getInstallationAccessToken:vi.fn(async()=>"app-token"),createInstallationFetcher:()=>m.fetch}));
 vi.mock("@/lib/repository/loadGithubRepository",async importOriginal=>({...await importOriginal<typeof import("@/lib/repository/loadGithubRepository")>(),loadGithubRepository:m.load}));
@@ -19,6 +22,11 @@ function request(params:Record<string,string>={}){return GET(new Request(`http:/
 async function selection(){const response=await request(),body=await response.json();expect(response.status).toBe(200);const feature=body.features.find((item:{entryPoint:{routePath:string;method:string}})=>item.entryPoint.routePath==="/api/login"&&item.entryPoint.method==="POST");return {analysisId:body.snapshot.analysisId,featureId:feature.id};}
 beforeEach(()=>{
  vi.resetAllMocks();clearGithubAnalysisCacheForTests();clearQueryCaches();vi.stubGlobal("fetch",m.fetch);
+ m.queryRaw.mockImplementation(async(sql:TemplateStringsArray,...values:unknown[])=>{
+  if(sql.join("?").includes("FOR UPDATE"))return values[0]==="user-a"?[{id:"user-a"}]:[];
+  if(sql.join("?").includes("clock_timestamp"))return [{now:new Date()}];
+  throw new Error("Unexpected admission SQL");
+ });m.countRuns.mockResolvedValue(0);
  m.user.mockResolvedValue("user-a");m.connection.mockImplementation(async({where})=>where.id==="own"&&where.userId==="user-a"&&where.active?connection:null);
  m.latest.mockResolvedValue({status:"COMPLETED",commitSha:SHA});m.token.mockResolvedValue("user-token");
  m.github.mockImplementation(async(path:string)=>path.endsWith("/contents")?[]:path.startsWith("/user/installations?")?{total_count:1,installations:[{id:7,suspended_at:null,permissions:{contents:"read"}}]}:{total_count:1,repositories:[{id:21,full_name:"org/private",permissions:{pull:true}}]});

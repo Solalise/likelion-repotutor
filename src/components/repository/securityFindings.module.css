@@ -1,0 +1,86 @@
+.findings {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* aria-pressed is the single source of truth for the selected appearance. */
+.findings .tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px;
+  background: var(--vl-soft);
+  border-color: var(--vl-line);
+}
+
+.findings .tabs button {
+  height: auto;
+  min-height: 44px;
+  min-width: 0;
+  padding: 10px 12px;
+  justify-content: center;
+  border: 1px solid transparent;
+  color: var(--vl-ink);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.findings .tabs button[aria-pressed="true"] {
+  background: #515f30;
+  color: #fff;
+  border-color: #515f30;
+  box-shadow: 0 2px 5px rgb(48 58 49 / 12%);
+}
+
+.findings :is(button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--vl-accent);
+  outline-offset: 3px;
+}
+
+.findings :is(section, article, form, fieldset, details, label) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.findings fieldset { margin-inline: 0; }
+.findings label { display: block; }
+.findings :is(input:not([type="checkbox"]), select, textarea) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 10px;
+  border: 1px solid var(--vl-line);
+  border-radius: 8px;
+  background: var(--vl-card);
+  color: var(--vl-ink);
+  font: inherit;
+}
+.findings input[type="checkbox"] { width: 22px; height: 22px; vertical-align: middle; margin-right: 8px; }
+.findings button { min-height: 44px; max-width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; }
+.findings summary { min-height: 44px; padding-block: 10px; cursor: pointer; }
+.findings pre { min-width: 0; max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; }
+.findings code { overflow-wrap: anywhere; }
+.findings :global(.repository-metadata) > div { max-width: 100%; flex-wrap: wrap; }
+.findings :global(.repository-metadata) dd { min-width: 0; max-width: 100%; }
+.findings :global(.vl-two-col) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.findings :global(.vl-two-col) > * { min-width: 0; }
+
+@media (max-width: 820px) {
+  .findings { padding: 16px; }
+  .findings .tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .findings :global(.tutor-card) { padding: 14px; }
+  .findings :global(.vl-two-col) { grid-template-columns: minmax(0, 1fr); }
+  .findings :is(ol, ul) { padding-inline-start: 22px; }
+}
+
+@media (max-width: 440px) {
+  .findings :is(input:not([type="checkbox"]), select, textarea) { font-size: 16px; }
+  .findings :global(.secondary-action) { width: 100%; margin-block: 4px; }
+}

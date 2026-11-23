@@ -1,3 +1,4 @@
+import { restoreService } from "./actions";
 import { PlatformShell } from "@/components/ui-platform/PlatformShell";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -23,15 +24,15 @@ async function refreshRepositories() {
   redirect("/services?sync=success");
 }
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ connected?: string; sync?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<{ connected?: string; sync?: string; removed?: string }> }) {
   const session = await auth();
-  const { connected, sync } = await searchParams;
+  const { connected, sync, removed } = await searchParams;
   let services: ServiceConnection[] = [], error = "", selectedId: string | undefined;
   if (session?.user?.id) {
     try {
       await syncAllUserInstallations(session.user.id);
       const connections = await db.userRepository.findMany({
-        where: { userId: session.user.id, active: true },
+        where: { userId: session.user.id, active: true, removedAt: null },
         include: { installation: { select: { suspendedAt: true } }, repository: { select: {
           fullName: true, defaultBranch: true, analysisRuns: {
             where: { requestedByUserId: session.user.id, source: "CONNECTED_REPOSITORY" },
@@ -63,6 +64,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       <section className="vl-card"><h2>GitHub 저장소 연결</h2><p className="vl-description">App에서 허용하고 현재 계정으로 접근할 수 있는 저장소만 표시합니다. 저장소를 선택한 뒤 배포 URL·Vercel 계정·프로젝트를 연결하세요.</p><div className="vl-actions"><Link className="vl-button" href="/api/github/installations/start">GitHub App 설치 · 저장소 선택</Link><form action={refreshRepositories}><button type="submit" className="vl-outline-button">저장소 권한 동기화</button></form></div></section>
       {(error || sync === "failed") && <p role="alert">{error || "권한 동기화에 실패했습니다. 로그인과 App 권한을 확인하세요."}</p>}
       {sync === "success" && !error && <p role="status">저장소 권한을 동기화했습니다.</p>}
+      {removed && <div role="status" className={`vl-card ${styles.removalNotice}`}><span>서비스를 삭제했습니다. GitHub 저장소는 유지됩니다.</span><form action={restoreService}><input type="hidden" name="connectionId" value={removed}/><button type="submit" className="vl-outline-button">삭제 취소</button></form></div>}
       {!error && <ServiceConnections services={services} selectedId={selectedId} />}
       {selected && <section aria-label="선택한 서비스 연결"><h2>{selected.fullName}</h2><ServiceAnalysis key={selected.id} connectionId={selected.id} status={selected.analysisStatus} /><RepositoryDeployment key={selected.id} connectionId={selected.id} /></section>}
     </>}

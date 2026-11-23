@@ -1,0 +1,2 @@
+.record textarea { box-sizing: border-box; display: block; width: 100%; padding: 10px; margin-top: 7px; border: 1px solid var(--vl-line); border-radius: 8px; background: var(--vl-card); color: var(--vl-ink); font: inherit; resize: vertical; }
+.record pre { white-space: pre-wrap; overflow-wrap: anywhere; }

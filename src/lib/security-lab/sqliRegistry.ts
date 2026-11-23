@@ -5,6 +5,7 @@ export type ManagedSqliTarget = {
   projectId: string; deploymentId: string;
   isolatedTestOnly: true; syntheticDataOnly: true; readOnlyDatabase: true; sideEffectFreeApi: true;
   reviewReference: string;
+  reflectionLocation?: string; reflectionContext?: "HTML_TEXT" | "HTML_ATTRIBUTE" | "UNKNOWN";
 };
 export type SqliExecutionApproval = {
   id: string; targetId: string; userId: string; connectionId: string; analysisRunId: string;

@@ -25,40 +25,41 @@ export const fixtureGold:GoldRelation[]=[
  {id:"fx-switch",truth:"positive",stage:"cfg",kind:"cfg",file:limits,anchor:"switch(choice)",unsupported:true,note:"Must remain unsupported."},
  {id:"fx-runtime",truth:"negative",stage:"semantics",kind:"runtime",note:"No observed runtime order or completion may be claimed."},
 ];
-const workspace="src/components/repository/RepositoryWorkspace.tsx",panel="src/components/repository/AiLearningPanel.tsx";
+const service="src/components/services/ServiceAnalysis.tsx",servicePage="src/app/services/page.tsx",admission="src/lib/repository/analysisAdmission.ts";
+const panel="src/components/repository/AiLearningPanel.tsx";
 const general="src/app/api/analyze/route.ts",connected="src/app/api/repositories/[connectionId]/analyze/route.ts",learn="src/app/api/repositories/[connectionId]/learn/route.ts",access="src/lib/github/repositoryAccess.ts";
-export interface Workflow {id:string;name:string;route:string;method:string;gold:GoldRelation[]}
+export interface Workflow {id:string;name:string;route:string;method:string;httpOutcome:"missing"|"unresolved";gold:GoldRelation[]}
 export const realWorkflows:Workflow[]=[
- {id:"sample-analysis",name:"샘플 저장소 분석",route:"/api/analyze",method:"GET",gold:[
-  {id:"sample-page",truth:"positive",stage:"entry",kind:"entry",route:"/repository",target:"RepositoryPage",note:"Actual repository page export."},
+ {id:"sample-analysis",name:"현재 서비스 UI 및 별도 로컬 샘플 분석 API",route:"/api/analyze",method:"GET",httpOutcome:"missing",gold:[
+  {id:"sample-page",truth:"positive",stage:"entry",kind:"entry",route:"/services",target:"Page",note:"Current service page export; the old repository route only redirects."},
   {id:"sample-feature",truth:"positive",stage:"discovery",kind:"feature",route:"/api/analyze",method:"GET",note:"API discovery separate from page feature."},
-  {id:"sample-component",truth:"positive",stage:"component",kind:"component",file:"src/app/repository/page.tsx",anchor:"<RepositoryWorkspace",target:"RepositoryWorkspace",note:"Page JSX component relation, not an invocation trace."},
-  {id:"sample-click",truth:"positive",stage:"event",kind:"event",file:workspace,anchor:'onClick={() => void runAnalysis({ source: "sample" })}',target:"runAnalysis",note:"Actual sample button inline binding."},
-  {id:"sample-inline-call",truth:"positive",stage:"call",kind:"call",file:workspace,anchor:'runAnalysis({ source: "sample" })',target:"runAnalysis",note:"Separate inline callback -> runAnalysis call; DOM binding is to the callback, not directly to runAnalysis."},
-  {id:"sample-fetch-helper",truth:"positive",stage:"call",kind:"call",file:workspace,anchor:"fetchAnalysis(request)",occurrence:0,target:"fetchAnalysis",note:"runAnalysis awaits fetchAnalysis; the full literal call differs from its typed declaration."},
-  {id:"sample-http",truth:"positive",stage:"http",kind:"http",file:workspace,anchor:"fetch(`/api/analyze?${params}`",route:"/api/analyze",method:"GET",note:"Human can identify fixed pathname despite unknown query; current extractor may leave entire URL unresolved."},
+  {id:"sample-component",truth:"positive",stage:"component",kind:"component",file:servicePage,anchor:"<ServiceAnalysis",target:"ServiceAnalysis",note:"Current page-to-analysis component relation, not a runtime invocation trace."},
+  {id:"sample-click",truth:"positive",stage:"event",kind:"event",file:service,anchor:"onClick={async () => {",target:"requestServiceFindings",note:"Current service analysis button. Sample API below is audited separately; no UI-to-sample execution is claimed."},
+  {id:"sample-inline-call",truth:"positive",stage:"call",kind:"call",file:service,anchor:"requestServiceFindings(connectionId)",target:"requestServiceFindings",note:"Inline callback invokes the current findings helper."},
+  {id:"sample-session-component",truth:"positive",stage:"component",kind:"component",file:service,anchor:"<AnalysisSession",target:"AnalysisSession",note:"Current analysis wrapper retains the session component."},
+  {id:"sample-http",truth:"positive",stage:"http",kind:"http",file:service,anchor:"fetcher(`/api/repositories/${encodeURIComponent(connectionId)}/analyze`",route:"/api/repositories/[connectionId]/analyze",method:"GET",note:"Known source call via an injected fetcher; extractor currently misses it. Keep this positive in recall, never count it as success."},
   {id:"sample-server",truth:"positive",stage:"call",kind:"call",file:general,anchor:"loadSampleAnalysis()",target:"loadSampleAnalysis",note:"4-E shares the same sample analysis in a cache helper; GET still directly invokes it. Historical 4-D hashes/report remain unchanged."},
   {id:"sample-wrapper",truth:"positive",stage:"call",kind:"call",file:general,anchor:'json(wantsAnalysisReceipt(request) ? { status: "analysis-complete", repository: analysis.repository } : analysis)',target:"json",note:"GET calls the same response wrapper; 4-E receipt mode is opt-in."},
   {id:"sample-creation",truth:"positive",stage:"response",kind:"creation",file:general,anchor:"NextResponse.json(body",note:"Wrapper really invokes imported NextResponse.json."},
   {id:"sample-return",truth:"positive",stage:"return",kind:"return",file:general,anchor:'return json(wantsAnalysisReceipt(request) ? { status: "analysis-complete", repository: analysis.repository } : analysis)',note:"API return remains a wrapper call; receipt mode does not resolve inter-function values."},
   {id:"sample-runtime",truth:"negative",stage:"semantics",kind:"runtime",note:"No runtime flow claimed."},
  ]},
- {id:"connected-analysis",name:"연결 저장소 분석 및 분석 기록 저장",route:"/api/repositories/[connectionId]/analyze",method:"GET",gold:[
+ {id:"connected-analysis",name:"연결 저장소 분석 및 분석 기록 저장",route:"/api/repositories/[connectionId]/analyze",method:"GET",httpOutcome:"missing",gold:[
   {id:"connected-entry",truth:"positive",stage:"entry",kind:"entry",route:"/api/repositories/[connectionId]/analyze",method:"GET",target:"GET",note:"Actual dynamic API route."},
   {id:"connected-feature",truth:"positive",stage:"discovery",kind:"feature",route:"/api/repositories/[connectionId]/analyze",method:"GET",note:"Automatic API feature."},
-  {id:"connected-retry",truth:"positive",stage:"event",kind:"event",file:workspace,anchor:"onClick={() => void runAnalysis(lastRequest)}",target:"runAnalysis",note:"Retry event can carry the previous connected request; value propagation is not claimed."},
-  {id:"connected-inline-call",truth:"positive",stage:"call",kind:"call",file:workspace,anchor:"runAnalysis(lastRequest)",target:"runAnalysis",note:"Separate source-confirmed inline callback call."},
-  {id:"connected-call",truth:"positive",stage:"call",kind:"call",file:workspace,anchor:"fetchAnalysis(request)",occurrence:0,target:"fetchAnalysis",note:"runAnalysis -> fetchAnalysis."},
-  {id:"connected-branch",truth:"positive",stage:"cfg",kind:"cfg",file:workspace,anchor:"fetch(`/api/repositories/${encodeURIComponent(request.connectionId)}/analyze`",branch:"true",note:"Request belongs to connected source branch."},
-  {id:"connected-http",truth:"positive",stage:"http",kind:"http",file:workspace,anchor:"fetch(`/api/repositories/${encodeURIComponent(request.connectionId)}/analyze`",route:"/api/repositories/[connectionId]/analyze",method:"GET",note:"Unknown runtime connectionId prevents exact URL linking; human source pattern association is scored as a known positive gap, not a confirmed runtime request."},
+  {id:"connected-retry",truth:"positive",stage:"event",kind:"event",file:service,anchor:"onClick={async () => {",target:"requestServiceFindings",note:"Current analysis/reanalysis button; exact runtime values are not claimed."},
+  {id:"connected-inline-call",truth:"positive",stage:"call",kind:"call",file:service,anchor:"requestServiceFindings(connectionId)",target:"requestServiceFindings",note:"Current source-confirmed inline callback call."},
+  {id:"connected-call",truth:"positive",stage:"component",kind:"component",file:service,anchor:"<AnalysisSession",target:"AnalysisSession",note:"Current session component relation."},
+  {id:"connected-branch",truth:"positive",stage:"cfg",kind:"cfg",file:service,anchor:"fetcher(`/api/repositories/${encodeURIComponent(connectionId)}/analyze`",note:"Helper call has a source-backed CFG context; no removed connected-source branch is claimed."},
+  {id:"connected-http",truth:"positive",stage:"http",kind:"http",file:service,anchor:"fetcher(`/api/repositories/${encodeURIComponent(connectionId)}/analyze`",route:"/api/repositories/[connectionId]/analyze",method:"GET",note:"Injected fetcher and runtime connectionId are not resolved. Report missing as a positive recall gap rather than deleting the case."},
   {id:"connected-auth-helper",truth:"positive",stage:"call",kind:"call",file:connected,anchor:"requireRepositoryAccess(userId, connectionId)",target:"requireRepositoryAccess",note:"Actual imported permission helper call."},
-  {id:"connected-db-create",truth:"unknown",stage:"db",kind:"db",file:connected,anchor:"db.analysisRun.create(",note:"Query-looking call exists, but cache's runtime Prisma identity is not independently proven."},
+  {id:"connected-db-create",truth:"unknown",stage:"db",kind:"db",file:admission,anchor:"tx.analysisRun.create(",note:"Creation moved into the DB admission transaction; runtime client identity is not independently proven."},
   {id:"connected-db-read",truth:"unknown",stage:"db",kind:"db",file:access,anchor:"db.userRepository.findFirst(",note:"Same global singleton limitation in reachable permission helper."},
   {id:"connected-response-helper",truth:"positive",stage:"response",kind:"creation",file:access,anchor:"NextResponse.json(body",note:"Actual wrapper creation is visible."},
   {id:"connected-return",truth:"positive",stage:"return",kind:"return",file:connected,anchor:"return repositoryJson(cached ?",note:"Human can follow the wrapper return; analyzer must not pretend this is already composed."},
   {id:"connected-runtime",truth:"negative",stage:"semantics",kind:"runtime",note:"No server throw -> client catch or runtime order claim."},
  ]},
- {id:"ai-learning",name:"AI 코드 설명 요청 및 학습 기록",route:"/api/repositories/[connectionId]/learn",method:"POST",gold:[
+ {id:"ai-learning",name:"AI 코드 설명 요청 및 학습 기록",route:"/api/repositories/[connectionId]/learn",method:"POST",httpOutcome:"unresolved",gold:[
   {id:"learn-entry",truth:"positive",stage:"entry",kind:"entry",route:"/api/repositories/[connectionId]/learn",method:"POST",target:"POST",note:"Actual POST export."},
   {id:"learn-feature",truth:"positive",stage:"discovery",kind:"feature",route:"/api/repositories/[connectionId]/learn",method:"POST",note:"Automatic API feature."},
   {id:"learn-event",truth:"positive",stage:"event",kind:"event",file:panel,anchor:"onClick={() => generate(Boolean(result))}",target:"generate",occurrence:0,note:"First generate button, not retry duplicate."},

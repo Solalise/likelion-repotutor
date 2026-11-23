@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BookOpen, Crosshair } from "lucide-react";
+import { ArrowUpRight, BookOpen } from "lucide-react";
 import { LocalPracticeStatus } from "./LocalIdorLab";
 import { BASIC_SITE_URL, IDOR_LAB_URL, SQLI_LAB_URL } from "@/lib/security-lab/basicSiteConnection";
 import styles from "./practice.module.css";
@@ -14,15 +14,15 @@ export const practiceTopics = [
 
 export function PracticeDashboard() {
   return <main id="main-content" className={`vl-main ${styles.page}`}>
-    <header className={styles.hero}><small>VULNLAB / LOCAL PRACTICE</small><h1>아는 만큼, 바로 실험하세요.</h1><p>두 모드 모두 같은 실습 웹사이트를 사용합니다. 처음이라면 행동 결과로 진행하는 가이드 실습을, 직접 탐색하려면 자유 실습을 선택하세요.</p><div className={styles.pills}><span>학습·퀴즈 선행 조건 없음</span><span>가상 계정과 데이터</span><span>로컬 격리 환경</span></div></header>
+    <header className={styles.hero}><small>VULNLAB / LOCAL PRACTICE</small><h1>배운 것을 토대로, 실습을 진행해보세요</h1><p>실습 사이트에서 가이드를 따라 하거나, 자유롭게 탐색하며 실습해보세요.</p><div className={styles.pills}><span>학습·퀴즈 선행 조건 없음</span><span>가상 계정과 데이터</span><span>로컬 격리 환경</span></div></header>
     <div className={styles.heading}><h2>실습 선택</h2><span>4개 환경 · 취약 모드 / 안전 모드 비교</span></div>
-    <div className={styles.grid}>{practiceTopics.map((topic, i) => <article id={topic.id} key={topic.id} className={styles.card}>
-      <h2>{topic.title}</h2><div className={styles.cardTop}><span className={styles.level}>난이도 · {topic.level}</span><span><Crosshair size={17}/> LAB 0{i + 1} · {topic.label}</span></div>
+    <div className={styles.grid}>{practiceTopics.map((topic) => <article id={topic.id} key={topic.id} className={styles.card}>
+      <h2>{topic.title}</h2><div className={styles.cardTop}><span className={styles.level}>난이도 · {topic.level}</span></div>
       <p>{topic.description}</p><div className={styles.goal}><small>실습 목표</small><strong>{topic.goal}</strong></div>
       <p>가이드 실습: 웹사이트에서 미션을 수행하고 실제 결과로 진행합니다.<br/>자유 실습: 같은 웹사이트를 직접 탐색하고 필요할 때만 힌트를 확인합니다.</p>
       <div className={styles.actions}><LocalPracticeLink className={styles.primary} aria-label={`${topic.title} 가이드 실습 (새 탭)`} href={`${topic.url}${topic.url.includes("?") ? "&" : "?"}mode=guided`} target="_blank" rel="noopener noreferrer">가이드 실습 <ArrowUpRight size={16}/></LocalPracticeLink><LocalPracticeLink className={styles.secondary} aria-label={`${topic.title} 자유 실습 (새 탭)`} href={`${topic.url}${topic.url.includes("?") ? "&" : "?"}mode=free`} target="_blank" rel="noopener noreferrer">자유 실습 <ArrowUpRight size={16}/></LocalPracticeLink><Link className={styles.secondary} href={`/learn/${topic.id}`}><BookOpen size={15}/> 개념 학습하기</Link></div>
     </article>)}</div>
     <LocalPracticeStatus/>
-    <section className={styles.paths} aria-labelledby="practice-paths"><h2 id="practice-paths">시작하는 방법은 달라도, 확인할 근거는 같습니다.</h2><div><p><strong>가이드 실습</strong><span>실습 계정 로그인 → 웹사이트 미션 수행 → 실제 결과 확인</span></p><p><strong>자유 실습</strong><span>실습 계정 로그인 → 자유 탐색 → 필요할 때만 힌트</span></p></div><p>실습 계정 로그인과 서버 활성화는 필요합니다. 개념 설명과 퀴즈는 /learn에서 학습합니다. 실습에서는 같은 게시판·검색·댓글·운영 화면을 사용하며, 모드 전환 시 입력과 실제 행동 기록을 유지합니다. 새로고침하면 진행 기록은 초기화됩니다.</p></section>
+
   </main>;
 }

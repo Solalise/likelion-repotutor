@@ -11,3 +11,7 @@
 .workspace :global(label) { display: block; margin: 15px 0 7px; }
 .workspace :global(pre) { max-width: 100%; overflow: auto; overflow-wrap: anywhere; white-space: pre-wrap; background: var(--vl-soft); color: var(--vl-ink); }
 @media(max-width:650px) { .workspace dl { grid-template-columns: 1fr; gap: 6px; } .workspace dd { margin-bottom: 12px; } .workspace :global(.tutor-card) { padding: 21px; } }
+.serviceActions { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.deleteButton { color: #a14d42; border-color: #e4ccc7; background: #fff; }
+.deleteButton:hover { background: #fcf1ee; }
+.removalNotice { display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; }

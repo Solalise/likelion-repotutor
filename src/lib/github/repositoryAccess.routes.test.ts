@@ -5,14 +5,17 @@ const mocks = vi.hoisted(() => ({
   installationToken: vi.fn(), load: vi.fn(), analyze: vi.fn(), cache: vi.fn(), storeCache: vi.fn(),
   createRun: vi.fn(), updateRun: vi.fn(), latestRun: vi.fn(), learningRecord: vi.fn(), saveLearning: vi.fn(),
   context: vi.fn(), generate: vi.fn(), validate: vi.fn(), rate: vi.fn(),
+  queryRaw: vi.fn(), countRuns: vi.fn(),
 }));
 vi.mock("@/lib/auth/currentUser", () => ({ requireUserId: mocks.user }));
-vi.mock("@/lib/db", () => ({ db: {
+vi.mock("@/lib/db", () => {
+  const tx = { $queryRaw: mocks.queryRaw, analysisRun: { count: mocks.countRuns, create: mocks.createRun } };
+  return { db: {
   userRepository: { findFirst: mocks.connection, updateMany: mocks.revoke, update: vi.fn() },
   analysisRun: { create: mocks.createRun, update: mocks.updateRun, findFirst: mocks.latestRun },
   learningRecord: { findUnique: mocks.learningRecord, upsert: mocks.saveLearning },
-  $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
-} }));
+  $transaction: (work: Promise<unknown>[] | ((transaction: typeof tx) => Promise<unknown>)) => Array.isArray(work) ? Promise.all(work) : work(tx),
+} }; });
 vi.mock("./api", async (importOriginal) => ({
   ...await importOriginal<typeof import("./api")>(), getGitHubUserAccessToken: mocks.token, githubJson: mocks.json,
 }));
@@ -49,8 +52,23 @@ function request() { return new Request("http://localhost/api/repositories/own-c
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ selection: { type: "function", id: "fn" } }),
 }); }
 
+it("returns access review metadata and records only summary counts in the existing analysis stats", async () => {
+  const accessControl={version:"access-control-static-v1",status:"partial",findings:[{type:"IDOR"},{type:"AUTHORIZATION"}],boundaries:[{description:"unknown middleware"}],truncated:false};
+  mocks.cache.mockReturnValue({...analysis,accessControl});
+  const response=await GET(new Request("http://localhost/analyze"),params());
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({accessControl});
+  expect(mocks.updateRun).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({stats:expect.objectContaining({accessControl:{version:"access-control-static-v1",status:"partial",idorCandidates:1,authorizationCandidates:1,boundaries:1,truncated:false}})})}));
+});
+
 beforeEach(() => {
   vi.resetAllMocks();
+  mocks.queryRaw.mockImplementation(async (sql: TemplateStringsArray, ...values: unknown[]) => {
+    if (sql.join("?").includes("FOR UPDATE")) return values[0] === "user-a" ? [{ id: "user-a" }] : [];
+    if (sql.join("?").includes("clock_timestamp")) return [{ now: new Date() }];
+    throw new Error("Unexpected admission SQL");
+  });
+  mocks.countRuns.mockResolvedValue(0);
   mocks.user.mockResolvedValue("user-a");
   mocks.connection.mockImplementation(async ({ where }) => where.id === connection.id && where.userId === connection.userId && where.active ? connection : null);
   mocks.token.mockResolvedValue("user-a-token");
@@ -229,6 +247,25 @@ it("keeps uncached authorized source analysis working", async () => {
   expect(response.status).toBe(200);
   expect(mocks.analyze).toHaveBeenCalledOnce();
   expect(mocks.storeCache).toHaveBeenCalledWith("installation:7:org/private@sha", expect.objectContaining({ source: "github" }));
+});
+
+it("enforces the real DB admission limit before collecting or serving analysis", async () => {
+  mocks.countRuns.mockResolvedValue(10);
+  const response = await GET(new Request("http://localhost/analyze"), params());
+  expect(response.status).toBe(429);
+  expect(response.headers.get("Retry-After")).toBe("600");
+  expect(mocks.createRun).not.toHaveBeenCalled();
+  expect(mocks.load).not.toHaveBeenCalled();
+  expect(mocks.cache).not.toHaveBeenCalled();
+});
+
+it("fails closed when the DB admission transaction cannot acquire its clock/lock", async () => {
+  mocks.queryRaw.mockRejectedValue(new Error("database unavailable"));
+  const response = await GET(new Request("http://localhost/analyze"), params());
+  expect(response.status).toBe(503);
+  expect(mocks.createRun).not.toHaveBeenCalled();
+  expect(mocks.load).not.toHaveBeenCalled();
+  expect(mocks.cache).not.toHaveBeenCalled();
 });
 
 it("retains the user scope on cached AI explanations and the latest analysis", async () => {

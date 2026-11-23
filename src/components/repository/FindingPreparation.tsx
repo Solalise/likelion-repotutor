@@ -107,10 +107,10 @@ function Preparation({ analysis, finding, connectionId }: Props) {
   const topic = finding.type === "XSS" ? "xss" : "sqli";
   return <section aria-labelledby="finding-preparation-title" aria-busy={loading || checkingCommit}>
     <h4 id="finding-preparation-title">사용자 프로젝트 재현 실습 준비</h4>
-    <p>정적 탐지 후보와 배포 환경을 연결해 준비 조건을 표시합니다. 커밋 확인은 공식 메타데이터만 조회합니다. SQLi 전송은 별도 서버 등록 대상·실행 승인·요청 예산을 편집기에서 확인한 뒤에만 가능합니다.</p>
+    <p>정적 탐지 후보와 배포 환경을 연결해 준비 조건을 표시합니다. 커밋 확인은 공식 메타데이터만 조회합니다. SQLi/XSS HTTP 관찰은 별도 서버 등록 대상·실행 승인·요청 예산을 해당 편집기에서 확인한 뒤에만 가능합니다.</p>
     <PracticeTargetEditor key={JSON.stringify([finding.id, snapshot?.deploymentVersion, snapshot?.deployment.vercelUrl, snapshot?.deployment.ownershipStatus])}
       analysis={analysis} finding={finding} baseUrl={preparation.deployment?.vercelUrl} connectionId={connectionId}
-      ownership={preparation.deployment?.ownershipStatus === "VERIFIED" && Boolean(preparation.deployment?.verifiedAt)} />
+      ownership={preparation.deployment?.ownershipStatus === "VERIFIED" && Boolean(preparation.deployment?.verifiedAt)} targetReady={!loading} />
     <dl className="repository-metadata">
       <div><dt>저장소 / 분석 커밋</dt><dd>{preparation.staticFinding.repository} / <code>{preparation.staticFinding.commitSha ?? "미확인"}</code></dd></div>
       <div><dt>후보 / 코드 위치</dt><dd>{finding.type} · {finding.filePath}:{finding.line}</dd></div>
@@ -122,9 +122,9 @@ function Preparation({ analysis, finding, connectionId }: Props) {
       <div><dt>Vercel 배포 커밋 SHA</dt><dd><code>{preparation.deploymentCodeMatch?.deployedCommitSha ?? "확인되지 않음"}</code></dd></div>
       <div><dt>커밋 일치 여부</dt><dd>{checkingCommit ? "공식 메타데이터 확인 중" : deploymentCommitLabels[preparation.deploymentCodeMatch?.status ?? "UNAVAILABLE"]}</dd></div>
       <div><dt>실습 준비 상태</dt><dd>{loading ? "연결 정보 확인 중" : preparation.state ? labels[preparation.state] : "배포 연결 정보 미확인"}</dd></div>
-      <div><dt>실제 재현 가능 여부</dt><dd>이 연결 정보는 실행 승인이 아닙니다. SQLi 편집기의 별도 서버 승인 상태를 확인하세요.</dd></div>
+      <div><dt>실제 재현 가능 여부</dt><dd>이 연결 정보는 실행 승인이 아닙니다. 해당 유형 편집기의 별도 서버 승인 상태를 확인하세요.</dd></div>
       <div><dt>실습 대상 URL·API 경로</dt><dd>상단 대상 확인 화면에서 지정 · 실행 권한과 별도</dd></div>
-      <div><dt>실습 결과</dt><dd>실제 전송 결과는 SQLi 편집기에서 별도 표시합니다.</dd></div>
+      <div><dt>실습 결과</dt><dd>실제 HTTP 관찰 결과는 해당 유형 편집기에서 별도 표시합니다.</dd></div>
     </dl>
     {connectionId && <>
       <button className="secondary-action" type="button" disabled={loading || checkingCommit} onClick={refreshDeployment}>배포 연결 상태 새로고침</button>

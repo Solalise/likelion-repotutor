@@ -4,29 +4,46 @@ import { useState } from "react";
 import type { RepositoryAnalysis } from "@/types/analysis";
 import { SourceCodeViewer } from "./SourceCodeViewer";
 import { FindingPreparation } from "./FindingPreparation";
+import { AccessStaticFindings } from "./AccessStaticFindings";
+import { ManualSecurityTarget, type ManualSecurityKind } from "./ManualSecurityTarget";
+import { SecurityTargetRecords, SecurityTestRecordProvider } from "./SecurityTestRecord";
+import { practiceTarget } from "@/lib/security-lab/practiceTarget";
+import styles from "./securityFindings.module.css";
 
 const levels = { HIGH: "높음", MEDIUM: "중간", LOW: "낮음" };
 
-export function SqlInjectionFindings({ analysis, connectionId }: { analysis: RepositoryAnalysis; connectionId?: string }) {
+type FindingKind = "SQL_INJECTION" | "XSS" | "IDOR" | "AUTHORIZATION";
+
+const findingTabs: { id: FindingKind; label: string }[] = [
+  { id: "SQL_INJECTION", label: "SQL Injection" },
+  { id: "XSS", label: "XSS" },
+  { id: "IDOR", label: "IDOR" },
+  { id: "AUTHORIZATION", label: "권한 검증" },
+];
+const manualKinds: ManualSecurityKind[] = ["IDOR", "AUTHORIZATION"];
+
+export function SqlInjectionFindings({ analysis, connectionId, archived = false }: { analysis: RepositoryAnalysis; connectionId?: string; archived?: boolean }) {
+  const [kind, setKind] = useState<FindingKind>("SQL_INJECTION");
   const [selectedId, setSelectedId] = useState<string>();
-  const [kind, setKind] = useState<"SQL_INJECTION" | "XSS">("SQL_INJECTION");
-  const title = kind === "XSS" ? "XSS" : "SQL Injection";
-  const report = kind === "XSS" ? analysis.xss : analysis.sqlInjection;
+  const supported = kind === "SQL_INJECTION" || kind === "XSS";
+  const title = findingTabs.find(tab => tab.id === kind)?.label ?? "";
+  const report = kind === "SQL_INJECTION" ? analysis.sqlInjection : kind === "XSS" ? analysis.xss : undefined;
   const selected = report?.findings.find(finding => finding.id === selectedId) ?? report?.findings[0];
   const file = selected && analysis.files.find(item => item.path === selected.filePath);
   const firstLine = selected ? Math.max(1, selected.line - 4) : 1;
   const lastLine = selected ? Math.min(selected.endLine + 4, firstLine + 45) : 1;
   const source = file?.sourceCode.split(/\r?\n/).slice(firstLine - 1, lastLine).join("\n");
+  const suggestedTarget = selected ? practiceTarget(analysis, selected) : undefined;
 
-  return <section className="tutor-card" aria-labelledby="sql-injection-findings-title">
+  return <SecurityTestRecordProvider key={JSON.stringify([connectionId, analysis.repository, analysis.collection?.commitSha])} archived={archived} persistence={analysis.collection?.commitSha ? { repositoryFullName: analysis.repository, commitSha: analysis.collection.commitSha } : undefined}><section className={`tutor-card ${styles.findings}`} aria-label="소스코드 취약점 정적 분석">
     <h2 id="sql-injection-findings-title">소스코드 취약점 정적 분석</h2>
-    <p>수집된 실제 소스코드에서 입력과 SQL·HTML 출력 지점의 연결 근거를 찾습니다. 위험도와 확신 수준은 검토 우선순위이며, 실제 취약점이나 공격 성공을 확정하지 않습니다. 배포 사이트에는 요청하지 않습니다.</p>
-    <div className="view-toggle" role="group" aria-label="취약점 유형 선택">
-      <button type="button" aria-pressed={kind === "SQL_INJECTION"} onClick={() => { setKind("SQL_INJECTION"); setSelectedId(undefined); }}>SQL Injection</button>
-      <button type="button" aria-pressed={kind === "XSS"} onClick={() => { setKind("XSS"); setSelectedId(undefined); }}>XSS</button>
+    <p>SQL Injection·XSS·IDOR·권한 검증의 지원되는 코드 패턴을 정적으로 분석합니다. 모든 의심 후보는 실제 취약점 확정 결과가 아니며 HTTP 관찰과 사용자 판단을 별도로 기록합니다.</p>
+    <div className={`view-toggle ${styles.tabs}`} role="group" aria-label="취약점 유형 선택">
+      {findingTabs.map(tab => <button key={tab.id} type="button" aria-pressed={kind === tab.id}
+        onClick={() => { setKind(tab.id); setSelectedId(undefined); }}>{tab.label}</button>)}
     </div>
     <p>저장소: {analysis.repository} · 커밋: <code>{analysis.collection?.commitSha ?? "확인되지 않음"}</code> · 수집 파일: {analysis.files.length}개{analysis.collection?.partial ? " (일부 수집)" : ""}</p>
-    {!report ? <p role="status">현재 결과에는 {title} 분석 정보가 없습니다. 저장소를 다시 분석해 주세요.</p> : <>
+    {!supported ? <AccessStaticFindings analysis={analysis} kind={kind as ManualSecurityKind} /> : !report ? <p role="status">현재 결과에는 {title} 분석 정보가 없습니다. 저장소를 다시 분석해 주세요.</p> : <>
       <h3>{title} 분석 결과</h3>
       <p role="status">입력 흐름 관찰 {report.findings.filter(item => item.relationship === "input-flow-observed" && !(item.type === "XSS" && item.disposition === "protected")).length}개 · 의심 후보 {report.findings.filter(item => item.relationship === "suspected" && !(item.type === "XSS" && item.disposition === "protected")).length}개{kind === "XSS" ? ` · 안전 처리 관찰 ${analysis.xss?.findings.filter(item => item.disposition === "protected").length ?? 0}개` : ""}{report.truncated ? " · 출력 지점 100개 표시 제한 도달" : ""}</p>
       {!report.findings.length && <p>현재 지원하는 패턴과 수집 범위에서 후보를 찾지 못했습니다. 저장소가 안전하다는 의미는 아닙니다.</p>}
@@ -58,10 +75,18 @@ export function SqlInjectionFindings({ analysis, connectionId }: { analysis: Rep
         <h4>{selected.type === "XSS" && selected.disposition === "protected" ? "안전 처리 분류 근거" : "취약할 수 있는 이유"}</h4><p>{selected.reason}</p>
         <h4>안전한 수정 방법</h4><p>{selected.remediation}</p>
         <h4>추가 확인 사항</h4><ul>{selected.limitations.map(item => <li key={item}>{item}</li>)}</ul>
-        <p>실제 실행 및 공격 성공 여부: 테스트하지 않음</p>
+        <p>이 정적 분석 항목은 실제 실행 여부나 SQLi 성공을 판정하지 않습니다. HTTP 관찰 결과와 사용자 판단은 아래 검사 흐름에서 별도로 관리합니다.</p>
         {!(selected.type === "XSS" && selected.disposition === "protected") && <FindingPreparation analysis={analysis} finding={selected} connectionId={connectionId} />}
+        <details key={selected.id}>
+          <summary>검사 결과 수동 기록 · 수정 및 재검증</summary>
+          <SecurityTargetRecords scope={`finding:${selected.type}:${selected.id}`} kind={selected.type} suggestion={suggestedTarget}
+            codeLocation={`${selected.filePath}:${selected.line}–${selected.endLine}`} />
+        </details>
       </article>}
       <details><summary>분석 지원 범위와 한계</summary><ul>{report.limitations.map(item => <li key={item}>{item}</li>)}</ul></details>
     </>}
-  </section>;
+    {manualKinds.map(manualKind => <div key={JSON.stringify([connectionId, analysis.repository, analysis.collection?.commitSha, manualKind])} hidden={!archived && kind !== manualKind}>
+      <ManualSecurityTarget kind={manualKind} />
+    </div>)}
+  </section></SecurityTestRecordProvider>;
 }

@@ -32,13 +32,15 @@ describe("source-backed server responses and local value provenance",()=>{
     expect(sites.find(site=>site.statusCode===400)!.context?.branchPath.at(-1)?.branch).toBe("true");
     expect(entryReturns(analysis)).toHaveLength(4);
   });
-  it("resolves a literal numeric const and keeps dynamic/spread options unresolved",()=>{
+  it("resolves a literal numeric status const",()=>{
     const analysis=fixture('const STATUS=404; return Response.json({}, {status:STATUS});');
     expect(analysis.serverResponses!.creations[0]).toMatchObject({statusCode:404,statusResolution:"static"});
-    for(const options of ['{status:code}','options','{status:200,...options}','{[key]:200}','{get status(){return 200}}','{status:700}']) {
-      const site=fixture(`return Response.json({},${options})`).serverResponses!.creations[0];
-      expect(site.statusResolution).toBe("unresolved"); expect(site.statusCode).toBeUndefined();
-    }
+  });
+  // Each case creates a fresh type-checking Project. Keep independent analyses
+  // independently timed instead of accumulating seven analyses in one 5s test.
+  it.each(['{status:code}','options','{status:200,...options}','{[key]:200}','{get status(){return 200}}','{status:700}'])("keeps dynamic/invalid status options unresolved: %s",options=>{
+    const site=fixture(`return Response.json({},${options})`).serverResponses!.creations[0];
+    expect(site.statusResolution).toBe("unresolved"); expect(site.statusCode).toBeUndefined();
   });
   it("does not turn creation without return into an endpoint response",()=>{
     const analysis=fixture('const unused=Response.json({ok:true}); return null;');

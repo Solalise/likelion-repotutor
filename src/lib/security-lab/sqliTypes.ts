@@ -1,26 +1,6 @@
-/** Serializable contract for a future isolated runner. No credentials or arbitrary target URL. */
-export type SqliRequestDraft = {
-  version: "sqli-practice-v1";
-  connectionId: string | null;
-  repository: string;
-  commitSha: string | null;
-  findingId: string;
-  target: { deploymentOrigin: string; apiPath: string; method: "GET"; inputLocation: "query"; parameter: string };
-  baseline: { value: string };
-  test: { value: string };
-};
-
-export type SqliResponseEvidence = {
-  requestId: string;
-  observedAt: string;
-  outcome: "RESPONSE" | "NETWORK_ERROR" | "TIMEOUT" | "ACCESS_DENIED" | "BLOCKED" | "SIZE_LIMIT";
-  statusCode: number | null;
-  durationMs: number | null;
-  body: string | null;
-  bodyTruncated: boolean;
-  errorMessage: string | null;
-};
-
+import { isMatchingProbeResult, probeTargetKey, type ProbeRequestDraft, type ProbeResponseEvidence, type ProbeResult } from "./probeTypes";
+export type SqliRequestDraft = ProbeRequestDraft & { version: "sqli-practice-v1" };
+export type SqliResponseEvidence = ProbeResponseEvidence;
 export type SqliAssessmentStatus = "NOT_RUN" | "INCONCLUSIVE" | "VULNERABILITY_CONFIRMED" | "NO_VULNERABLE_BEHAVIOR_OBSERVED";
 export const sqliAssessmentLabels: Record<SqliAssessmentStatus, string> = {
   NOT_RUN: "미실행", INCONCLUSIVE: "판정 불가",
@@ -28,17 +8,7 @@ export const sqliAssessmentLabels: Record<SqliAssessmentStatus, string> = {
 };
 
 /** Server-owned run IDs and reviewed proof references will be required by a future integration. */
-export type SqliComparisonResult = {
-  runId: string;
-  request: SqliRequestDraft;
-  baseline: SqliResponseEvidence | null;
-  test: SqliResponseEvidence | null;
-  assessment: {
-    status: Exclude<SqliAssessmentStatus, "NOT_RUN">;
-    reason: string;
-    evidenceReferences: string[];
-  } | null;
-};
+export type SqliComparisonResult = ProbeResult<SqliRequestDraft>;
 
 export type SqliExecutionStatus = {
   allowed: boolean;
@@ -59,4 +29,50 @@ export function sqliRequestPreview(request: SqliRequestDraft, variant: "baseline
   const url = new URL(request.target.apiPath, request.target.deploymentOrigin);
   url.searchParams.set(request.target.parameter, request[variant].value);
   return `${request.target.method} ${url.href}`;
+}
+
+/** Client-session state only; approval and active requests are never retained. */
+export type SqliEditorSession = {
+  targetKey: string;
+  baseline: string;
+  test: string;
+  result: SqliComparisonResult | null;
+  initialResult?: SqliComparisonResult | null;
+  attempted?: boolean;
+};
+
+export const sqliTargetKey = probeTargetKey;
+export function isMatchingSqliResult(value: unknown, expected: SqliRequestDraft): value is SqliComparisonResult { return isMatchingProbeResult(value, expected); }
+
+export function sqliHttpDifference(result: SqliComparisonResult) {
+  const { baseline, test } = result;
+  const complete = baseline?.outcome === "RESPONSE" && test?.outcome === "RESPONSE";
+  return {
+    statusChanged: complete ? baseline.statusCode !== test.statusCode : null,
+    bodyChanged: complete && !baseline.bodyTruncated && !test.bodyTruncated ? baseline.body !== test.body : null,
+  };
+}
+
+/** A user may copy this summary into MANUAL notes; it is not stored server evidence. */
+export function sqliObservationNote(result: SqliComparisonResult): string {
+  const diff = sqliHttpDifference(result);
+  return ["사용자가 복사한 HTTP 관찰 요약 · 서버 미검증 수동 메모 · SQLi 확정 아님",
+    `실행 ID: ${result.runId}`, `분석 SHA: ${result.request.commitSha}`,
+    `대상: GET ${result.request.target.deploymentOrigin}${result.request.target.apiPath} · query/${result.request.target.parameter}`,
+    `입력쌍: 정상 ${result.request.baseline.value} · 고정 테스트 ${result.request.test.value}`,
+    `정상: ${result.baseline?.outcome ?? "미실행"} · HTTP ${result.baseline?.statusCode ?? "없음"}`,
+    `테스트: ${result.test?.outcome ?? "미실행"} · HTTP ${result.test?.statusCode ?? "없음"}`,
+    `본문: ${diff.bodyChanged === null ? "완전한 비교 불가" : diff.bodyChanged ? "차이 있음" : "동일"}`,
+    "원본 응답은 현재 화면 세션에만 보관됩니다. 이 메모는 서버 검증 근거를 영구 저장한 것이 아닙니다."].join("\n");
+}
+
+export function retainSqliObservation(history: SqliComparisonResult[], result: SqliComparisonResult): SqliComparisonResult[] {
+  if (!isMatchingSqliResult(result, result.request) || history.some(row => row.runId === result.runId)) return history;
+  return [...history, result].slice(-10);
+}
+
+/** References are explicitly selected; never hydrate a new request with old evidence. */
+export function previousSqliObservations(history: SqliComparisonResult[], current: SqliComparisonResult): SqliComparisonResult[] {
+  return history.filter(row => row.runId !== current.runId && row.request.connectionId === current.request.connectionId
+    && row.request.repository === current.request.repository && row.request.commitSha !== current.request.commitSha);
 }
