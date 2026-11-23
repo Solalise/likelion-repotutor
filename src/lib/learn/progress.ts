@@ -5,6 +5,7 @@ export type Progress = {
     completed: number[];
     answers: (number | null)[];
     submitted: boolean;
+    visited?: number[];
 };
 export function emptyProgress(): Progress { return { version: PROGRESS_VERSION, step: 0, completed: [], answers: [null, null, null], submitted: false }; }
 export function progressKey(id: string) { return `vulnlab:learn:${id}`; }
@@ -15,7 +16,7 @@ export function parseProgress(raw: string | null): Progress {
             return emptyProgress();
         const answers = p.answers.map((a: unknown) => Number.isInteger(a) && Number(a) >= 0 && Number(a) < 3 ? a as number : null);
         const submitted = p.submitted && answers.every((a: number | null) => a !== null);
-        return { version: PROGRESS_VERSION, step: p.step, completed: [...new Set<number>(p.completed.filter((s: unknown) => Number.isInteger(s) && Number(s) >= 0 && Number(s) <= (submitted ? 5 : 4)))], answers, submitted };
+        return { version: PROGRESS_VERSION, step: p.step, completed: [...new Set<number>(p.completed.filter((s: unknown) => Number.isInteger(s) && Number(s) >= 0 && Number(s) <= (submitted ? 5 : 4)))], answers, submitted, ...(Array.isArray(p.visited) ? { visited: [...new Set<number>(p.visited.filter((s: unknown) => Number.isInteger(s) && Number(s) >= 0 && Number(s) <= 5))] } : {}) };
     }
     catch {
         return emptyProgress();

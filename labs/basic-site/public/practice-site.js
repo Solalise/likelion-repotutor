@@ -11,7 +11,7 @@ const message = text => { $('#site-message').textContent = text; };
 
 function renderProgress() {
   const progress = state.snapshot();
-  $('#site-mission-title').textContent = progress.completed ? '미션 완료' : `${progress.step + 1} / ${progress.total} · ${missions[kind][progress.step][0]}`;
+  $('#site-mission-title').textContent = progress.completed ? '미션 완료' : (kind === 'xss' && progress.step === 2 ? missions[kind][progress.step][0] : `${progress.step + 1} / ${progress.total} · ${missions[kind][progress.step][0]}`);
   $('#site-mission-action').textContent = progress.completed ? '실제 응답으로 시나리오 비교를 확인했습니다. 개념 정리는 학습 페이지에서 이어가세요.' : missions[kind][progress.step][1];
   $('#site-completed').hidden = !progress.completed;
 }
@@ -180,7 +180,7 @@ $('#site-comment')?.addEventListener('submit', event => {
 $('#site-comment textarea')?.addEventListener('input', () => { epoch++; clearPreview(); });
 window.addEventListener('message', event => {
   if (!preview || event.source !== preview.frame.contentWindow || event.data !== 'vulnlab-xss-executed' || preview.version !== epoch || preview.observation.policy !== 'vulnerable') return;
-  observe({ type: 'execution', ...preview.observation }); message('댓글 미리보기에서 실행 신호를 확인했습니다.');
+  observe({ type: 'execution', ...preview.observation }); message('XSS 실행 성공: 입력한 코드가 댓글 미리보기에서 실행되었습니다.');
 });
 async function report() {
   if (!enabled) { message('이 시나리오는 비활성화되어 있습니다.'); return; }
