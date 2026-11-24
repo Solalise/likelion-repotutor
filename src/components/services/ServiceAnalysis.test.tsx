@@ -1,5 +1,6 @@
 ﻿import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+vi.mock("@/lib/vercel/connectionEvents", () => ({ notifyVercelChanged: vi.fn() }));
 import { ServiceAnalysis } from "./ServiceAnalysis";
 import { SqlInjectionFindings } from "@/components/repository/SqlInjectionFindings";
 import { SecurityTestRecordProvider } from "@/components/repository/SecurityTestRecord";
@@ -99,7 +100,8 @@ it("isolates changed commits and same-SHA candidate/schema changes while retaini
   expect(panels(tree)[1].key).toBe(oldKey);
   expect(findings(tree)[0].props.archived).toBe(false); expect(findings(tree)[1].props.archived).toBe(true);
   const fieldsets = nodes(tree).filter(n => n.type === "fieldset");
-  expect(fieldsets[0].props.disabled).toBe(false); expect(fieldsets[1].props.disabled).toBe(true);
+  // Both the new review workspace and retained static detail must honor snapshot read-only state.
+  expect(fieldsets.map(field => field.props.disabled)).toEqual([false, false, true, true]);
   expect((findings(tree)[0].props.analysis as RepositoryAnalysis).collection?.commitSha).toBe("b".repeat(40));
   expect((findings(tree)[1].props.analysis as RepositoryAnalysis).collection?.commitSha).toBe("a".repeat(40));
   expect(provider(oldKey, true).props.value.drafts["finding:SQL_INJECTION:sqli:1"].memo).toBe("old commit note");

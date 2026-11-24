@@ -1,7 +1,7 @@
 import { Node, SyntaxKind, type SourceFile } from "ts-morph";
 import type { ServerResponseAnalysis } from "@/types/response";
 import type { XssAnalysis, XssFinding } from "@/types/security";
-import { declarations, evidence, importOrigin, mutatedLocals, traceValue, type Context, type Value } from "./sqlInjection";
+import { createCoverage, finishCoverage, declarations, evidence, importOrigin, mutatedLocals, traceValue, type Context, type Value } from "./sqlInjection";
 import { resolveLocalValue } from "./localValueFlow";
 
 type Sink = { node: Node; value: Node; name: string; kind: XssFinding["sinkKind"]; environment: XssFinding["environment"]; proven: boolean };
@@ -48,6 +48,7 @@ function browserSource(node: Node, sink: Node, context: Context, mutations: Set<
       uncertain: values.some(value => value.uncertain) };
   }
   if (!Node.isPropertyAccessExpression(node)) return;
+  if (!["search", "hash", "href", "value"].includes(node.getName())) return;
   const receiver = local(node.getExpression(), sink, context, mutations);
   if (["search", "hash", "href"].includes(node.getName()) && (
     isGlobal(receiver, "location") || Node.isPropertyAccessExpression(receiver) && receiver.getName() === "location"
@@ -258,8 +259,10 @@ function sinks(sourceFile: SourceFile, context: Context, mutations: Set<Node>, r
 
 /** Source-only HTML-output pass. No HTML evaluation, network calls or code execution. */
 export function collectXss(sources: Array<{ path: string; sourceFile: SourceFile }>, context: Context & { responses: ServerResponseAnalysis }): XssAnalysis {
+  const coverage = createCoverage(sources, context, node => browserSource(node, node, context, new Set())?.sources[0]);
+  context = { ...context, diagnostics: coverage.diagnostics };
   const result: XssAnalysis = { version: "xss-static-v1", findings: [], truncated: false, limitations: [
-    "수집한 JS/TS의 지역 초기화와 지원하는 요청·브라우저 입력만 추적합니다. 함수 간 전달과 런타임 실행은 증명하지 않습니다.",
+    "수집한 JS/TS의 지역 값과 지원하는 요청·브라우저 입력, 확정 함수의 제한된 인수·단순 반환을 추적합니다. 런타임 실행은 증명하지 않습니다.",
     "안전 처리 관찰은 확인한 import·기본 설정·HTML 텍스트 문맥에 한정됩니다. 패키지 버전·외부 파일의 설정 변경·간접 변경은 보증하지 않습니다.",
     "JS/CSS/URL/속성 문맥, 사용자 정의 정화 함수, 외부 EJS/Pug/Handlebars 파일과 사용자 정의 템플릿 태그는 안전성을 확정하지 않습니다.",
     "서버 res.send/end, 동적 응답 헤더, 사용자 컴포넌트 및 JSX spread는 실제 HTML 출력 의미가 미확정일 수 있습니다.",
@@ -270,6 +273,7 @@ export function collectXss(sources: Array<{ path: string; sourceFile: SourceFile
   for (const { path, sourceFile } of sources) {
     const mutations = mutatedLocals(sourceFile);
     for (const sink of sinks(sourceFile, context, mutations, context.responses)) {
+      coverage.sinks.push(evidence(sink.node, "HTML 해석 출력 지점"));
       const inspectSource = (node: Node, next: (node: Node) => Value) => browserSource(node, sink.node, context, mutations, next);
       const raw = traceValue(sink.value, sink.node, context, mutations, { inspect: inspectSource, variableDescription: "지역 변수 초기화에서 HTML 출력으로 연결" });
       if (!raw.dynamic) continue;
@@ -312,5 +316,8 @@ export function collectXss(sources: Array<{ path: string; sourceFile: SourceFile
       });
     }
   }
+  finishCoverage(coverage, result.findings, result.truncated);
+  coverage.suspectedCandidates = result.findings.filter(f => f.disposition === "candidate" && f.relationship === "suspected").length;
+  result.coverage = coverage;
   return result;
 }

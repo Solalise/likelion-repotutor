@@ -27,10 +27,10 @@ it("renders each of the 24 stage views independently with flow, code, and quiz p
             expect(html).toContain(steps[step]);
             expect(html).not.toContain(courses.find(other => other.id !== c.id)!.concept[0]);
             if (step === 1)
-                expect(html).toContain('aria-label="정상 요청과 응답 흐름"');
+                expect(html).toContain(c.id === "xss" ? "브라우저가 HTML 파싱" : 'aria-label="정상 요청과 응답 흐름"');
             if (step === 3) {
-                expect(html).toContain("취약 지점");
-                expect(html).toContain('aria-label="안전 코드"');
+                expect(html).toContain(c.id === "xss" ? "취약 코드" : "취약 지점");
+                expect(html).toContain(c.id === "xss" ? "안전 코드 · HTML 텍스트 위치" : 'aria-label="안전 코드"');
             }
             if (step === 5)
                 expect((html.match(/type="radio"/g) ?? [])).toHaveLength(9);
@@ -42,7 +42,12 @@ it("shows explanations, a persisted score, and the correct practice destination 
     for (const c of courses) {
         Object.assign(state, { step: 5, completed: [0, 1, 2, 3, 4, 5], submitted: true, answers: c.quizzes.map(q => q.answer) });
         const html = renderToStaticMarkup(<LearningCourse course={c}/>);
-        expect(html).toContain(`href="${c.lab}" target="_blank" rel="noopener noreferrer"`);
+        if (c.id === "xss") {
+            // XSS has an existing connection gate. Completion alone must not bypass it.
+            expect(html).toContain("실습 서버 연결 확인 중");
+            expect(html).not.toContain(`href="${c.lab}"`);
+            expect(html).toContain("연결 다시 확인");
+        } else expect(html).toContain(`href="${c.lab}" target="_blank" rel="noopener noreferrer"`);
         expect(html).toContain("기초 학습 완료");
         for (const q of c.quizzes)
             expect(html).toContain(q.explanation);

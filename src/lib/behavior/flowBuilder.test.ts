@@ -244,5 +244,5 @@ describe("evidence based behavior projection", () => {
     expect(result.flows.every(flow => flow.status === "partial" && validateBehaviorFlow(flow, analysis).valid)).toBe(true);
     expect(result.flows.some(flow => flow.nodes.some(node => node.label === "requireRepositoryAccess"))).toBe(true);
     expect(JSON.stringify(analysis)).toBe(before);
-  });
+  }, 15_000); // Real source AST/CFG + flow validation; allow GC/parallel-test overhead without weakening assertions.
 });

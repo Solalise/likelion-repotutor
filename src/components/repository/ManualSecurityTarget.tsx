@@ -16,9 +16,9 @@ export function ManualSecurityTarget({ kind, candidate }: { kind: ManualSecurity
   const api = candidate?.api?.relation === "confirmed" ? candidate.api : undefined;
   const codeLocation = candidate ? `${candidate.filePath}:${candidate.line}–${candidate.endLine}` : "";
   const [state, setState] = useSecuritySession(`registration:${scope}`, () => ({
-    target: { apiPath: api?.path ?? "", method: api?.method ?? (candidate ? "" : "GET"), purpose: "", expectedBehavior: "" } as CommonTarget,
-    idor: { objectId: "", otherObjectId: "", ownerAccount: "", otherAccount: "", identifierLocation: "" } as IdorDetails,
-    authorization: { protectedFeature: "", requiredRole: "", allowedRoles: "", deniedRoles: "" } as AuthorizationDetails,
+    target: { apiPath: api?.path ?? "", method: api?.method ?? (candidate ? "" : "GET"), purpose: candidate?.planSuggestion?.purpose ?? "", expectedBehavior: "" } as CommonTarget,
+    idor: { objectId: "", otherObjectId: "", ownerAccount: "", otherAccount: "", identifierLocation: candidate?.planSuggestion?.identifierLocation ?? "" } as IdorDetails,
+    authorization: { protectedFeature: candidate ? [api?.method, api?.path, candidate.functionName].filter(Boolean).join(" ") : "", requiredRole: "", allowedRoles: "", deniedRoles: "" } as AuthorizationDetails,
     expected: { A_OWN: "ALLOW", A_OTHER: "DENY", B_OWN: "ALLOW", B_OTHER: "DENY" } as Record<"A_OWN" | "A_OTHER" | "B_OWN" | "B_OTHER", AccessDecision>,
     operations: [] as ExtraOperation[], nextOperation: 1, policyConfirmed: false, prepared: false, recordOpen: false, inputWarning: "",
   }));
@@ -45,7 +45,11 @@ export function ManualSecurityTarget({ kind, candidate }: { kind: ManualSecurity
   return <section className="tutor-card" aria-label={`${title} 수동 검사 대상`}>
     <h3 ref={heading} tabIndex={-1}>{title} · {recordOpen ? "결과 기록" : prepared ? "수동 검사 준비" : "수동 검사 대상 등록"}</h3>
     <p>모든 정책·소유 관계·역할과 관찰은 사용자 작성이며 서버 미검증입니다. 자동 정적 분석이나 취약점 확정 결과가 아닙니다.</p>
-    {candidate && <p>정적 의심 후보 연결: {candidate.id} · {codeLocation}. 확인된 API만 초안으로 전달했습니다. 계정·리소스·역할·배포 커밋과 최종 대상을 직접 확인하세요.</p>}
+    {candidate?.planSuggestion && <details><summary>코드에서 자동 입력한 정보와 정책 확인</summary>
+      <p>식별자 위치: {candidate.planSuggestion.identifierLocation || "미확인"} · 관찰된 역할: {candidate.planSuggestion.observedRoles.join(", ") || "미확인"}</p>
+      <p>소유권 검사 {candidate.planSuggestion.ownershipChecks.length}개 · 역할 검사 {candidate.planSuggestion.roleChecks.length}개. 관찰된 검사는 허용 정책의 확정이 아닙니다. 테스트 계정·리소스·기대 접근·필수 역할을 확인하세요.</p>
+    </details>}
+    {candidate && <p>정적 의심 후보 연결: {candidate.id} · {codeLocation}. 확인된 API와 식별자 정보를 초안으로 전달했습니다. 계정·리소스·역할·배포 커밋과 최종 대상을 직접 확인하세요.</p>}
     {state.inputWarning && <p role="alert">{state.inputWarning}</p>}
     <p>초안은 현재 분석 화면의 탭·준비/기록 이동 중 유지됩니다. DB 저장한 기록만 새로고침 후 결과 페이지에서 조회할 수 있습니다. API·계정·리소스·역할·작업·기대 정책 변경 후 확정하면 새 버전을 만들고 이전 기록은 읽기 전용으로 보존합니다.</p>
     <div hidden={recordOpen}>{prepared ? <>

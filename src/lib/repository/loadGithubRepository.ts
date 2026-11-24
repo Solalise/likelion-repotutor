@@ -1,5 +1,7 @@
+import type { PackageManifest } from "@/types/technology";
 import { gunzipSync } from "node:zlib";
 import path from "node:path";
+import type { CollectionFile, FileExclusion } from "@/types/scanCoverage";
 import type { SourceInput } from "@/types/analysis";
 
 const GITHUB_API_ORIGIN = "https://api.github.com";
@@ -17,6 +19,8 @@ export const GITHUB_COLLECTION_LIMITS = {
 
 export interface GithubRepositoryCoordinates { owner: string; repo: string; fullName: string; url: string }
 export interface GithubCollectionInfo {
+  packageManifests?: PackageManifest[];
+  repositoryFiles: number; analyzableFiles: number; excludedFiles: number; manifest: CollectionFile[];
   repositoryUrl: string; defaultBranch: string; commitSha: string;
   discoveredFiles: number; collectedFiles: number; totalBytes: number; archiveBytes: number;
   durationMs: number; partial: boolean; treeTruncated: boolean; cached: boolean; apiRequestCount: number;
@@ -62,11 +66,14 @@ export function parseGithubRepositoryUrl(input: string): GithubRepositoryCoordin
   return { owner, repo, fullName: `${owner}/${repo}`, url: `https://github.com/${owner}/${repo}` };
 }
 
-function shouldCollect(path: string, size: number): boolean {
+export function collectionExclusion(path: string, size: number): FileExclusion | undefined {
   const parts = path.split("/");
   const fileName = parts.at(-1) ?? "";
-  return SUPPORTED_EXTENSION.test(fileName) && !parts.slice(0, -1).some((part) => EXCLUDED_DIRECTORY.test(part))
-    && !GENERATED_FILE.test(fileName) && size > 0 && size <= GITHUB_COLLECTION_LIMITS.maxFileBytes;
+  if (parts.slice(0, -1).some(part => EXCLUDED_DIRECTORY.test(part))) return "excluded-directory";
+  if (GENERATED_FILE.test(fileName)) return "generated-file";
+  if (!SUPPORTED_EXTENSION.test(fileName)) return "unsupported-language";
+  if (size === 0) return "empty-file";
+  if (size > GITHUB_COLLECTION_LIMITS.maxFileBytes) return "file-size-limit";
 }
 function isToolingFile(filePath: string): boolean {
   return /(?:^|\/)(?:plugins?|scripts?|config|configs|tooling|buildSrc|\.github)(?:\/|$)|(?:^|\/)(?:babel|metro|webpack|vite|jest|eslint|prettier)\.config\./i.test(filePath);
@@ -198,6 +205,7 @@ interface SelectionResult {
   dependencyFiles: number;
   skippedByFileLimit: number;
   skippedByByteLimit: number;
+  byteLimitedPaths: Set<string>;
 }
 
 function withoutExtension(filePath: string): string {
@@ -310,7 +318,7 @@ function selectWithinLimits(items: ArchiveFile[]): SelectionResult {
   }
   const skippedByByteLimit = byteLimitedPaths.size;
   const skippedByFileLimit = Math.max(0, items.length - selected.length - skippedByByteLimit);
-  return { files: selected, dependencyFiles, skippedByFileLimit, skippedByByteLimit };
+  return { files: selected, dependencyFiles, skippedByFileLimit, skippedByByteLimit, byteLimitedPaths };
 }
 
 function tarString(buffer: Buffer, start: number, length: number): string {
@@ -343,7 +351,9 @@ function paxPath(buffer: Buffer): string | undefined {
   }
   return undefined;
 }
-function parseTar(buffer: Buffer, deadline: number): ArchiveFile[] {
+function parseTar(buffer: Buffer, deadline: number): { files: ArchiveFile[]; manifest: CollectionFile[]; packageManifests: PackageManifest[] } {
+  const manifest: CollectionFile[] = [];
+  const packageManifests: PackageManifest[] = [];
   const files: ArchiveFile[] = [];
   let offset = 0;
   let pendingPath: string | undefined;
@@ -364,15 +374,26 @@ function parseTar(buffer: Buffer, deadline: number): ArchiveFile[] {
     else if (type === 76) pendingPath = tarString(data, 0, data.length);
     else if (type === 0 || type === 48) {
       const path = safeArchivePath(pendingPath ?? headerPath);
-      if (path && shouldCollect(path, size)) files.push({ path, size, content: buffer.subarray(dataStart, dataEnd) });
+      if (path) {
+        if (/(?:^|\/)package\.json$/.test(path) && !path.split("/").slice(0,-1).some(part => EXCLUDED_DIRECTORY.test(part)) && size <= 64 * 1024 && packageManifests.length < 32) {
+          try {
+            const data = JSON.parse(buffer.subarray(dataStart, dataEnd).toString("utf8"));
+            const dependencies = [data.dependencies, data.devDependencies, data.peerDependencies].flatMap(value => value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : []);
+            packageManifests.push({ path, dependencies: [...new Set(dependencies)] });
+          } catch { packageManifests.push({ path, dependencies: [], error: "Invalid package.json" }); }
+        }
+        const reason = collectionExclusion(path, size);
+        manifest.push({ path, bytes: size, status: reason ? "excluded" : "included", ...(reason ? { reason } : {}) });
+        if (!reason) files.push({ path, size, content: buffer.subarray(dataStart, dataEnd) });
+      }
       pendingPath = undefined;
     }
     offset = dataStart + Math.ceil(size / 512) * 512;
   }
-  return files;
+  return { files, manifest, packageManifests };
 }
 
-async function downloadArchive(coordinates: GithubRepositoryCoordinates, sha: string, deadline: number, fetcher: typeof fetch): Promise<{ files: ArchiveFile[]; archiveBytes: number }> {
+async function downloadArchive(coordinates: GithubRepositoryCoordinates, sha: string, deadline: number, fetcher: typeof fetch): Promise<{ files: ArchiveFile[]; manifest: CollectionFile[]; packageManifests: PackageManifest[]; archiveBytes: number }> {
   const url = `${GITHUB_ARCHIVE_ORIGIN}/${coordinates.owner}/${coordinates.repo}/tar.gz/${sha}`;
   if (!url.startsWith(`${GITHUB_ARCHIVE_ORIGIN}/`) || !COMMIT_SHA.test(sha)) throw new GithubRepositoryError("허용되지 않은 GitHub 아카이브 요청입니다.", 400);
   const remaining = deadline - Date.now();
@@ -401,7 +422,7 @@ async function downloadArchive(coordinates: GithubRepositoryCoordinates, sha: st
     let extracted: Buffer;
     try { extracted = gunzipSync(Buffer.concat(chunks), { maxOutputLength: GITHUB_COLLECTION_LIMITS.maxExtractedBytes }); }
     catch { throw new GithubRepositoryError("저장소 압축 해제 크기가 허용 한도를 초과했거나 압축 파일이 손상되었습니다.", 413); }
-    return { files: parseTar(extracted, deadline), archiveBytes };
+    return { ...parseTar(extracted, deadline), archiveBytes };
   } catch (error: unknown) {
     if (error instanceof GithubRepositoryError) throw error;
     if (error instanceof Error && error.name === "AbortError") throw new GithubRepositoryError("GitHub 저장소 다운로드 시간이 초과되었습니다.", 504);
@@ -449,15 +470,19 @@ async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordin
   if (cached) return cachedResult(cached, startedAt, apiRequestCount);
   const archive = await downloadArchive(coordinates, commit.sha, deadline, fetcher);
   const eligible = archive.files.sort((a, b) => a.path.localeCompare(b.path));
-  if (eligible.length === 0) throw new GithubRepositoryError("분석할 수 있는 JavaScript 또는 TypeScript 소스 파일이 없습니다.", 422);
   const selection = selectWithinLimits(eligible);
   const sources = selection.files.map((file) => ({ path: file.path, content: file.content.toString("utf8") }));
   const totalBytes = sources.reduce((sum, source) => sum + Buffer.byteLength(source.content, "utf8"), 0);
   const partial = sources.length < eligible.length;
+  const included = new Set(sources.map(source => source.path));
+  const manifest = archive.manifest.map(file => file.status === "included" && !included.has(file.path)
+    ? { ...file, status: "excluded" as const, reason: selection.byteLimitedPaths.has(file.path) ? "total-byte-limit" as const : "file-count-limit" as const } : file);
   const result: GithubRepositoryLoadResult = {
     repository: metadata.repository,
     sources,
     collection: {
+      packageManifests: archive.packageManifests,
+      repositoryFiles: manifest.length, analyzableFiles: eligible.length, excludedFiles: manifest.length - sources.length, manifest,
       repositoryUrl: coordinates.url, defaultBranch: metadata.defaultBranch, commitSha: commit.sha,
       discoveredFiles: eligible.length, collectedFiles: sources.length, totalBytes, archiveBytes: archive.archiveBytes,
       durationMs: Date.now() - startedAt, partial, treeTruncated: false, cached: false, apiRequestCount,

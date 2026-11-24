@@ -1,5 +1,6 @@
 import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { analyzeSourceFiles } from "@/lib/ast/analyzer";
 import {
   clearGithubRepositoryCachesForTests,
   GITHUB_COLLECTION_LIMITS,
@@ -58,6 +59,50 @@ beforeEach(() => {
   clearGithubRepositoryCachesForTests();
   vi.useRealTimers();
   delete process.env.GITHUB_TOKEN;
+});
+
+it("collects package metadata separately from AST sources", async () => {
+  const result = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher([{ path: "package.json", content: JSON.stringify({ dependencies: { next: "1", mongoose: "1" } }) }, { path: "app/actions.ts", content: "export const x=1;" }], []));
+  expect(result.collection.packageManifests).toEqual([{ path: "package.json", dependencies: ["next", "mongoose"] }]);
+  expect(result.sources.map(s => s.path)).toEqual(["app/actions.ts"]);
+});
+
+it("accounts for all 107 regular files and records exact exclusions instead of losing them before indexing", async () => {
+  const files = [
+    ...Array.from({ length: 100 }, (_, i) => ({ path: `src/file${i}.ts`, content: `export const value${i} = ${i};` })),
+    { path: "src/View.TSX", content: "export const View = () => <p>ok</p>;" },
+    { path: "server.py", content: "print('synthetic')" },
+    { path: "src/generated.ts", content: "export const generated = true;" },
+    { path: "fixtures/unsafe.ts", content: "export const fixture = true;" },
+    { path: "src/empty.ts", content: "" },
+    { path: "src/large.ts", content: "x".repeat(256 * 1024 + 1) },
+    { path: "package.json", content: "{}" },
+  ];
+  const result = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher(files, []));
+  expect(result.collection).toMatchObject({ repositoryFiles: 107, analyzableFiles: 101, collectedFiles: 101, excludedFiles: 6, partial: false });
+  expect(result.collection.manifest).toHaveLength(107);
+  expect(result.sources.some(s => s.path === "src/View.TSX")).toBe(true);
+  expect(analyzeSourceFiles(result.sources).files).toHaveLength(101);
+  for (const [path, reason] of [["server.py", "unsupported-language"], ["src/generated.ts", "generated-file"], ["fixtures/unsafe.ts", "excluded-directory"], ["src/empty.ts", "empty-file"], ["src/large.ts", "file-size-limit"]]) {
+    expect(result.collection.manifest.find(f => f.path === path)).toMatchObject({ status: "excluded", reason });
+  }
+});
+
+it("reports unsupported-only repositories without claiming successful language coverage", async () => {
+  const result = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher([{ path: "api.py", content: "pass" }], []));
+  expect(result.sources).toEqual([]);
+  expect(result.collection).toMatchObject({ repositoryFiles: 1, analyzableFiles: 0, collectedFiles: 0, excludedFiles: 1 });
+});
+
+it("records file-count and byte-limit exclusions on the actual omitted paths", async () => {
+  const count = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher(Array.from({ length: 205 }, (_, i) => ({ path: `src/f${i}.ts`, content: "export const x = 1;" })), []));
+  expect(count.sources).toHaveLength(200);
+  expect(count.collection.manifest.filter(f => f.reason === "file-count-limit")).toHaveLength(5);
+  clearGithubRepositoryCachesForTests();
+  const bytes = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher(Array.from({ length: 40 }, (_, i) => ({ path: `src/f${i}.ts`, content: "/**" + "x".repeat(240 * 1024) + "*/" })), []));
+  expect(bytes.collection.partial).toBe(true);
+  expect(bytes.collection.totalBytes).toBeLessThanOrEqual(8 * 1024 * 1024);
+  expect(bytes.collection.manifest.filter(f => f.reason === "total-byte-limit")).toHaveLength(40 - bytes.sources.length);
 });
 afterEach(() => delete process.env.GITHUB_TOKEN);
 

@@ -4,20 +4,17 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { RepositoryDeployment as Deployment } from "@/lib/repository/deployment";
 import { VercelAccountConnection } from "./VercelAccountConnection";
-import { subscribeVercelChanged } from "@/lib/vercel/connectionEvents";
+import { notifyVercelChanged, subscribeVercelChanged } from "@/lib/vercel/connectionEvents";
 
-type Connection = {
-  connectionId: string;
-  repository: { fullName: string; htmlUrl: string };
-  deployment: Deployment;
-};
+type Connection = import("@/lib/security-lab/findingPreparation").DeploymentConnectionSnapshot;
 type Challenge = { filePath: string; fileContent: string; expiresAt: string };
 
-export function RepositoryDeployment({ connectionId }: { connectionId: string }) {
-  return <DeploymentConnection key={connectionId} connectionId={connectionId} />;
+type ConnectionProps = { connectionId: string; environmentOnly?: boolean; registrationOnly?: boolean; onConnection?: (connection: Connection | undefined) => void };
+export function RepositoryDeployment(props: ConnectionProps) {
+  return <DeploymentConnection key={props.connectionId} {...props} />;
 }
 
-function DeploymentConnection({ connectionId }: { connectionId: string }) {
+function DeploymentConnection({ connectionId, environmentOnly = false, registrationOnly = false, onConnection }: ConnectionProps) {
   const router = useRouter();
   const [connection, setConnection] = useState<Connection>();
   const [url, setUrl] = useState("");
@@ -29,6 +26,7 @@ function DeploymentConnection({ connectionId }: { connectionId: string }) {
   const [message, setMessage] = useState("");
   const [connectionEpoch, setConnectionEpoch] = useState(0);
   const endpoint = `/api/repositories/${encodeURIComponent(connectionId)}/deployment`;
+  useEffect(() => { onConnection?.(connection); }, [connection, onConnection]);
 
   useEffect(() => subscribeVercelChanged(() => {
     setLoading(true); setConnection(undefined); setUrl(""); setError(""); setMessage("");
@@ -78,8 +76,8 @@ function DeploymentConnection({ connectionId }: { connectionId: string }) {
       setConnection(payload);
       setUrl(payload.deployment.vercelUrl ?? "");
       setChallenge(undefined);
-      setMessage("배포 URL을 저장했습니다. 소유권은 아직 검증되지 않았으며 테스트 요청은 허용되지 않습니다.");
-      router.refresh();
+      setMessage(registrationOnly ? "사이트 주소를 저장했습니다. 일반 탐색용 등록이며 실제 테스트 실행 승인이 아닙니다." : "배포 URL을 저장했습니다. 소유권은 아직 검증되지 않았으며 테스트 요청은 허용되지 않습니다.");
+      notifyVercelChanged(); router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "저장에 실패했습니다.");
     } finally { setSaving(false); }
@@ -105,6 +103,9 @@ function DeploymentConnection({ connectionId }: { connectionId: string }) {
         setChallenge(undefined);
         setMessage(payload.message ?? "소유권을 확인했습니다.");
       }
+      // Keep the newly issued one-time file content visible; reload the revision without clearing it.
+      if (action === "issue") setConnectionEpoch(value => value + 1);
+      else notifyVercelChanged();
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "소유권 확인에 실패했습니다.");
@@ -122,26 +123,32 @@ function DeploymentConnection({ connectionId }: { connectionId: string }) {
   }
 
   const busy = saving || Boolean(verificationAction);
-  return <section className="tutor-card" aria-labelledby="repository-deployment-title" aria-busy={loading || busy}>
-    <h2 id="repository-deployment-title">GitHub 저장소 · Vercel 배포 연결</h2>
-    <VercelAccountConnection key={connectionId} connectionId={connectionId} />
+  return <section id={environmentOnly ? "project-test-environment" : "practice-readiness"} tabIndex={-1} className="tutor-card" aria-labelledby="repository-deployment-title" aria-busy={loading || busy}>
+    <h2 id="repository-deployment-title">{registrationOnly ? "사이트 주소 등록 (선택)" : environmentOnly ? "사용자 소유 테스트 환경 등록 및 확인" : "GitHub 저장소 · Vercel 배포 연결"}</h2>
+    {!environmentOnly && <VercelAccountConnection key={connectionId} connectionId={connectionId} snapshot={connection} />}
+    {environmentOnly && <p>{registrationOnly ? "가이드와 수동 기록은 사이트 등록·소유권 확인 없이 이용할 수 있습니다. 등록 사이트는 일반 브라우저 탐색으로만 엽니다. Vercel 계정 연결은 요구하지 않습니다." : "운영 데이터와 분리해 관리하는 테스트 사이트를 등록하세요. Vercel 계정 연결은 요구하지 않습니다. 소유권 확인은 분석 커밋과 사이트 코드의 일치를 증명하지 않으며 실행 승인도 아닙니다."}</p>}
     {loading && <p role="status">연결 정보를 불러오는 중입니다.</p>}
     {connection && <>
       <dl className="repository-metadata">
         <div><dt>GitHub 저장소</dt><dd><a href={connection.repository.htmlUrl} target="_blank" rel="noopener noreferrer">{connection.repository.fullName}</a></dd></div>
-        <div><dt>저장된 배포 URL</dt><dd>{connection.deployment.vercelUrl ?? "등록되지 않음"}</dd></div>
-        <div><dt>소유권 상태</dt><dd>{connection.deployment.ownershipStatus === "VERIFIED" ? "검증 완료" : "미검증"}</dd></div>
+        <div><dt>{environmentOnly ? "등록된 테스트 사이트" : "저장된 배포 URL"}</dt><dd>{connection.deployment.vercelUrl ?? "등록되지 않음"}</dd></div>
+        {!registrationOnly && <div><dt>소유권 상태</dt><dd>{connection.deployment.ownershipStatus === "VERIFIED" ? "검증 완료" : "미검증"}</dd></div>}
         <div><dt>실제 테스트 요청</dt><dd>허용되지 않음</dd></div>
       </dl>
+      <details><summary>{environmentOnly ? "테스트 사이트 주소 등록 / 변경" : "배포 URL 관리 · 등록 / 변경"}</summary>
+      <p>같은 URL을 다시 저장해도 기존 검증은 초기화됩니다. 변경할 때만 저장하세요.</p>
       <form onSubmit={save}>
-        <label htmlFor="repository-vercel-url">Vercel 배포 URL</label>
+        <label htmlFor="repository-vercel-url">{environmentOnly ? "사용자가 관리하는 테스트 사이트 URL" : "Vercel 배포 URL"}</label>
         <input id="repository-vercel-url" name="vercelUrl" type="url" value={url}
           onChange={event => setUrl(event.target.value)} required maxLength={2048}
-          placeholder="https://my-project.vercel.app" aria-describedby="repository-deployment-note" disabled={busy} />
-        <button className="primary-action" type="submit" disabled={busy}>{saving ? "저장 중…" : "배포 URL 저장"}</button>
+          placeholder={environmentOnly ? "https://test.your-domain.com" : "https://my-project.vercel.app"} aria-describedby="repository-deployment-note" disabled={busy} />
+        <button className="primary-action" type="submit" disabled={busy}>{saving ? "저장 중…" : environmentOnly ? "테스트 사이트 저장" : "배포 URL 저장"}</button>
       </form>
-      {connection.deployment.vercelUrl && <section aria-labelledby="deployment-verification-title">
+      </details>
+      {!registrationOnly && connection.deployment.vercelUrl && <section aria-labelledby="deployment-verification-title">
         <h3 id="deployment-verification-title">배포 사이트 소유권 확인</h3>
+        <p>{connection.deployment.ownershipStatus === "VERIFIED" ? "검증 기록이 있습니다. 토큰을 다시 발급할 필요가 없습니다." : "아래 소유권 관리에서 확인 파일을 배치하고 검증하세요."}</p>
+        <details><summary>소유권 관리 · 확인 파일 / 토큰 발급 / 검증</summary>
         <ol>
           <li>검증 토큰을 발급하고 아래 파일 내용을 복사하세요.</li>
           <li>프로젝트의 정적 파일 폴더에 <code>.well-known/vulnlab-ownership.txt</code>를 배치하세요. Next.js에서는 <code>public/.well-known/vulnlab-ownership.txt</code>입니다.</li>
@@ -158,9 +165,10 @@ function DeploymentConnection({ connectionId }: { connectionId: string }) {
         <button className="secondary-action" type="button" disabled={busy} onClick={() => void verification("issue")}>{verificationAction === "issue" ? "발급 중…" : "검증 토큰 발급 / 재발급"}</button>
         <button className="primary-action" type="button" disabled={busy || !connection.deployment.challengeExpiresAt || connection.deployment.ownershipStatus === "VERIFIED"} onClick={() => void verification("verify")}>{verificationAction === "verify" ? "확인 중…" : "소유권 확인"}</button>
         <p>확인 버튼은 저장된 URL만 사용합니다. URL 입력을 바꿨다면 먼저 저장하세요. 검증 성공 후 확인 파일을 제거할 수 있습니다.</p>
+        </details>
       </section>}
     </>}
-    <p id="repository-deployment-note">Vercel 기본 도메인 또는 사용자 지정 도메인의 HTTPS 주소를 경로·쿼리 없이 입력하세요. URL 등록만으로 소유권을 인정하지 않습니다. 소유권 확인 버튼을 누를 때만 고정된 확인 파일을 요청합니다. 공개 IPv4와 유효한 TLS 인증서가 필요합니다. 소유권 검증은 GitHub 코드와 배포의 일치나 Vercel 제공 여부를 증명하지 않으며 실제 공격 테스트를 허용하지 않습니다.</p>
+    {registrationOnly ? <p id="repository-deployment-note">경로·쿼리 없는 공개 HTTPS 주소를 등록하세요. 사이트 등록과 일반 탐색은 실제 테스트 실행 승인이 아닙니다.</p> : <details><summary>URL·소유권 검증 지원 범위</summary><p id="repository-deployment-note">{environmentOnly ? "경로·쿼리 없는 공개 HTTPS 테스트 주소를 입력하세요. 현재 확인 방식은 공개 IPv4·TLS·고정 확인 파일을 사용하며 로컬·사설 주소 자동 검증은 지원하지 않습니다. 소유권 확인 버튼을 누를 때만 확인 파일을 조회합니다. 격리·합성 데이터 여부는 사용자가 별도로 확인하며 자동 공격 요청은 보내지 않습니다." : "Vercel 기본 도메인 또는 사용자 지정 도메인의 HTTPS 주소를 경로·쿼리 없이 입력하세요. URL 등록만으로 소유권을 인정하지 않습니다. 소유권 확인 버튼을 누를 때만 고정된 확인 파일을 요청합니다. 공개 IPv4와 유효한 TLS 인증서가 필요합니다. 소유권 검증은 GitHub 코드와 배포의 일치나 Vercel 제공 여부를 증명하지 않으며 실제 공격 테스트를 허용하지 않습니다."}</p></details>}
     {error && <p className="notice-error" role="alert">{error}</p>}
     {message && <p role="status">{message}</p>}
   </section>;

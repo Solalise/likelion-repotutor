@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>VulnLab</title><link rel="stylesheet" href="panel.css"></head>
+<body><header><strong>VulnLab</strong><p id="project"></p><small id="context"></small></header>
+<p id="status" role="status" aria-live="polite"></p>
+<main id="workspace" hidden>
+<div id="kind" role="tablist" aria-label="Security review types"></div>
+<p id="overall"></p><progress id="overall-progress" max="100" value="0"></progress><details id="previous-records" hidden><summary>이전 분석·환경 버전의 수동 기록</summary><p id="record-history"></p></details>
+<p id="step-count"></p><progress id="progress" max="100" value="0"></progress>
+<article><p id="guide-state"></p><p id="feature-target"></p><h1 id="action"></h1><p id="explanation"></p><h2 id="preparation-title">준비할 환경과 데이터</h2><p id="preparation"></p><h2 id="step-title"></h2><p id="expected-behavior"></p><h2 id="observe-title"></h2><p id="observe"></p><p id="interpretation"></p>
+<section id="xss-samples" hidden aria-label="무해한 XSS 비교 문구"><label for="sample-plain">일반 문구</label><input id="sample-plain" readonly value="VulnLab 메모"><button id="copy-plain" type="button">일반 문구 복사</button><label for="sample-html">HTML 모양 문구</label><input id="sample-html" readonly value="&lt;b&gt;VulnLab 메모&lt;/b&gt;"><button id="copy-html" type="button">HTML 모양 문구 복사</button><p id="copy-status" role="status"></p></section>
+<details id="source-details"><summary id="source-label"></summary><div id="source"></div></details></article>
+<section aria-label="현재 단계 관찰"><label for="step-result">이 단계에서 직접 확인한 결과</label><select id="step-result"><option value="UNREVIEWED">아직 확인하지 않음</option><option value="EXPECTED">확인 범위에서 기대 동작과 일치</option><option value="UNEXPECTED">다른 동작·문제 의심 관찰</option><option value="UNKNOWN">확인했지만 판정할 수 없음</option><option value="NOT_APPLICABLE">해당 없음 근거를 확인함</option></select><label for="step-method">이 단계의 확인 방법</label><select id="step-method"><option value="unconfirmed">근거 확인하지 못함</option><option value="code-review">관련 코드 직접 확인</option><option value="approved-test">승인된 격리 환경의 합성 테스트</option></select></section>
+<form id="record" hidden><fieldset id="record-fields"><h2 id="record-title"></h2><p>단계별 선택을 모은 수동 기록입니다. 미확인 단계는 미확인으로 남습니다.</p><pre id="record-preview"></pre>
+<label id="outcome-label" for="outcome"></label><select id="outcome"><option value="UNSET"></option><option value="OBSERVED"></option><option value="NOT_OBSERVED"></option><option value="INCONCLUSIVE"></option><option value="NOT_APPLICABLE"></option></select>
+<label id="evidence-label" for="evidence" hidden></label><select id="evidence" hidden><option value="code-review"></option><option value="approved-test"></option><option value="unconfirmed"></option></select>
+<details><summary id="notes-label"></summary><textarea id="notes" maxlength="300"></textarea></details>
+<input id="expected" type="hidden"><input id="observed" type="hidden"><input id="codeLocation" type="hidden">
+<button id="save" type="submit"></button></fieldset></form>
+<details><summary id="scope-label"></summary><p id="scope"></p><p id="guide-origin"></p></details>
+<button id="open-site" type="button"></button>
+</main><footer id="footer"></footer><nav aria-label="Guide navigation"><button id="previous" type="button"></button><button id="next" type="button"></button></nav><script src="panel.js" type="module"></script></body></html>

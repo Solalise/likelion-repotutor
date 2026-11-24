@@ -1,0 +1,12 @@
+.review { min-width: 0; overflow-wrap: anywhere; }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-block: 18px; }
+.cards button { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; border: 1px solid var(--vl-line); border-radius: 10px; background: var(--vl-soft); color: var(--vl-ink); text-align: left; cursor: pointer; }
+.cards button[aria-pressed="true"] { background: var(--vl-accent, #515f30); color: white; }
+.review :is(input:not([type="checkbox"]), textarea, select) { display: block; box-sizing: border-box; width: 100%; max-width: 100%; margin-block: 8px 16px; padding: 10px; border: 1px solid var(--vl-line); border-radius: 8px; color: var(--vl-ink); background: var(--vl-card); font: inherit; }
+.review progress { width: 100%; accent-color: #515f30; }
+.review pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; }
+.review summary { cursor: pointer; padding-block: 10px; }
+.review :is(button, a, input, textarea, select, summary):focus-visible { outline: 3px solid var(--vl-accent); outline-offset: 3px; }
+.review fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+@media(max-width: 750px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 420px) { .cards { grid-template-columns: minmax(0, 1fr); } }

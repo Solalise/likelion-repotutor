@@ -1,0 +1,46 @@
+.surface { padding:28px; border-radius:24px; background:#f5f6ef; color:#343f32; }
+.heading > span { font-size:12px; letter-spacing:.07em; color:#889775; }
+.heading h1 { margin:7px 0 8px; font-size:32px; line-height:1.2; }
+.heading p { margin:0; color:#7f8b75; line-height:1.7; }
+.summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:26px 0 30px; }
+.summary > div { display:flex; flex-direction:column; align-items:flex-start; gap:10px; background:#fff; border:1px solid #dfe4d5; border-radius:17px; padding:20px; }
+.summary svg { color:#85986b; }
+.summary span { color:#72766d; font-size:14px; }
+.summary strong { font-size:29px; color:#46583a; }
+.summary small { font-size:11px; font-weight:400; color:#7f8b75; }
+.sectionHeading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
+.sectionHeading h2 { margin:0; font-size:22px; }
+.sectionHeading > span { color:#849076; font-size:13px; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.card { display:flex; flex-direction:column; min-width:0; padding:22px; border:1px solid #dfe4d5; border-radius:19px; background:#fff; overflow-wrap:anywhere; }
+.cardHeading { display:flex; align-items:flex-start; gap:13px; margin-bottom:25px; }
+.github { display:grid; place-items:center; flex-shrink:0; width:48px; height:48px; border-radius:12px; color:#6c8053; background:#e9eedd; }
+.cardHeading h2 { font-size:17px; line-height:1.5; margin:0 0 4px; font-weight:600; }
+.cardHeading a { color:#777b72; font-size:14px; text-decoration:none; }
+.cardHeading a:hover { text-decoration:underline; }
+.progressLabel { display:flex; justify-content:space-between; gap:12px; font-size:14px; color:#777b72; margin-bottom:14px; }
+.progressLabel strong { color:#687e4d; font-weight:500; white-space:nowrap; }
+.track { height:9px; border-radius:20px; overflow:hidden; background:#e9eddf; }
+.track > span { display:block; height:100%; border-radius:inherit; background:#869b6c; }
+.statuses { display:flex; flex-direction:column; gap:15px; margin:26px 0 0; padding:24px 0; border-top:1px solid #e6eadd; }
+.statuses > div { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.statuses dt { font-size:15px; }
+.badge { margin:0; padding:5px 10px; border-radius:10px; font-size:12px; line-height:1.6; text-align:center; }
+.UNSET { background:#f0f1ed; color:#8d9585; }
+.OBSERVED { background:#f8e8e2; color:#a45742; }
+.NOT_OBSERVED { background:#e8efdd; color:#64804d; }
+.INCONCLUSIVE { background:#f6efdd; color:#a4853f; }
+.NOT_APPLICABLE { background:#eaf0ef; color:#68817e; }
+.note { margin:0 0 14px; color:#87907d; font-size:12px; line-height:1.7; }
+.cardFooter { margin-top:auto; border-top:1px solid #e6eadd; padding-top:20px; }
+.meta { display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:19px; color:#787d72; font-size:12px; }
+.meta > span { display:flex; align-items:center; gap:8px; }
+.meta svg { color:#8e9c7f; }
+.meta code { font:inherit; }
+.button { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; box-sizing:border-box; min-height:52px; padding:13px 16px; border-radius:11px; background:#7b8e50; color:white; text-decoration:none; font-size:15px; font-weight:500; margin-top:auto; }
+.button:hover { background:#687c41; }
+.button:focus-visible, .cardHeading a:focus-visible { outline:3px solid #aab891; outline-offset:4px; }
+.disclaimer { display:flex; align-items:flex-start; gap:9px; color:#8c9781; font-size:12px; line-height:1.8; margin:24px 0 0; }
+.disclaimer svg { flex-shrink:0; margin-top:3px; }
+@media(max-width:900px) { .grid { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:560px) { .surface { padding:18px 14px; border-radius:18px; } .summary { gap:8px; margin:20px 0 24px; } .summary > div { padding:13px 10px; border-radius:12px; } .summary span { font-size:11px; } .summary strong { font-size:24px; } .card { padding:18px; } .sectionHeading h2 { font-size:19px; } .sectionHeading > span { font-size:11px; } }

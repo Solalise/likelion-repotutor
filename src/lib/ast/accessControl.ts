@@ -1,3 +1,4 @@
+import type { NextInputs } from "./nextInputs";
 import { createHash } from "node:crypto";
 import { Node, SyntaxKind, type CallExpression, type SourceFile } from "ts-morph";
 import type { RepositoryAnalysis, RepositoryEntryPoint } from "@/types/analysis";
@@ -12,7 +13,7 @@ export const ACCESS_ANALYSIS_LIMITS = { findings: 100, visitsPerEntry: 64, callD
 type Sources = Array<{ path: string; sourceFile: SourceFile }>;
 type Bindings = Map<Node, Node>;
 type Visit = { owner: string; bindings: Bindings; path: CallExpression[] };
-type Context = { analysis: RepositoryAnalysis; definitions: Map<string, Node>; resolveOwner: (node: Node) => string | undefined };
+type Context = { nextInputs?: NextInputs; analysis: RepositoryAnalysis; definitions: Map<string, Node>; resolveOwner: (node: Node) => string | undefined };
 type Facts = { calls: CallExpression[]; conditions: Node[]; comparisons: Node[] };
 const ownerKey = /^(?:ownerId|authorId|userId|accountId|tenantId|organizationId)$/i;
 const idKey = /^(?:id|.*Id|.*_id)$/;
@@ -185,13 +186,19 @@ export function collectAccessControl(sources: Sources, ctx: Context): AccessCont
       return [{ ...evidence(sourceFile, "전역 middleware/proxy 코드 존재 · 해당 API 적용·보호 효과는 추정"), kind: "middleware" as const, relation: "inferred" as const, control: "unresolved" as const }];
     }).slice(0, 4);
   }
-  function push(type: AccessControlFinding["type"], owner: string, sink: Node, entry: RepositoryEntryPoint | undefined, checks: AccessCheckEvidence[], inputs: SqlInjectionEvidence[], path: CallExpression[], relation: "confirmed" | "inferred", uncertain: boolean, extra: string[]) {
+  function push(type: AccessControlFinding["type"], owner: string, sink: Node, entry: RepositoryEntryPoint | undefined, checks: AccessCheckEvidence[], inputs: SqlInjectionEvidence[], path: CallExpression[], relation: "confirmed" | "inferred", uncertain: boolean, extra: string[], inputSteps: SqlInjectionEvidence[] = [], bodyKeys: string[] = []) {
     if (result.findings.length >= ACCESS_ANALYSIS_LIMITS.findings) { result.truncated = true; result.status = "partial"; return; }
     const fn = functions.get(owner); if (!fn) return;
     const protection = checks.some(c => c.kind === (type === "IDOR" ? "ownership" : "role") && c.relation === "confirmed");
     const digest = createHash("sha256").update(JSON.stringify([type, entry, key(sink), path.map(key)])).digest("hex").slice(0,24);
     const id = `${type.toLowerCase()}:${ACCESS_ANALYSIS_VERSION}:${digest}`; if (result.findings.some(f => f.id === id)) return;
-    result.findings.push({ id, type, ownerFunctionId: owner, functionName: fn.name, filePath: fn.filePath, line: sink.getStartLineNumber(), endLine: sink.getEndLineNumber(), code: sink.getText().slice(0,2400), sink: Node.isCallExpression(sink) ? sink.getExpression().getText() : fn.name,
+    const routeIds = [...(entry?.routePath ?? "").matchAll(/\[([^\]]+)\]/g)].map(m => m[1]);
+    const queryIds = [...new Set(inputSteps.flatMap(step => [...step.code.matchAll(/(?:searchParams|params)\.get\(['"]([^'"]+)['"]\)/g)].map(m => m[1])))];
+    const observedRoles = [...new Set(checks.filter(c => c.kind === "role").flatMap(c => [...c.code.matchAll(/['"]([A-Za-z][\w-]*)['"]/g)].map(m => m[1])))];
+    const planSuggestion = { identifierLocation: routeIds.length === 1 && inputs.some(input => /\.params\b/.test(input.code)) ? `path: ${routeIds[0]}` : queryIds.length === 1 ? `query: ${queryIds[0]}` : bodyKeys.length === 1 ? `body: ${bodyKeys[0]}` : "",
+      purpose: `${entry?.method ?? ""} ${entry?.routePath ?? ""} · ${type === "IDOR" ? "리소스 접근 정책 비교" : "역할별 작업 정책 비교"}`.trim(),
+      observedRoles, ownershipChecks: checks.filter(c => c.kind === "ownership"), roleChecks: checks.filter(c => c.kind === "role"), policyConfirmed: false as const };
+    result.findings.push({ planSuggestion, id, type, ownerFunctionId: owner, functionName: fn.name, filePath: fn.filePath, line: sink.getStartLineNumber(), endLine: sink.getEndLineNumber(), code: sink.getText().slice(0,2400), sink: Node.isCallExpression(sink) ? sink.getExpression().getText() : fn.name,
       api: entry?.method ? { path: entry.routePath, method: entry.method, filePath: entry.filePath, relation: "confirmed" } : null,
       operationRelation: relation, reviewState: protection ? "CHECKS_OBSERVED" : "UNCONFIRMED", severity: relation === "confirmed" ? "MEDIUM" : "LOW", confidence: relation === "confirmed" && inputs.length && !uncertain ? "HIGH" : relation === "confirmed" ? "MEDIUM" : "LOW", relationship: inputs.length && !uncertain ? "input-flow-observed" : "suspected",
       inputSources: inputs.slice(0,8), checks, callPath: path.slice(0,8).map(call => evidence(call, "기존 CFG에서 확정된 함수 호출 경로 · 실행/인가 효과는 별도")),
@@ -203,6 +210,40 @@ export function collectAccessControl(sources: Sources, ctx: Context): AccessCont
       manualChecks: ["해당 API가 공개 리소스인지와 실제 허용 역할·소유권 정책을 확인하세요.", "권한 함수의 반환값 사용·await·거부 방향·예외/우회 경로를 확인하세요.", "조회 후 검사라면 검사 이전 응답·로깅·부작용과 모든 반환 경로를 확인하세요.", "미수집 코드·middleware matcher·DB RLS/tenant scope·배포 커밋을 확인하세요.", "격리 환경의 계정 A/B 또는 역할별 HTTP 결과를 수동 비교하세요."], assessment: "STATIC_REVIEW_ONLY", runtimeExploitation: "not-tested" });
   }
   const entryVisits = new Map<string, Visit[]>(); let contexts = 0;
+  // Small additive review for source-proven Mongoose models; no schema/plugin/RLS assumptions.
+  function mongooseModel(node: Node, depth = 0): boolean {
+    if (depth > 5 || !Node.isIdentifier(node)) return false;
+    const defs = declarations(node); if (defs.length !== 1 || !Node.isVariableDeclaration(defs[0])) return false;
+    const value = defs[0].getInitializer(); if (!value || !Node.isCallExpression(value)) return false;
+    const expression = value.getExpression(), base = Node.isPropertyAccessExpression(expression) ? expression.getExpression() : expression;
+    const origin = importOrigin(base);
+    return origin?.library === "mongoose" && (Node.isPropertyAccessExpression(expression) ? expression.getName() === "model" : origin.name === "model");
+  }
+  for (const [owner, fact] of facts) for (const call of fact.calls) {
+    const expression = call.getExpression();
+    if (!Node.isPropertyAccessExpression(expression) || !mongooseModel(expression.getExpression()) || !/^(?:findById|findOne|findByIdAndUpdate|findOneAndUpdate|findByIdAndDelete|updateOne|deleteOne)$/.test(expression.getName())) continue;
+    const entry = (analysis.entryPoints ?? []).find(e => e.kind === "api" && e.nodeId === owner);
+    const action = ctx.nextInputs?.actions.some(a => a.filePath === functions.get(owner)?.filePath && a.line === functions.get(owner)?.line);
+    if (!entry && !action) { boundary(call, "Mongoose 모델 호출은 확인했으나 API/Server Action 입력 경계 연결은 미확인"); continue; }
+    const arg = call.getArguments()[0]; if (!arg) continue;
+    const identifier = expression.getName().startsWith("findById") ? arg : objectFieldValue(arg, "_id") ?? objectFieldValue(arg, "id");
+    if (!identifier) { boundary(call, "Mongoose 동적 필터·복합 식별자 분석은 미지원"); continue; }
+    const value = traceValue(identifier, call, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner, nextInputs: ctx.nextInputs }, mutationSet(identifier));
+    if (!value.sources.length) continue;
+    const checks = collectChecks([{ owner, bindings: new Map(), path: [] }], new Map([[owner, call]]), call);
+    for (const key of ["ownerId", "userId", "tenantId"]) {
+      const filter = objectFieldValue(arg, key);
+      if (filter && principalId(filter, new Map())) checks.push({ ...evidence(filter, "Mongoose 필터에 인증 사용자 범위 연결 관찰"), kind: "ownership", relation: "confirmed", control: "query-filter" });
+    }
+    push("IDOR", owner, call, entry, checks, value.sources, [], "confirmed", value.uncertain,
+      ["Mongoose 직접 모델 호출과 입력 식별자만 검토합니다. 스키마·플러그인·populate·간접 모델 캐시 및 정책 효과는 미확인입니다.", ...(action ? ["Server Action에는 고정 API URL을 부여하지 않습니다. 인증·인가 및 실제 호출 경로를 확인하세요."] : [])], value.steps);
+    if (expression.getName() !== "findById" && expression.getName() !== "findOne") push("AUTHORIZATION", owner, call, entry, checks, value.sources, [], "inferred", true, ["Mongoose 변경 작업의 역할 정책을 확인하세요. 작업 이름만으로 필수 역할을 결정하지 않습니다."]);
+    boundary(call, "Mongoose 접근 제어는 직접 호출·필터의 제한적 검토이며 전체 보호 효과는 미확인");
+  }
+  for (const action of ctx.nextInputs?.actions ?? []) {
+    const file = sources.find(s => s.path === action.filePath);
+    if (file) boundary(file.sourceFile, "Server Action 인증·인가 검토는 직접 Mongoose 호출에 한정됩니다. Prisma·래퍼·간접 호출의 Action 관계는 아직 미지원");
+  }
   for (const entry of (analysis.entryPoints ?? []).filter(e => e.kind === "api" && e.framework === "next-app")) {
     const visits = reachable(entry); entryVisits.set(entry.nodeId, visits); let traces = 0; let madeAuth = false;
     for (const site of analysis.databaseAccess?.sites ?? []) for (const server of site.serverContexts.filter(s => s.status === "confirmed" && s.entryPoint.nodeId === entry.nodeId)) {
@@ -257,23 +298,29 @@ export function collectAccessControl(sources: Sources, ctx: Context): AccessCont
             const defs = shorthand.getValueSymbol()?.getDeclarations() ?? [];
             if (defs.length === 1 && Node.isVariableDeclaration(defs[0]) && !mutationSet(node).has(defs[0])) {
               const initializer = defs[0].getInitializer();
-              if (initializer) return traceValue(initializer, call, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner }, mutationSet(initializer), { inspect });
+              if (initializer) return traceValue(initializer, call, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner, nextInputs: ctx.nextInputs }, mutationSet(initializer), { inspect });
             }
             if (defs.length === 1 && Node.isParameterDeclaration(defs[0])) {
               const arg = bindings.get(defs[0]);
-              if (arg) return traceValue(arg, arg, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner }, mutationSet(arg), { inspect });
+              if (arg) return traceValue(arg, arg, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner, nextInputs: ctx.nextInputs }, mutationSet(arg), { inspect });
             }
           }
           const defs = declarations(node); if (defs.length !== 1 || !Node.isParameterDeclaration(defs[0]) || mutationSet(node).has(defs[0])) return;
           const arg = bindings.get(defs[0]); if (!arg || arg === node) return;
-          const v = traceValue(arg, arg, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner }, mutationSet(arg), { inspect });
+          const v = traceValue(arg, arg, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner, nextInputs: ctx.nextInputs }, mutationSet(arg), { inspect });
           return { ...v, steps: [...v.steps, evidence(node, "기존 확정 호출의 단순 인수→매개변수 연결")].slice(0,12) };
         };
-        values.push(traceValue(id, call, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner }, mutationSet(id), { inspect, variableDescription: "요청 식별자의 지역 값 연결" }));
+        values.push(traceValue(id, call, { entries: analysis.entryPoints ?? [], resolveOwner: ctx.resolveOwner, nextInputs: ctx.nextInputs }, mutationSet(id), { inspect, variableDescription: "요청 식별자의 지역 값 연결" }));
       }
       if (filters.length && !dynamic) checks.push(...filters.slice(0,4).map(node => ({ ...evidence(node, "where 소유/tenant 범위와 인증 사용자 ID 연결 구문 · 실제 정책은 미검증"), kind: "ownership" as const, relation: "confirmed" as const, control: "query-filter" as const, functionId: site.ownerFunctionId })));
       const inputs = values.flatMap(v => v.sources).filter((e,i,all) => all.findIndex(o => o.filePath === e.filePath && o.line === e.line && o.code === e.code) === i), uncertain = dynamic || values.some(v => v.uncertain) || path.length !== server.callPath.length;
-      if (inputs.length) push("IDOR", site.ownerFunctionId, call, entry, checks, inputs, path, "confirmed", uncertain, ["지원하는 where의 ID 계열 필드와 실제 DB 메타데이터를 연결했습니다. ID 사용 자체를 취약점으로 판단하지 않습니다."]);
+      const bodyKeys = [...new Set(ids.flatMap(id => {
+        const node = resolve(id, bindings);
+        if (!Node.isPropertyAccessExpression(node)) return [];
+        const receiver = resolve(node.getExpression(), bindings);
+        return Node.isCallExpression(receiver) && inputs.some(input => input.description === "API 요청 본문을 읽는 호출" && input.code === receiver.getText()) ? [node.getName()] : [];
+      }))];
+      if (inputs.length) push("IDOR", site.ownerFunctionId, call, entry, checks, inputs, path, "confirmed", uncertain, ["지원하는 where의 ID 계열 필드와 실제 DB 메타데이터를 연결했습니다. ID 사용 자체를 취약점으로 판단하지 않습니다."], values.flatMap(v => v.steps), bodyKeys);
       if (privileged.test(entry.routePath) || site.operationType === "write" && (/^(?:role|permission|user|account)$/i.test(site.model ?? "") || /Many$/.test(site.operation ?? ""))) { push("AUTHORIZATION", site.ownerFunctionId, call, entry, checks, inputs, path, "confirmed", uncertain, ["서버 작업은 확인했으나 경로·모델 이름으로 추정한 민감도와 필요한 역할은 확정하지 않습니다."]); madeAuth = true; }
     }
     if (!madeAuth && privileged.test(entry.routePath)) { const definition = definitions.get(entry.nodeId); if (definition) push("AUTHORIZATION", entry.nodeId, definition, entry, [...collectChecks(visits, new Map()), ...middleware(entry)].slice(0,24), [], [], "inferred", true, ["민감 API 경로 이름 단서만 있습니다. 해당 기능의 실제 민감도·필수 역할·DB 작업은 미확인입니다."]); }

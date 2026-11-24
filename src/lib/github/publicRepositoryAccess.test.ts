@@ -20,7 +20,7 @@ beforeEach(() => {
   vi.stubEnv("GITHUB_TOKEN", "server-private-repository-token");
   fetchMock.mockImplementation(async () => Response.json({ private: false, full_name: "org/project" }));
   mocks.load.mockResolvedValue({ repository: "org/project", sources: [], collection: { commitSha: "sha" } });
-  mocks.analyze.mockReturnValue({ repository: "org/project", nodes: [], edges: [], entryPoints: [], stats: {},
+  mocks.analyze.mockReturnValue({ scannerRevision: "repository-security-3", repository: "org/project", files: [], nodes: [], edges: [], entryPoints: [], stats: { files: 0, functions: 0, relations: 0 },
     sqlInjection: { version: "sqli-static-v1", findings: [], truncated: false, limitations: [] },
     xss: { version: "xss-static-v1", findings: [], truncated: false, limitations: [] },
     accessControl: { version: "access-control-static-v1", status: "completed", findings: [], boundaries: [], truncated: false, limitations: [] },

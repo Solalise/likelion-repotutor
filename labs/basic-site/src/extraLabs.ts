@@ -1,8 +1,13 @@
 import type { PracticeMode } from "./modes.ts";
 import { escapeHtml } from "./pages.ts";
+import { randomBytes } from "node:crypto";
 export function xssDocument(text: string, vulnerable: boolean) {
- const policy = "default-src 'none'; script-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; style-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'";
- return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${policy}"><script>window.alert=()=>{parent.postMessage('vulnlab-xss-executed','*')};</script><h3>댓글 미리보기</h3><div>${vulnerable ? text : escapeHtml(text)}</div>`;
+ const secret = `VULNLAB-B-${randomBytes(6).toString("hex").toUpperCase()}`;
+ const policy = `default-src 'none'; script-src ${vulnerable ? "'unsafe-inline'" : "'none'"}; connect-src 'none'; img-src 'none'; media-src 'none'; object-src 'none'; style-src 'none'; frame-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'`;
+ const bridge = vulnerable
+  ? `<script>(()=>{const secret=${JSON.stringify(secret)};const send=message=>parent.postMessage(message,'*');window.alert=()=>send({type:'vulnlab-xss-executed'});Object.defineProperty(window,'vulnLabDemo',{value:Object.freeze({readSecret:()=>{send({type:'vulnlab-xss-executed'});send({type:'vulnlab-xss-exposure',victimId:'user-b',secret})}})});})();</script>`
+  : "";
+ return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${policy}">${bridge}<h3>댓글 미리보기</h3><div>${vulnerable ? text : escapeHtml(text)}</div>`;
 }
 export function extraLabPage(kind: "xss" | "authz", enabled: boolean, mode?: PracticeMode) {
  const xss = kind === "xss";

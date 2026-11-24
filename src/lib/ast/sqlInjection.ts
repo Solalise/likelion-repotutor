@@ -2,8 +2,13 @@ import { Node, SyntaxKind, type SourceFile } from "ts-morph";
 import type { RepositoryEntryPoint } from "@/types/analysis";
 import type { SqlInjectionAnalysis, SqlInjectionEvidence } from "@/types/security";
 import { objectFieldValue, resolveLocalValue, sqlQueryField } from "./localValueFlow";
+import { functionSyntax } from "./prismaClientResolver";
+import type { ScanDiagnostic, ScanCoverage } from "@/types/scanCoverage";
+import { nextInput, type NextInputs } from "./nextInputs";
 
-export type Context = { entries: RepositoryEntryPoint[]; resolveOwner: (node: Node) => string | undefined };
+export type Context = { entries: RepositoryEntryPoint[]; resolveOwner: (node: Node) => string | undefined; nextInputs?: NextInputs;
+  resolveTarget?: (node: Node) => string | undefined; definitions?: Map<string, Node>;
+  callers?: Map<string, import("ts-morph").CallExpression[]>; diagnostics?: ScanDiagnostic[] };
 export type Value = { sources: SqlInjectionEvidence[]; steps: SqlInjectionEvidence[]; dynamic: boolean; composed: boolean; uncertain: boolean };
 const empty = (): Value => ({ sources: [], steps: [], dynamic: false, composed: false, uncertain: false });
 const unknown = (): Value => ({ ...empty(), dynamic: true, uncertain: true });
@@ -86,6 +91,33 @@ function requestParameter(node: Node, context: Context, index: number): boolean 
   });
 }
 
+export function requestInput(node: Node, context: Context): SqlInjectionEvidence | undefined {
+  const modern = nextInput(node, context.nextInputs); if (modern) return modern;
+  if (Node.isPropertyAccessExpression(node) && (
+    ["url", "nextUrl", "headers", "cookies"].includes(node.getName()) && requestParameter(node.getExpression(), context, 0)
+    || node.getName() === "params" && requestParameter(node.getExpression(), context, 1))) return evidence(node, "API 진입점의 요청 입력 읽기");
+  if (Node.isCallExpression(node)) {
+    const member = node.getExpression();
+    if (Node.isPropertyAccessExpression(member) && ["json", "text", "formData"].includes(member.getName())
+      && requestParameter(member.getExpression(), context, 0)) return evidence(node, "API 요청 본문을 읽는 호출");
+  }
+}
+
+export function createCoverage(sources: Array<{ sourceFile: SourceFile }>, context: Context,
+  extra?: (node: Node) => SqlInjectionEvidence | undefined): ScanCoverage {
+  const inputs = sources.flatMap(({ sourceFile }) => sourceFile.getDescendants().flatMap(node => {
+    const point = requestInput(node, context) ?? extra?.(node);
+    return point ? [point] : [];
+  }));
+  return { status: sources.length ? "completed" : "unsupported", inputs, sinks: [], connectedSinks: 0, suspectedCandidates: 0, diagnostics: [] };
+}
+
+export function finishCoverage(coverage: ScanCoverage, findings: Array<{ relationship: string }>, truncated: boolean) {
+  coverage.connectedSinks = findings.filter(f => f.relationship === "input-flow-observed").length;
+  coverage.suspectedCandidates = findings.filter(f => f.relationship === "suspected").length;
+  if (truncated || coverage.diagnostics.length) coverage.status = "partial";
+}
+
 export function mutatedLocals(sourceFile: SourceFile): Set<Node> {
   const result = new Set<Node>();
   for (const expression of sourceFile.getDescendants()) {
@@ -106,12 +138,26 @@ export function traceValue(root: Node, sink: Node, context: Context, mutations: 
   variableDescription?: string;
 }): Value {
   let budget = 256;
+  let callDepth = 0;
+  const bindings = new Map<Node, Value>();
+  const changes = new Map<SourceFile, Set<Node>>([[sink.getSourceFile(), mutations]]);
+  const changed = (node: Node) => {
+    const file = node.getSourceFile();
+    if (!changes.has(file)) changes.set(file, mutatedLocals(file));
+    return changes.get(file)!.has(node);
+  };
+  function boundary(node: Node, message: string) {
+    const item = { ...evidence(node, message), message, kind: "unsupported" as const };
+    if (context.diagnostics && context.diagnostics.length < 200 && !context.diagnostics.some(d => d.filePath === item.filePath && d.line === item.line && d.message === message)) context.diagnostics.push(item);
+  }
   function trace(node: Node, depth = 0, seen = new Set<Node>()): Value {
-    if (--budget <= 0 || depth > 20 || seen.has(node)) return unknown();
+    if (--budget <= 0 || depth > 20 || seen.has(node)) { boundary(node, "입력 추적 예산·깊이 또는 순환 경계 도달"); return unknown(); }
     seen = new Set(seen).add(node);
     const next = (value: Node) => trace(value, depth + 1, seen);
     const inspected = extension?.inspect(node, next);
     if (inspected) return inspected;
+    const modern = nextInput(node, context.nextInputs);
+    if (modern) return { ...empty(), dynamic: true, sources: [modern] };
     if (Node.isStringLiteral(node) || Node.isNoSubstitutionTemplateLiteral(node) || Node.isNumericLiteral(node)
       || node.getKind() === SyntaxKind.TrueKeyword || node.getKind() === SyntaxKind.FalseKeyword || node.getKind() === SyntaxKind.NullKeyword) return empty();
     if (Node.isAwaitExpression(node) || Node.isParenthesizedExpression(node) || Node.isAsExpression(node)
@@ -141,10 +187,32 @@ export function traceValue(root: Node, sink: Node, context: Context, mutations: 
         uncertain: result.uncertain || node.getOperatorToken().getKind() !== SyntaxKind.PlusToken };
     }
     if (Node.isConditionalExpression(node)) return { ...combine([next(node.getWhenTrue()), next(node.getWhenFalse())]), uncertain: true };
+    if (Node.isArrayLiteralExpression(node)) return combine(node.getElements().map(next));
     if (Node.isIdentifier(node)) {
       const defs = declarations(node);
       if (defs.length !== 1) return unknown();
       const declaration = defs[0];
+      if (Node.isParameterDeclaration(declaration)) {
+        if (changed(declaration)) { boundary(node, "가변 함수 매개변수의 입력 연결 미확정"); return unknown(); }
+        const bound = bindings.get(declaration);
+        if (bound) return bound;
+        const fn = functionSyntax(declaration.getParent()), owner = context.resolveOwner(declaration);
+        const callers = owner ? context.callers?.get(owner) : undefined;
+        if (fn && callers?.length && callers.length <= 8 && callDepth < 4
+          && !declaration.isRestParameter()) {
+          callDepth++;
+          const values = callers.map(call => {
+            const arg = call.getArguments()[fn.getParameters().indexOf(declaration)];
+            if (!arg || Node.isSpreadElement(arg)) return unknown();
+            const value = next(arg);
+            return { ...value, steps: [...value.steps, evidence(call, "확정 호출의 인수 → 함수 매개변수"), evidence(declaration, "입력 인수를 받는 매개변수")].slice(0, 12) };
+          });
+          callDepth--;
+          return combine(values);
+        }
+        boundary(node, "함수 매개변수의 확정 호출·인수 연결 미지원 또는 한도 도달");
+        return unknown();
+      }
       if (Node.isVariableDeclaration(declaration)) {
         const flow = resolveLocalValue(node, node, context.resolveOwner);
         if (!flow) return unknown();
@@ -165,7 +233,7 @@ export function traceValue(root: Node, sink: Node, context: Context, mutations: 
       const mutable = variable.getFirstAncestorByKind(SyntaxKind.VariableDeclarationList)?.getDeclarationKind() !== "const";
       return { ...result, dynamic: result.dynamic || mutable || mutations.has(declaration) || mutations.has(variable),
         steps: [...result.steps, evidence(declaration, extension?.variableDescription ?? "지역 변수 초기화에서 SQL 인수로 연결")].slice(0, 12),
-        uncertain: result.uncertain || mutable || mutations.has(declaration) || mutations.has(variable) || Node.isBindingElement(declaration) };
+        uncertain: result.uncertain || mutable || mutations.has(declaration) || mutations.has(variable) || Node.isBindingElement(declaration) && (Boolean(declaration.getDotDotDotToken() || declaration.getInitializer()) || !Node.isIdentifier(declaration.getNameNode())) };
     }
     if (Node.isNewExpression(node) && node.getExpression().getText() === "URL" && !importOrigin(node.getExpression())) {
       const result = combine(node.getArguments()?.map(next) ?? []);
@@ -174,6 +242,27 @@ export function traceValue(root: Node, sink: Node, context: Context, mutations: 
     if (Node.isTaggedTemplateExpression(node)) return { ...next(node.getTemplate()), dynamic: true, uncertain: true };
     if (Node.isCallExpression(node)) {
       const expression = node.getExpression();
+      const target = context.resolveTarget?.(expression), definition = target && context.definitions?.get(target);
+      const fn = definition && functionSyntax(definition);
+      if (fn && callDepth < 4) {
+        const body = fn.getBody();
+        const statements = body && Node.isBlock(body) ? body.getStatements() : [];
+        const returns = statements.filter(Node.isReturnStatement);
+        // Only straight-line const declarations and one final return. No implicit proof across guards/loops/try.
+        const simple = body && (!Node.isBlock(body) || returns.length === 1 && statements.at(-1) === returns[0]
+          && statements.every(s => Node.isReturnStatement(s) || Node.isVariableStatement(s) && s.getDeclarationKind() === "const"));
+        const value = body && !Node.isBlock(body) ? body : returns[0]?.getExpression();
+        if (simple && value && fn.getParameters().every(p => !p.isRestParameter() && !p.getInitializer() && !changed(p))
+          && !node.getArguments().some(Node.isSpreadElement)) {
+          const args = node.getArguments().map(next), previous = new Map(bindings);
+          fn.getParameters().forEach((p, i) => bindings.set(p, args[i] ?? unknown()));
+          callDepth++;
+          const result = next(value);
+          callDepth--; bindings.clear(); previous.forEach((v, k) => bindings.set(k, v));
+          return { ...result, steps: [...result.steps, evidence(value, "확정 함수의 단일 반환값"), evidence(node, "반환값 → 호출 결과 연결")].slice(0, 12) };
+        }
+        boundary(node, "조건·반복·예외 또는 기본/가변 인수가 있는 함수 반환 추적은 미지원");
+      }
       if (Node.isPropertyAccessExpression(expression)) {
         const receiver = expression.getExpression();
         const method = expression.getName();
@@ -181,9 +270,11 @@ export function traceValue(root: Node, sink: Node, context: Context, mutations: 
           return { ...empty(), dynamic: true, sources: [evidence(node, "API 요청 본문을 읽는 호출")] };
         }
         const result = combine([next(receiver), ...node.getArguments().map(next)]);
+        if (!["get", "getAll", "toString"].includes(method)) boundary(node, "메서드 호출의 변환·검증 의미 미지원");
         return { ...result, dynamic: true, uncertain: result.uncertain || !["get", "getAll", "toString"].includes(method),
           steps: [...result.steps, evidence(node, "입력에서 호출 결과로의 연결; 변환/검증 의미는 제한적으로만 분석")].slice(0, 12) };
       }
+      boundary(node, "호출 결과 의미 미확정: 사용자 정의·외부 래퍼 또는 추적 한도");
       return { ...combine(node.getArguments().map(next)), dynamic: true, uncertain: true };
     }
     return unknown();
@@ -232,15 +323,32 @@ function safePrismaSql(node: Node, sink: Node, mutations: Set<Node>, depth = 0):
 
 /** Additive source-only pass: no DB, network, generated queries or code execution. */
 export function collectSqlInjection(sources: Array<{ path: string; sourceFile: SourceFile }>, context: Context): SqlInjectionAnalysis {
+  const coverage = createCoverage(sources, context);
+  let connectedSinks = 0;
+  context = { ...context, diagnostics: coverage.diagnostics };
   const result: SqlInjectionAnalysis = { version: "sqli-static-v1", findings: [], truncated: false, limitations: [
     "수집된 JS/TS 파일의 단순 지역 변수 초기화만 추적합니다. 수집되지 않은 파일과 다른 언어는 분석하지 않습니다.",
-    "함수 간 인수 전달, 복잡한 별칭·객체 변경, 분기별 검증·이스케이프·사용자 정의 래퍼는 완전히 해석하지 않습니다.",
+    "확정 호출의 최대 4단계·호출자 8개와 단순 반환을 추적합니다. 복잡한 별칭·객체 변경, 분기별 검증·사용자 정의 래퍼는 완전히 해석하지 않습니다.",
     "입력 흐름 관찰은 정적 구문 근거이며 실행 가능성·실제 공격 성공·검증 부재를 확정하지 않습니다.",
     "정적 쿼리와 별도 값 인수, 보간 없는 문자열, Prisma의 매개변수화된 태그 템플릿은 취약점으로 표시하지 않습니다. 미탐 가능성이 있습니다.",
     "최대 100개 후보를 표시합니다. 후보가 없어도 안전성을 보증하지 않습니다.",
   ] };
   for (const { path, sourceFile } of sources) {
     const mutations = mutatedLocals(sourceFile);
+    for (const tagged of sourceFile.getDescendantsOfKind(SyntaxKind.TaggedTemplateExpression)) {
+      const tag = tagged.getTag();
+      if (!Node.isPropertyAccessExpression(tag) || !["$queryRaw", "$executeRaw"].includes(tag.getName()) || clientLibrary(tag.getExpression()) !== "@prisma/client") continue;
+      coverage.sinks.push(evidence(tagged, "Prisma 매개변수 태그 SQL 실행 지점"));
+      const template = tagged.getTemplate();
+      if (Node.isTemplateExpression(template) && template.getTemplateSpans().some(span => {
+        const value = traceValue(span.getExpression(), tagged, context, mutations);
+        return value.sources.length && !value.uncertain;
+      })) connectedSinks++;
+      if (tagged.getDescendantsOfKind(SyntaxKind.CallExpression).some(call => {
+        const member = call.getExpression();
+        return Node.isPropertyAccessExpression(member) && member.getName() === "raw";
+      })) coverage.diagnostics.push({ ...evidence(tagged, "Prisma raw 태그 조각"), kind: "unsupported", message: "Prisma.raw가 포함된 태그 SQL 조각의 전체 의미는 미지원입니다. 안전한 매개변수화로 확정하지 않습니다." });
+    }
     for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
     const member = call.getExpression();
     if (!Node.isPropertyAccessExpression(member)) continue;
@@ -249,14 +357,20 @@ export function collectSqlInjection(sources: Array<{ path: string; sourceFile: S
     const argument = call.getArguments()[0];
     if (!argument) continue;
     const query = argument;
+    const library = clientLibrary(member.getExpression());
+    const traced = traceQueryArgument(query, call, context, mutations);
+    const sqlShape = [query.getText(), ...traced.steps.map(step => step.code)].some(code => /\b(?:SELECT|INSERT|UPDATE|DELETE|WITH|CREATE|ALTER|DROP)\b/i.test(code));
+    if (library && supportedMethod(library, method) || method.startsWith("$") || sqlShape) {
+      coverage.sinks.push(evidence(call, "SQL 실행 지점 (안전한 바인딩 포함)"));
+      const boundObject = sqlQueryField(query) === "text" ? resolveLocalValue(query, query, context.resolveOwner, "values")?.values ?? [objectFieldValue(query, "values")].filter((node): node is Node => Boolean(node)) : [];
+      const values = [traced, ...[...call.getArguments().slice(1), ...boundObject].map(arg => traceValue(arg, call, context, mutations))];
+      if (values.some(value => value.sources.length && !value.uncertain)) connectedSinks++;
+    }
     // Prisma.sql's tagged parameters are bound values, not string concatenation.
     // Explicit raw fragments nested inside the template are left as review candidates.
     if (safePrismaSql(query, call, mutations)) continue;
-    const traced = traceQueryArgument(query, call, context, mutations);
     if (!traced.dynamic) continue;
-    const library = clientLibrary(member.getExpression());
     if (library && !supportedMethod(library, method)) continue;
-    const sqlShape = [query.getText(), ...traced.steps.map(step => step.code)].some(code => /\b(?:SELECT|INSERT|UPDATE|DELETE|WITH|CREATE|ALTER|DROP)\b/i.test(code));
     const raw = method.startsWith("$");
     if (!library && !raw && !sqlShape) continue;
     // Non-SQL library methods and static parameter bindings must not become findings.
@@ -286,5 +400,8 @@ export function collectSqlInjection(sources: Array<{ path: string; sourceFile: S
     });
     }
   }
+  finishCoverage(coverage, result.findings, result.truncated);
+  coverage.connectedSinks = connectedSinks;
+  result.coverage = coverage;
   return result;
 }

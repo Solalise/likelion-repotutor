@@ -1,0 +1,44 @@
+.workspace { padding:26px; background:#f5f6ef; border-radius:22px; color:#35422f; min-width:0; overflow-wrap:anywhere; }
+.projectHeader { display:flex; align-items:center; gap:16px; margin-bottom:22px; }
+.projectHeader h2 { margin:0 0 6px; font-size:25px; line-height:1.4; }
+.projectHeader p { margin:0; color:#787d72; font-size:14px; }
+.projectIcon { display:grid; place-items:center; width:64px; height:64px; flex-shrink:0; background:#e5ebd9; color:#6b8053; border-radius:16px; }
+.status { margin-left:auto; flex-shrink:0; padding:7px 12px; border-radius:20px; font-size:12px; background:#e4ecda; color:#5b7446; }
+.tags { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+.tags span { padding:6px 13px; border-radius:11px; background:#e9eedd; color:#62784d; font-size:13px; }
+.panel { min-width:0; background:white; border:1px solid #dde4d2; border-radius:17px; padding:22px; margin:20px 0; }
+.panel h3 { margin:0 0 12px; font-size:20px; font-weight:650; }
+.panelHeading { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; }
+.panelHeading h3 { margin:0; }
+.metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.metrics > div { display:flex; flex-direction:column; gap:14px; background:#f5f6ef; border-radius:12px; padding:18px; }
+.metrics span { color:#7b8173; font-size:14px; }
+.metrics strong { font-size:29px; color:#465b35; }
+.analysisMeta { display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; margin:20px 0; font-size:13px; color:#79866a; }
+.analysisMeta > span { display:flex; align-items:center; gap:8px; }
+.analysisMeta a { color:#738953; }
+.note { margin:10px 0; color:#7a8172; line-height:1.8; font-size:13px; }
+.sectionTitle { font-size:22px; margin:26px 0 18px; }
+.typeGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.typeGrid > .panel { margin:0; }
+.typeIcon { display:grid; place-items:center; width:48px; height:48px; border-radius:12px; background:#edf1e5; color:#738951; margin-bottom:14px; flex-shrink:0; }
+.typeStatus { border-top:1px solid #e6ebde; padding-top:17px; margin-top:18px; color:#788c62; font-size:13px; }
+.startHeading { display:flex; gap:14px; align-items:center; border-bottom:1px solid #e6ebde; padding-bottom:16px; margin-bottom:10px; }
+.step { display:grid; grid-template-columns:34px minmax(0,1fr); gap:15px; padding:18px 0; }
+.stepNumber { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; color:#71874f; background:#e8eddc; }
+.stepHeading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.stepHeading h4 { margin:0; font-size:16px; font-weight:600; }
+.stepHeading > span { color:#869571; font-size:12px; }
+.actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:12px; }
+.primary,.secondary { display:inline-flex; justify-content:center; align-items:center; gap:9px; box-sizing:border-box; padding:13px 17px; border-radius:10px; font:inherit; font-size:14px; cursor:pointer; text-decoration:none; }
+.primary { width:100%; border:1px solid #7c8e51; background:#7c8e51; color:white; margin-top:16px; }
+.secondary { background:#ebefdf; color:#6c8050; border:1px solid #e1e7d4; }
+.primary:hover { background:#697c43; }
+.workspace button:disabled { opacity:.55; cursor:not-allowed; }
+.workspace :is(a,button,summary):focus-visible { outline:3px solid #a6b58a; outline-offset:3px; }
+.workspace summary { cursor:pointer; padding:10px 0; color:#74875c; line-height:1.6; }
+.progressLabel { display:flex; justify-content:space-between; color:#74845f; font-size:14px; margin:20px 0 12px; }
+.track { height:9px; background:#e8eddf; border-radius:12px; overflow:hidden; }
+.track span { display:block; height:100%; border-radius:inherit; background:#859a65; }
+@media(max-width:850px) { .projectHeader { flex-wrap:wrap; } .status { margin-left:0; } .typeGrid { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:550px) { .workspace { padding:16px 12px; } .panel { padding:17px; } .projectHeader h2 { font-size:20px; } .projectIcon { width:48px; height:48px; } .metrics { gap:7px; } .metrics > div { padding:12px 9px; } .metrics span { font-size:11px; } .metrics strong { font-size:24px; } .panelHeading { align-items:flex-start; flex-direction:column; } .step { gap:10px; } .stepHeading { align-items:flex-start; flex-direction:column; gap:6px; } }

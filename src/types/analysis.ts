@@ -37,6 +37,7 @@ export interface CodeEdgeOccurrence {
 }
 
 export interface FunctionRelation {
+  diagnosticKind?: "native-tag" | "builtin" | "react-hook" | "external-library" | "internal-unresolved";
   relation: Exclude<CodeRelation, "import">;
   name: string;
   targetId?: string;
@@ -89,6 +90,11 @@ export interface AnalysisStats {
 export type AnalysisSource = "sample" | "github";
 
 export interface RepositoryCollection {
+  packageManifests?: import("./technology").PackageManifest[];
+  repositoryFiles?: number;
+  analyzableFiles?: number;
+  excludedFiles?: number;
+  manifest?: import("./scanCoverage").CollectionFile[];
   source: AnalysisSource;
   repositoryUrl?: string;
   defaultBranch?: string;
@@ -110,6 +116,10 @@ export interface RepositoryCollection {
 }
 
 export interface RepositoryAnalysis {
+  technology?: import("./technology").TechnologyStack;
+  serverActions?: Array<{ filePath: string; line: number; name: string }>;
+  diagnostics?: import("./scanCoverage").ScanDiagnostic[];
+  scannerRevision?: string;
   repository: string;
   files: FileAnalysis[];
   nodes: CodeNode[];

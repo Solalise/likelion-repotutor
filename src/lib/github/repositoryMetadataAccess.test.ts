@@ -37,7 +37,7 @@ it("does not expose persisted repository metadata when GitHub cannot confirm per
 it("scopes the replacement service page and its analysis history to the current user", async () => {
   await ServicesPage({ searchParams: Promise.resolve({}) });
   expect(mocks.sync).toHaveBeenCalledWith("user-a");
-  expect(mocks.repositories).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "user-a", active: true },
+  expect(mocks.repositories).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "user-a", active: true, removedAt: null },
     include: expect.objectContaining({ repository: { select: expect.objectContaining({ analysisRuns: expect.objectContaining({
       where: { requestedByUserId: "user-a", source: "CONNECTED_REPOSITORY" },
     }) }) } }),

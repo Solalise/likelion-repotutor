@@ -1,25 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { deploymentCommitLabels, type DeploymentCommitComparison } from "@/lib/security-lab/deploymentCommit";
+import { type DeploymentCommitComparison } from "@/lib/security-lab/deploymentCommit";
+import { ConnectionReadiness } from "./ConnectionReadiness";
+import type { DeploymentConnectionSnapshot } from "@/lib/security-lab/findingPreparation";
 import { notifyVercelChanged, subscribeVercelChanged } from "@/lib/vercel/connectionEvents";
 
-type Status = {
-  encryptionReady: boolean; connected?: boolean; message?: string; issue?: string | null;
-  identity?: { id: string; name: string; username: string | null } | null;
-  selection?: { teamId: string | null; projectId: string } | null;
-  analysisCommitSha?: string | null; deploymentUrl?: string | null;
-};
+type Status = import("@/lib/security-lab/connectionReadiness").VercelConnectionSummary;
 type Team = { id: string; name: string };
 type Project = { id: string; name: string; selectable: boolean; reason: string };
 type Teams = { teams: Team[]; nextCursor: string | null };
 type Projects = { projects: Project[]; nextCursor: string | null };
 
-export function VercelAccountConnection({ connectionId }: { connectionId: string }) {
-  return <AccountConnection key={connectionId} connectionId={connectionId} />;
+export function VercelAccountConnection({ connectionId, snapshot }: { connectionId: string; snapshot?: DeploymentConnectionSnapshot }) {
+  return <AccountConnection key={connectionId} connectionId={connectionId} snapshot={snapshot} />;
 }
 
-function AccountConnection({ connectionId }: { connectionId: string }) {
+function AccountConnection({ connectionId, snapshot }: { connectionId: string; snapshot?: DeploymentConnectionSnapshot }) {
   const endpoint = `/api/repositories/${encodeURIComponent(connectionId)}/deployment/vercel`;
   const [status, setStatus] = useState<Status>();
   const [teams, setTeams] = useState<Team[]>([]);
@@ -105,12 +102,21 @@ function AccountConnection({ connectionId }: { connectionId: string }) {
   const usable = Boolean(status?.encryptionReady && status.connected && status.identity);
   return <section aria-labelledby="vercel-account-title" aria-busy={Boolean(busy)}>
     <h3 id="vercel-account-title">Vercel 계정 및 프로젝트 연결</h3>
-    <p>GitHub 로그인은 유지하며 Vercel의 개인 Access Token을 별도로 연결합니다. 메타데이터 조회 권한이 있는 토큰을 사용하세요.</p>
-    <p><a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer">Vercel에서 토큰 발급하기 ↗</a></p>
     <p>연결 상태: {busy === "status" ? "확인 중" : !status ? "확인하지 못함" : !status.encryptionReady ? "암호화 키 설정 필요" : status.connected ? status.identity ? "공식 API에서 계정 확인됨" : "저장된 연결 확인 필요" : "미연결"}</p>
     {status?.identity && <p>계정: {status.identity.name}{status.identity.username ? ` (@${status.identity.username})` : ""} · ID: <code>{status.identity.id}</code></p>}
+    <p>저장된 프로젝트: {status?.selection ? `${status.selection.teamId ?? "개인 계정"} / ${status.selection.projectId}` : "미선택"} · 이미 연결된 계정·프로젝트는 다시 등록하지 않아도 됩니다.</p>
     {status?.encryptionReady === false && <p className="notice-error" role="alert">{status.message ?? "TOKEN_ENCRYPTION_KEY 설정이 필요합니다. 토큰은 저장할 수 없습니다."}</p>}
     {status?.issue && <p className="notice-error" role="alert">{status.issue}</p>}
+    <ConnectionReadiness connectionId={connectionId} snapshot={snapshot} account={status} comparison={comparison} />
+    <button className="secondary-action" type="button" disabled={Boolean(busy)} onClick={notifyVercelChanged}>연결 상태 새로고침</button>
+    <button className="secondary-action" type="button" disabled={Boolean(busy) || !usable || !status?.selection || !status?.analysisCommitSha || !snapshot?.deployment.vercelUrl} onClick={() => void action("commit", async signal => {
+      setComparison(undefined);
+      const payload = await api<DeploymentCommitComparison>(`${endpoint.replace(/\/vercel$/, "")}/commit`, signal, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ analysisCommitSha: status!.analysisCommitSha }) });
+      if (!signal.aborted) setComparison(payload);
+    })}>{busy === "commit" ? "배포 커밋 확인 중…" : "배포 커밋 확인"}</button>
+    <details><summary>Vercel 계정 관리 · 토큰 교체 / 연결 해제</summary>
+    <p>GitHub 로그인은 유지하며 Vercel Access Token을 별도로 연결합니다. 정상 연결은 다시 입력하지 마세요.</p>
+    <p><a href="https://vercel.com/account/tokens" target="_blank" rel="noopener noreferrer">Vercel에서 토큰 발급하기 ↗</a></p>
     <form ref={formRef} onSubmit={connect} autoComplete="off">
       <label htmlFor="vercel-access-token">Vercel 개인 Access Token</label>
       <input id="vercel-access-token" name="vercelAccessToken" type="password" autoComplete="off" spellCheck={false}
@@ -118,13 +124,12 @@ function AccountConnection({ connectionId }: { connectionId: string }) {
       <button className="primary-action" type="submit" disabled={Boolean(busy) || status?.encryptionReady !== true}>{busy === "connect" ? "확인 중…" : status?.connected ? "토큰 교체" : "Vercel 계정 연결"}</button>
     </form>
     <p>토큰은 제출 즉시 입력창에서 지우며 브라우저 저장소에 보관하지 않습니다. 연결·교체·해제는 이 로그인 사용자의 모든 저장소에 영향을 주고 기존 프로젝트 선택·소유권 검증을 무효화합니다. GitHub 연결과 등록된 배포 URL은 유지됩니다.</p>
-    <button className="secondary-action" type="button" disabled={Boolean(busy)} onClick={refreshStatus}>연결 상태 새로고침</button>
     {status?.connected && <button className="secondary-action" type="button" disabled={Boolean(busy)} onClick={() => void action("disconnect", async signal => {
       await api(endpoint, signal, { method: "DELETE" });
       if (!signal.aborted) { setMessage("이 앱의 Vercel 연결을 해제했습니다. 토큰 자체 폐기는 Vercel에서 진행해 주세요."); notifyVercelChanged(); }
     })}>Vercel 연결 해제</button>}
-    {usable && <>
-      <p>저장된 선택: {status?.selection ? `${status.selection.teamId ?? "개인 계정"} / ${status.selection.projectId}` : "팀·프로젝트 미선택"}</p>
+    </details>
+    {usable && <details><summary>Vercel 프로젝트 관리 · 선택 / 변경</summary>
       <label htmlFor="vercel-team">개인 계정 / 팀</label>
       <select id="vercel-team" value={teamId} disabled={Boolean(busy)} onChange={event => { setTeamId(event.target.value); setProjects([]); setProjectId(""); setProjectCursor(null); }}>
         <option value="personal">개인 계정 ({status?.identity?.username ?? status?.identity?.name})</option>
@@ -146,16 +151,8 @@ function AccountConnection({ connectionId }: { connectionId: string }) {
         if (!signal.aborted) { setMessage("프로젝트를 연결했습니다. 변경된 연결의 사이트 소유권을 다시 확인해 주세요."); notifyVercelChanged(); }
       })}>프로젝트 연결 저장</button>
       <p>프로젝트 이름은 일치 근거가 아닙니다. GitHub 저장소 ID와 현재 계정·팀의 프로젝트 읽기 권한을 서버에서 다시 검사합니다.</p>
-      <p>최근 완료 분석 커밋: <code>{status?.analysisCommitSha ?? "분석 기록 없음"}</code></p>
-      {!status?.analysisCommitSha && <p>저장소 분석이 완료된 뒤 연결 상태를 새로고침하면 커밋 비교를 진행할 수 있습니다.</p>}
-      <button className="secondary-action" type="button" disabled={Boolean(busy) || !status?.selection || !status?.analysisCommitSha || !status?.deploymentUrl} onClick={() => void action("commit", async signal => {
-        setComparison(undefined);
-        const payload = await api<DeploymentCommitComparison>(`${endpoint.replace(/\/vercel$/, "")}/commit`, signal, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ analysisCommitSha: status!.analysisCommitSha }) });
-        if (!signal.aborted) setComparison(payload);
-      })}>배포 커밋 확인</button>
-      {comparison && <p role="status">{deploymentCommitLabels[comparison.status]}<br/>분석: <code>{comparison.analyzedCommitSha ?? "미확인"}</code><br/>배포: <code>{comparison.deployedCommitSha ?? "미확인"}</code><br/>{comparison.reason}</p>}
       <p>소유권·커밋 일치와 실습 승인은 별도입니다. 실제 공격 실행은 계속 비활성화되어 있습니다.</p>
-    </>}
+    </details>}
     {error && <p className="notice-error" role="alert">{error}</p>}
     {message && <p role="status">{message}</p>}
   </section>;

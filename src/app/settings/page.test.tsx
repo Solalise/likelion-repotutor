@@ -40,6 +40,7 @@ it("uses the authenticated user's GitHub metadata and preserves existing connect
   expect(html).toContain('href="/services"');
   expect(html).not.toContain('href="/api/github/installations/start"');
   expect(html).toContain("현재 접근 권한은 내 웹서비스에서 다시 확인");
+  expect(html).not.toContain("Vercel");
 });
 
 it("does not mistake a session or a Vercel connection for a GitHub account", async () => {

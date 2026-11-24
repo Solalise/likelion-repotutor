@@ -41,7 +41,7 @@ function text(node: ReactNode): string {
   return isValidElement<Record<string, unknown>>(node) ? text(node.props.children as ReactNode) : "";
 }
 function get(node: ReactNode, type: string, label?: string): Element {
-  const found = elements(node).find(element => element.type === type && (label === undefined || text(element.props.children as ReactNode) === label));
+  const found = elements(node).find(element => element.type === type && (label === undefined || text(element.props.children as ReactNode) === label || element.props["aria-label"] === label));
   if (!found) throw new Error(`Missing ${type}: ${label}`); return found;
 }
 function invoke(node: Element, event: string, value: unknown) {

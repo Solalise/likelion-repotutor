@@ -24,6 +24,7 @@ test('both modes serve the same website controls, with assistance separated and 
       assert.equal(response.status, 200);
       const html = await response.text(); versions.push(html);
       for (const id of ['site-account', 'site-posts', 'site-search']) assert.ok(html.includes(`id="${id}"`));
+      if (kind === 'xss') for (const id of ['site-xss-status', 'site-xss-victim', 'site-xss-secret', 'site-xss-impact', 'site-xss-review', 'site-mission-next']) assert.ok(html.includes(`id="${id}"`));
       assert.ok(html.includes('동네 이야기'));
       assert.doesNotMatch(html, /quick-form|quiz-|requestWorkshop|XSS 예시 입력|OR 1=1|innerHTML/);
       assert.match(html, mode === 'free' ? /id="site-mission"[^>]+ hidden/ : /id="site-hints"[^>]+ hidden/);
@@ -85,14 +86,27 @@ test('real local responses gate progress; hints, failures and mismatched compari
   const unsafe = await call('/api/lab/xss', { mode: 'vulnerable', text });
   xss.observe({ type: 'preview', policy: 'vulnerable', text, record: unsafe });
   assert.equal(xss.snapshot().step, 2); // Merely receiving HTML is not execution.
-  // Unit-test the signal consumer. Real browser execution is deliberately not claimed here.
+  const fakeSecret = 'VULNLAB-B-0123456789AB';
+  xss.observe({ type: 'exposure', policy: 'vulnerable', text, executed: true, exposure: { victimId: 'user-b', secret: fakeSecret }, record: unsafe });
+  assert.equal(xss.snapshot().step, 2); // User-supplied values are not exposure evidence.
   xss.observe({ type: 'execution', policy: 'vulnerable', text, record: unsafe });
+  assert.equal(xss.snapshot().step, 3);
+  xss.observe({ type: 'exposure', policy: 'vulnerable', text, executed: true, exposure: { victimId: 'user-a', secret: fakeSecret }, record: unsafe });
+  assert.equal(xss.snapshot().step, 3);
+  xss.observe({ type: 'exposure', policy: 'vulnerable', text, executed: true, exposure: { victimId: 'user-b', secret: fakeSecret }, record: unsafe });
+  assert.equal(xss.snapshot().step, 4);
+  xss.observe({ type: 'victim-review', policy: 'vulnerable', text, record: unsafe });
+  assert.equal(xss.snapshot().step, 5);
   const safe = await call('/api/lab/xss', { mode: 'safe', text });
   assert.ok(safe.data.document.includes('&lt;svg'));
   xss.observe({ type: 'preview', policy: 'safe', text: 'different', record: safe });
   assert.equal(xss.snapshot().completed, false);
+  xss.observe({ type: 'preview', policy: 'safe', text, executionDetected: true, record: safe });
+  assert.equal(xss.snapshot().completed, false);
   xss.observe({ type: 'preview', policy: 'safe', text, record: safe });
   assert.equal(xss.snapshot().completed, true);
+  xss.observe({ type: 'session', user: { id: 'user-b', role: 'user' } });
+  assert.equal(xss.snapshot().completed, false);
 
   const authz = createPracticeState('authz'); await login(authz);
   authz.observe({ type: 'report', policy: 'safe', record: await call('/api/lab/authz?mode=safe') });
@@ -114,7 +128,7 @@ test('switching assistance preserves live forms, evidence and inputs without sen
     replaceChildren(...children: unknown[]) { this.children = children; }
     append(...children: unknown[]) { this.children.push(...children); }
   }
-  const ids = ['site-policy', 'site-mission', 'site-hints', 'site-mission-title', 'site-mission-action', 'site-completed', 'site-session', 'site-logout', 'site-post', 'site-posts', 'site-search-results', 'site-request', 'site-hint', 'site-hint-list', 'site-account', 'site-search', 'site-message'];
+  const ids = ['site-policy', 'site-mission', 'site-hints', 'site-mission-title', 'site-mission-action', 'site-mission-next', 'site-completed', 'site-session', 'site-logout', 'site-post', 'site-posts', 'site-search-results', 'site-request', 'site-hint', 'site-hint-list', 'site-account', 'site-search', 'site-message'];
   const controls = new Map(ids.map(id => ['#' + id, new Control()]));
   controls.get('#site-policy')!.value = 'vulnerable';
   const modes = ['guided', 'free'].map(mode => Object.assign(new Control(), { dataset: { siteMode: mode } }));

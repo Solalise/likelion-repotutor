@@ -69,3 +69,10 @@
 @media(max-width:900px){.quick-practice{padding:22px}.quick-practice pre{max-height:220px}.quick-practice .primary{width:100%}}
 
 #site-mission-action{white-space:pre-line}
+[data-practice-site] .xss-victim{margin-top:24px;padding:20px;border:1px solid #d6dfcb;border-left:4px solid #8a6743;border-radius:10px;background:#fbf8f1}
+[data-practice-site] .xss-victim h3{margin:0 0 12px;color:#604a32}
+[data-practice-site] .xss-victim dl{grid-template-columns:110px minmax(0,1fr);gap:10px;line-height:1.7}
+[data-practice-site] .xss-victim dd{overflow-wrap:anywhere}
+[data-practice-site] .xss-victim button{width:auto}
+[data-practice-site] #site-xss-status{font-weight:650}
+[data-practice-site] .xss-defense{margin-top:20px;padding:16px;border-radius:8px;background:#edf3e6;color:#41563a}

@@ -30,22 +30,29 @@ it("uses the VulnLab shell and existing login without loading private services f
   expect(markup).not.toContain("함수 그래프");
 });
 
-it("reuses user-scoped permission checks and deployment UI without exposing findings or granting practice", async () => {
+it.each([true, false])("keeps analysis/preparation accessible independently of saved deployment state (%s)", registered => {
+  return checkBasicFlow(registered);
+});
+
+async function checkBasicFlow(registered: boolean) {
   mocks.auth.mockResolvedValue({ user: { id: "user-a" } });
-  mocks.list.mockResolvedValue([{ id: "connection-a", vercelUrl: "https://test.vercel.app", deploymentOwnershipStatus: "VERIFIED", deploymentVerifiedAt: new Date(), installation: { suspendedAt: null }, repository: { fullName: "org/app", defaultBranch: "main", analysisRuns: [{ status: "COMPLETED", stats: { sqlInjection: { candidates: 99 } }, sourceCode: "SECRET_FINDING_PATH" }] } }]);
+  mocks.list.mockResolvedValue([{ id: "connection-a", vercelUrl: registered ? "https://test.vercel.app" : null, deploymentOwnershipStatus: registered ? "VERIFIED" : "UNVERIFIED", deploymentVerifiedAt: registered ? new Date() : null, installation: { suspendedAt: null }, repository: { fullName: "org/app", defaultBranch: "main", analysisRuns: [{ status: "COMPLETED", stats: { sqlInjection: { candidates: 99 } }, sourceCode: "SECRET_FINDING_PATH" }] } }]);
   const markup = html(await Page(params("connection-a")));
   expect(mocks.sync).toHaveBeenCalledWith("user-a");
   expect(mocks.access).toHaveBeenCalledWith("user-a", "connection-a");
   expect(mocks.list.mock.calls[0][0].where).toEqual({ userId: "user-a", active: true, removedAt: null });
-  expect(markup).toContain("org/app"); expect(markup).toContain("https://test.vercel.app");
-  expect(markup).toContain("Vercel 계정 및 프로젝트 연결");
+  expect(markup).toContain("org/app"); expect(markup).not.toContain("https://test.vercel.app");
+  for (const obsolete of ["Vercel", "Access Token", "배포 URL 연결 필요", "사이트 소유권 확인", "배포 커밋", "practice-readiness"]) expect(markup).not.toContain(obsolete);
   expect(markup).toContain("분석 완료");
   expect(markup).not.toContain("SECRET_FINDING_PATH"); expect(markup).toContain("분석 결과 조회");
-  expect(markup).toMatch(/<button[^>]*disabled[^>]*>내 사이트 실습/);
+  expect(markup).toContain("프로젝트별 보안 검증 가이드");
+  expect(markup).toContain("정적 후보가 없어도 검토 가능");
+  expect(markup).not.toContain('href="/practice"');
+  expect(markup).not.toContain('href="/security-lab/project"');
   mocks.access.mockRejectedValue(new Error("denied"));
   const denied = html(await Page(params("other-user-connection")));
   expect(denied).not.toContain("org/app"); expect(denied).not.toContain("Vercel 계정 및 프로젝트 연결");
-});
+}
 
 it("requests a receipt, rejects full analysis, and retires old learning entry points", async () => {
   const fetcher = vi.fn().mockResolvedValue(Response.json({ status: "analysis-complete", commitSha: "sha", findings: ["PRIVATE"] }));

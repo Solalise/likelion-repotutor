@@ -1,3 +1,4 @@
+import { securityAnalysisStats } from "@/lib/repository/securityAnalysisStats";
 import { wantsAnalysisReceipt } from "@/lib/repository/sampleAnalysis";
 import { coalesceAnalysis } from "@/lib/repository/analysisWork";
 import { reserveAnalysisRun, AnalysisAdmissionError } from "@/lib/repository/analysisAdmission";
@@ -39,7 +40,7 @@ export async function GET(_request: Request, context: RouteContext) {
       const current = cached ?? getGithubAnalysisCache(analysisCacheKey);
       if (current) return current;
       const created: RepositoryAnalysis = {
-        ...analyzeSourceFiles(loaded.sources, loaded.repository), source: "github",
+        ...analyzeSourceFiles(loaded.sources, loaded.repository, loaded.collection.packageManifests), source: "github",
         collection: { source: "github", ...loaded.collection },
       };
       setGithubAnalysisCache(analysisCacheKey, created);
@@ -49,7 +50,7 @@ export async function GET(_request: Request, context: RouteContext) {
       db.analysisRun.update({
         where: { id: run.id },
         data: { status: "COMPLETED", commitSha: loaded.collection.commitSha, stats: JSON.parse(JSON.stringify({
-          ...analysis.stats,
+          ...analysis.stats, ...securityAnalysisStats(analysis),
           sqlInjection: analysis.sqlInjection ? {
             version: analysis.sqlInjection.version, candidates: analysis.sqlInjection.findings.length,
             inputFlowObserved: analysis.sqlInjection.findings.filter(finding => finding.relationship === "input-flow-observed").length,

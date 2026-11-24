@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "VulnLab 보안 검증 가이드",
+  "version": "0.1.0",
+  "minimum_chrome_version": "116",
+  "description": "승인된 격리 테스트 환경에서 수동 보안 검토를 안내하고 VulnLab에 결과를 기록합니다.",
+  "permissions": ["sidePanel"],
+  "action": { "default_title": "VulnLab 검증 가이드 열기" },
+  "side_panel": { "default_path": "panel.html" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "externally_connectable": { "matches": ["http://localhost/*", "http://127.0.0.1/*"] },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'" }
+}

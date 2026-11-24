@@ -194,7 +194,7 @@ describe("source-backed HTTP request boundaries", () => {
     expect(analysis.httpRequests).toHaveLength(3);
     expect(analysis.httpRequests!.every(site => site.reason === "dynamic-url" && !site.target)).toBe(true);
     expect(analysis.httpRequests!.every(site => site.context)).toBe(true);
-  });
+  }, 15_000); // Several real source files + AST/CFG; this is a correctness check, not a 5s performance budget.
   it("bounds recursive constant expansion and rejects stale source metadata", () => {
     const aliases = Array.from({length:30}, (_, index) => `const a${index + 1}=a${index}+a${index};`).join(" ");
     expect(request(`const a0="x"; ${aliases} fetch(a30);`).reason).toBe("dynamic-url");

@@ -1,3 +1,5 @@
+import type { ScanCoverage } from "./scanCoverage";
+
 export interface SqlInjectionEvidence {
   filePath: string;
   line: number;
@@ -6,6 +8,7 @@ export interface SqlInjectionEvidence {
 }
 
 export interface SqlInjectionFinding {
+  apiContexts?: { path: string; method: string; filePath: string; relation: "confirmed-call-path" }[];
   id: string;
   type: "SQL_INJECTION";
   severity: "HIGH" | "MEDIUM" | "LOW";
@@ -25,6 +28,7 @@ export interface SqlInjectionFinding {
 }
 
 export interface SqlInjectionAnalysis {
+  coverage?: ScanCoverage;
   version: "sqli-static-v1";
   findings: SqlInjectionFinding[];
   truncated: boolean;
@@ -41,6 +45,7 @@ export interface XssFinding extends Omit<SqlInjectionFinding, "type" | "clientLi
 }
 
 export interface XssAnalysis {
+  coverage?: ScanCoverage;
   version: "xss-static-v1";
   findings: XssFinding[];
   truncated: boolean;
@@ -54,6 +59,7 @@ export interface AccessCheckEvidence extends SqlInjectionEvidence {
   functionId?: string;
 }
 export interface AccessControlFinding extends Omit<SqlInjectionFinding, "type"> {
+  planSuggestion?: { identifierLocation: string; purpose: string; observedRoles: string[]; ownershipChecks: SqlInjectionEvidence[]; roleChecks: SqlInjectionEvidence[]; policyConfirmed: false };
   type: "IDOR" | "AUTHORIZATION";
   ownerFunctionId: string;
   functionName: string;
@@ -68,7 +74,7 @@ export interface AccessControlFinding extends Omit<SqlInjectionFinding, "type"> 
 }
 export interface AccessControlAnalysis {
   version: "access-control-static-v1";
-  status: "completed" | "partial" | "failed";
+  status: "completed" | "partial" | "failed" | "unsupported";
   findings: AccessControlFinding[];
   boundaries: SqlInjectionEvidence[];
   truncated: boolean;

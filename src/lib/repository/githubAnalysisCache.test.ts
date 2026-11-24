@@ -6,6 +6,15 @@ const analysis = analyzeSourceFiles([{ path: "app/settings/page.tsx", content: "
 afterEach(clearGithubAnalysisCacheForTests);
 
 describe("entrypoint metadata cache compatibility", () => {
+  it("invalidates old rules and failed SQLi/XSS passes without touching durable history", () => {
+    setGithubAnalysisCache("old-rules", { ...analysis, scannerRevision: "repository-security-1" });
+    expect(getGithubAnalysisCache("old-rules")).toBeUndefined();
+    for (const key of ["sqlInjection", "xss"] as const) {
+      const report = analysis[key]!;
+      setGithubAnalysisCache(key, { ...analysis, [key]: { ...report, coverage: { ...report.coverage!, status: "failed" } } });
+      expect(getGithubAnalysisCache(key)).toBeUndefined();
+    }
+  });
   it("rejects legacy access snapshots and retries failed additive analyses", () => {
     const legacy = { ...analysis }; delete legacy.accessControl;
     setGithubAnalysisCache("legacy-access", legacy);

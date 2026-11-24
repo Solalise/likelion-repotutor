@@ -1,3 +1,4 @@
+import { securityAnalysisStats } from "@/lib/repository/securityAnalysisStats";
 import { loadSampleAnalysis, wantsAnalysisReceipt } from "@/lib/repository/sampleAnalysis";
 import { coalesceAnalysis } from "@/lib/repository/analysisWork";
 import { NextResponse } from "next/server";
@@ -41,7 +42,7 @@ async function analyzeGithub(repositoryUrl: string): Promise<RepositoryAnalysis>
     const current = getGithubAnalysisCache(cacheKey);
     if (current) return current;
     const analysis: RepositoryAnalysis = {
-      ...analyzeSourceFiles(loaded.sources, loaded.repository), source: "github",
+      ...analyzeSourceFiles(loaded.sources, loaded.repository, loaded.collection.packageManifests), source: "github",
       collection: { source: "github", ...loaded.collection },
     };
     setGithubAnalysisCache(cacheKey, analysis);
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
       let analysis: RepositoryAnalysis;
       try {
         analysis = await analyzeGithub(repositoryUrl);
-        if (runId) await db.analysisRun.update({ where: { id: runId }, data: { status: "COMPLETED", commitSha: analysis.collection?.commitSha, completedAt: new Date() } });
+        if (runId) await db.analysisRun.update({ where: { id: runId }, data: { status: "COMPLETED", commitSha: analysis.collection?.commitSha, stats: JSON.parse(JSON.stringify({ ...analysis.stats, ...securityAnalysisStats(analysis) })), completedAt: new Date() } });
       } catch (error) {
         if (runId) await db.analysisRun.update({ where: { id: runId }, data: { status: "FAILED", errorCode: "PUBLIC_ANALYSIS_FAILED", completedAt: new Date() } });
         throw error;

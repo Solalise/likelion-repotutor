@@ -146,7 +146,7 @@ function Preparation({ analysis, finding, connectionId }: Props) {
     <nav className="header-actions" aria-label="관련 기초 학습 및 실습">
       <Link className="secondary-action" href={`/learn/${topic}`}>개념 학습하기</Link>
       <Link className="secondary-action" href={`/practice#${topic}`}>기초 실습 선택하기</Link>
-      {!connectionId ? <Link className="secondary-action" href="/repositories">내 저장소 연결하기</Link> : <a className="secondary-action" href="#repository-deployment-title">배포 URL·소유권 관리</a>}
+      {!connectionId ? <Link className="secondary-action" href="/repositories">내 저장소 연결하기</Link> : <Link className="secondary-action" href={`/services?connected=${encodeURIComponent(connectionId)}#practice-readiness`}>통합 연결·실습 준비 체크리스트</Link>}
     </nav>
   </section>;
 }

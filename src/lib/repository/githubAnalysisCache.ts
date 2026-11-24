@@ -12,7 +12,7 @@ export function githubAnalysisCacheKey(namespace: string, repository: string, co
 export function getGithubAnalysisCache(key: string): RepositoryAnalysis | undefined {
   const entry = cache.get(key);
   if (!entry) return undefined;
-  if (!Array.isArray(entry.entryPoints) || entry.sqlInjection?.version !== "sqli-static-v1" || entry.xss?.version !== "xss-static-v1" || entry.accessControl?.version !== "access-control-static-v1" || entry.accessControl.status === "failed") {
+  if (entry.scannerRevision !== "repository-security-3" || !Array.isArray(entry.entryPoints) || entry.sqlInjection?.version !== "sqli-static-v1" || entry.xss?.version !== "xss-static-v1" || entry.accessControl?.version !== "access-control-static-v1" || entry.accessControl.status === "failed" || entry.sqlInjection.coverage?.status === "failed" || entry.xss.coverage?.status === "failed") {
     cache.delete(key);
     return undefined;
   }

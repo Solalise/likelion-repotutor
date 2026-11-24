@@ -5,14 +5,15 @@ const kind = document.body.dataset.practiceSite;
 const enabled = document.body.dataset.enabled === 'true';
 const state = createPracticeState(kind);
 const $ = selector => document.querySelector(selector);
-let epoch = 0, actor, currentPost, preview, busy = false;
+let epoch = 0, actor, currentPost, preview, xssExposure, busy = false;
 const policy = () => $('#site-policy').value;
 const message = text => { $('#site-message').textContent = text; };
 
 function renderProgress() {
   const progress = state.snapshot();
-  $('#site-mission-title').textContent = progress.completed ? '미션 완료' : (kind === 'xss' && progress.step === 2 ? missions[kind][progress.step][0] : `${progress.step + 1} / ${progress.total} · ${missions[kind][progress.step][0]}`);
+  $('#site-mission-title').textContent = progress.completed ? '미션 완료' : `${progress.step + 1} / ${progress.total} · ${missions[kind][progress.step][0]}`;
   $('#site-mission-action').textContent = progress.completed ? '실제 응답으로 시나리오 비교를 확인했습니다. 개념 정리는 학습 페이지에서 이어가세요.' : missions[kind][progress.step][1];
+  $('#site-mission-next').textContent = progress.completed ? '가상 데이터 실습이 완료되었습니다.' : missions[kind][progress.step][2] ?? '다음 조건: 실습 결과를 확인하세요.';
   $('#site-completed').hidden = !progress.completed;
 }
 function setMode(mode) {
@@ -40,6 +41,17 @@ function node(tag, text, className) {
   return item;
 }
 function clearPreview() { preview = undefined; $('#site-preview')?.replaceChildren(); }
+function clearXssImpact() {
+  xssExposure = undefined;
+  if ($('#site-xss-victim')) {
+    $('#site-xss-victim').hidden = true;
+    $('#site-xss-secret').textContent = '';
+    $('#site-xss-impact').textContent = '';
+    $('#site-xss-review').disabled = false;
+    $('#site-xss-defense').hidden = true;
+    $('#site-xss-status').textContent = '';
+  }
+}
 async function json(path, options = {}) {
   // No user-supplied URL: every caller uses a fixed, same-origin practice endpoint.
   const request = new Request(new URL(path, location.origin), { credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(5000), ...options });
@@ -52,6 +64,7 @@ function identity(user) {
   const changed = actor?.id !== user?.id || actor?.role !== user?.role;
   if (changed) {
     epoch++; clearPreview();
+    if (kind === 'xss') clearXssImpact();
     $('#site-post').replaceChildren(); $('#site-search-results').replaceChildren();
     $('#site-request').textContent = '아직 요청 기록이 없습니다.';
     if ($('#site-report-result')) $('#site-report-result').textContent = '';
@@ -169,18 +182,45 @@ $('#site-comment')?.addEventListener('submit', event => {
     if (version !== epoch) return;
     recordResult(record); if (record.status !== 200 || typeof record.data.document !== 'string') return;
     const frame = document.createElement('iframe'); frame.title = '댓글 미리보기'; frame.setAttribute('sandbox', 'allow-scripts'); frame.referrerPolicy = 'no-referrer';
-    const observation = { record, text, policy: selectedPolicy };
+    const observation = { record, text, policy: selectedPolicy, executed: false, exposure: undefined };
     preview = { frame, observation, version };
     frame.addEventListener('load', () => {
-      if (preview?.frame === frame && version === epoch) observe({ type: 'preview', ...observation });
+      if (preview?.frame !== frame || version !== epoch) return;
+      observe({ type: 'preview', ...observation });
+      if (selectedPolicy === 'safe') {
+        $('#site-xss-status').textContent = '안전 모드 확인: 입력은 HTML이 아닌 글자로 표시됩니다. 이 출력에서 실행·정보 노출 신호는 확인되지 않았습니다.';
+        if (state.snapshot().completed) $('#site-xss-defense').hidden = false;
+      }
+      else if (!observation.executed) $('#site-xss-status').textContent = '댓글 미리보기가 완료되었습니다. 실제 코드 실행 신호는 아직 확인되지 않았습니다.';
     });
     frame.srcdoc = record.data.document; $('#site-preview').replaceChildren(frame);
   });
 });
-$('#site-comment textarea')?.addEventListener('input', () => { epoch++; clearPreview(); });
+$('#site-comment textarea')?.addEventListener('input', () => { epoch++; clearPreview(); if ($('#site-xss-status')) $('#site-xss-status').textContent = ''; });
 window.addEventListener('message', event => {
-  if (!preview || event.source !== preview.frame.contentWindow || event.data !== 'vulnlab-xss-executed' || preview.version !== epoch || preview.observation.policy !== 'vulnerable') return;
-  observe({ type: 'execution', ...preview.observation }); message('XSS 실행 성공: 입력한 코드가 댓글 미리보기에서 실행되었습니다.');
+  if (!preview || event.source !== preview.frame.contentWindow || preview.version !== epoch || preview.observation.policy !== 'vulnerable') return;
+  if (event.data?.type === 'vulnlab-xss-executed') {
+    preview.observation.executed = true;
+    observe({ type: 'execution', ...preview.observation });
+    $('#site-xss-status').textContent = 'XSS 실행 확인: 격리된 댓글 미리보기 안에서 입력 코드가 실행되었습니다. 실제 계정 정보에는 접근하지 않았습니다.';
+    message('취약 모드에서 코드 실행이 확인되었습니다. 다음은 가상 사용자 B의 실습 데이터 노출을 시도하세요.');
+    return;
+  }
+  if (event.data?.type !== 'vulnlab-xss-exposure' || !preview.observation.executed || event.data.victimId !== 'user-b' || typeof event.data.secret !== 'string' || !/^VULNLAB-B-[A-F0-9]{12}$/.test(event.data.secret)) return;
+  const exposure = { record: preview.observation.record, text: preview.observation.text, victimId: event.data.victimId, secret: event.data.secret };
+  xssExposure = exposure;
+  $('#site-xss-secret').textContent = `사용자 B의 가상 비밀정보: ${exposure.secret}`;
+  $('#site-xss-impact').textContent = '피해 상황 재현(실행 결과): 사용자 B에게만 보이도록 준비한 실습 정보가 취약한 댓글 미리보기를 통해 노출되었습니다. 이 데이터는 이번 실행에 임의 생성된 가상 값입니다.';
+  $('#site-xss-victim').hidden = false;
+  observe({ type: 'exposure', record: exposure.record, text: exposure.text, policy: 'vulnerable', executed: true, exposure: { victimId: exposure.victimId, secret: exposure.secret } });
+  $('#site-xss-status').textContent = '가상 데이터 접근 확인: iframe에서 사용자 B의 임의 생성 비밀정보가 실제로 전달되었습니다.';
+  message('가상 피해 재현에 성공했습니다. 피해자 관점의 공격 전·후 상태를 확인하세요.');
+});
+$('#site-xss-review')?.addEventListener('click', () => {
+  if (!xssExposure) return;
+  observe({ type: 'victim-review', record: xssExposure.record, text: xssExposure.text, policy: 'vulnerable' });
+  $('#site-xss-review').disabled = true;
+  $('#site-xss-impact').textContent += ' 피해자 화면의 변화를 확인했습니다.';
 });
 async function report() {
   if (!enabled) { message('이 시나리오는 비활성화되어 있습니다.'); return; }
@@ -194,6 +234,7 @@ async function report() {
 $('#site-report')?.addEventListener('click', () => void report());
 $('#site-policy').addEventListener('change', () => {
   epoch++; clearPreview(); message('사이트 버전을 변경했습니다. 같은 화면에서 다시 확인하세요.');
+  if ($('#site-xss-status')) $('#site-xss-status').textContent = '버전이 변경되었습니다. 같은 입력을 미리보기해 결과를 비교하세요.';
   $('#site-post').replaceChildren(); $('#site-search-results').replaceChildren();
   if ($('#site-report-result')) $('#site-report-result').textContent = '';
   if (currentPost && !$('[data-surface="post"]').hidden) void action(version => openPost(currentPost, version, false));

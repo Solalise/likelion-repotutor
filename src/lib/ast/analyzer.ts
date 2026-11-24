@@ -1,5 +1,6 @@
 import path from "node:path";
 import { Node, Project, ScriptTarget, SyntaxKind, ts, type SourceFile } from "ts-morph";
+import type { ScanDiagnostic } from "@/types/scanCoverage";
 import type { FileAnalysis, FunctionInfo, FunctionRelation, RepositoryAnalysis, SourceInput } from "@/types/analysis";
 import { buildGraph, resolveImportPath } from "./graphBuilder";
 import { analyzeImport } from "./importAnalyzer";
@@ -14,6 +15,10 @@ import { collectServerResponses } from "./serverResponses";
 import { collectSqlInjection } from "./sqlInjection";
 import { collectXss } from "./xss";
 import { collectAccessControl, failedAccessControlAnalysis } from "./accessControl";
+import { relationKind } from "./relationDiagnostics";
+import { collectNextInputs } from "./nextInputs";
+import { identifyTechnology } from "@/lib/repository/technologyStack";
+import type { PackageManifest } from "@/types/technology";
 
 type FunctionNode = Node & { getStartLineNumber(): number; getEndLineNumber(): number; getText(): string };
 interface Candidate { node: FunctionNode; declaration: Node; name: string; qualifiedName: string; kind: FunctionInfo["kind"] }
@@ -170,7 +175,7 @@ function analyzeRelations(candidate: Candidate, candidates: Map<string, Candidat
     const expression = call.getExpression();
     const target = targetId(expression, candidates, ids);
     push({
-      relation: "call", name: relationName(expression, aliases), targetId: target,
+      relation: "call", name: relationName(expression, aliases), targetId: target, diagnosticKind: target ? undefined : relationKind(expression),
       line: call.getStartLineNumber(), evidence: evidence(call), confidence: target ? "confirmed" : "inferred",
     });
     for (const argument of call.getArguments()) {
@@ -183,7 +188,7 @@ function analyzeRelations(candidate: Candidate, candidates: Map<string, Candidat
     if (enclosingCandidate(element, candidates) !== candidate) continue;
     const tag = element.getTagNameNode();
     const target = targetId(tag, candidates, ids);
-    push({ relation: "component", name: tag.getText().split(".").at(-1) ?? tag.getText(), targetId: target, line: element.getStartLineNumber(), evidence: evidence(element), confidence: target ? "confirmed" : "inferred" });
+    push({ relation: "component", name: tag.getText().split(".").at(-1) ?? tag.getText(), targetId: target, diagnosticKind: target ? undefined : relationKind(tag, true), line: element.getStartLineNumber(), evidence: evidence(element), confidence: target ? "confirmed" : "inferred" });
   }
   for (const attribute of candidate.node.getDescendantsOfKind(SyntaxKind.JsxAttribute)) {
     if (enclosingCandidate(attribute, candidates) !== candidate) continue;
@@ -207,7 +212,7 @@ function analyzeRelations(candidate: Candidate, candidates: Map<string, Candidat
   return relations;
 }
 
-export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-repository"): RepositoryAnalysis {
+export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-repository", manifests: PackageManifest[] = []): RepositoryAnalysis {
   const knownPaths = inputs.map((input) => normalizePath(input.path));
   const project = new Project({
     useInMemoryFileSystem: true,
@@ -223,11 +228,22 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
       }),
     }),
   });
-  const sourceFiles = inputs.filter((input) => /\.(?:tsx?|jsx?)$/.test(input.path)).map((input) => {
+  const sourceFiles = inputs.filter((input) => /\.(?:tsx?|jsx?)$/i.test(input.path)).map((input) => {
     const normalized = normalizePath(input.path);
-    return { path: normalized, sourceFile: project.createSourceFile(`/${normalized}`, input.content, { overwrite: true }) };
+    return { path: normalized, sourceFile: project.createSourceFile(`/${normalized}`, input.content, { overwrite: true, scriptKind: /tsx$/i.test(normalized) ? ts.ScriptKind.TSX : /jsx$/i.test(normalized) ? ts.ScriptKind.JSX : /js$/i.test(normalized) ? ts.ScriptKind.JS : ts.ScriptKind.TS }) };
   });
   project.resolveSourceFileDependencies();
+  const diagnostics: ScanDiagnostic[] = inputs.filter(input => !/\.(?:tsx?|jsx?)$/i.test(input.path)).map(input => ({ filePath: input.path, line: 1, code: "", message: "미지원 언어: JS/TS만 분석합니다.", kind: "unsupported" }));
+  for (const { path: filePath, sourceFile } of sourceFiles) {
+    for (const diagnostic of project.getProgram().compilerObject.getSyntacticDiagnostics(sourceFile.compilerNode)) {
+      const start = diagnostic.start ?? 0;
+      diagnostics.push({ filePath, line: sourceFile.getLineAndColumnAtPos(start).line, code: sourceFile.getFullText().slice(start, start + 100), message: ts.flattenDiagnosticMessageText(diagnostic.messageText, " "), kind: "parse" });
+    }
+    for (const declaration of sourceFile.getImportDeclarations()) {
+      const specifier = declaration.getModuleSpecifierValue();
+      if ((specifier.startsWith(".") || specifier.startsWith("@/")) && !declaration.getModuleSpecifierSourceFile()) diagnostics.push({ filePath, line: declaration.getStartLineNumber(), code: declaration.getText(), message: "수집 범위에서 로컬 import를 해결하지 못했습니다.", kind: "unresolved" });
+    }
+  }
   const candidates = new Map<string, Candidate>();
   const ids = new Map<Candidate, string>();
   const byFile = new Map<string, Candidate[]>();
@@ -277,6 +293,7 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
     edge.source === fn.id && edge.target === relation.targetId && edge.relation === relation.relation && edge.line === relation.line,
   ));
   const entryPoints = collectEntryPointMetadata(sourceFiles, (node) => targetId(node, candidates, ids));
+  const nextInputs = collectNextInputs(sourceFiles, entryPoints, node => { const candidate = enclosingCandidate(node, candidates); return candidate ? ids.get(candidate) : undefined; });
   const httpRequests = collectHttpRequests(sourceFiles, node => targetId(node, candidates, ids),
     node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; }, entryPoints, functionControlFlows);
   const databaseAccess = collectDatabaseAccess(sourceFiles, {
@@ -287,7 +304,28 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
   const serverResponses = collectServerResponses(sourceFiles, { entries: entryPoints, controlFlows: functionControlFlows, database: databaseAccess,
     resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
   });
+  for (const { path: filePath, sourceFile } of sourceFiles) {
+    if (/(?:^|\/)pages\/api\//.test(filePath) || sourceFile.getImportDeclarations().some(d => /^(?:express|fastify|koa)$/.test(d.getModuleSpecifierValue()))) diagnostics.push({ filePath, line: 1, code: "", kind: "unsupported", message: "API 프레임워크 의미 미지원: Next App Route Handler 외 요청·API 연결은 확정하지 않습니다." });
+  }
+  const definitions = new Map([...ids].map(([candidate, id]) => [id, candidate.node]));
+  const callers = new Map<string, import("ts-morph").CallExpression[]>();
+  const callTargets = new Map<Node, string>();
+  const callSites = new Map(functionControlFlows.flatMap(flow => flow.callSites).map(site =>
+    [`${site.location.filePath}:${site.location.startOffset}`, site]));
+  for (const { sourceFile } of sourceFiles) for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+    const site = callSites.get(`${sourceFile.getFilePath().replace(/^\//, "")}:${call.getStart()}`);
+    if (site?.targetResolution === "resolved" && site.targetNodeId && !site.inUnsupportedRegion) {
+      callTargets.set(call.getExpression(), site.targetNodeId);
+      callers.set(site.targetNodeId, [...(callers.get(site.targetNodeId) ?? []), call]);
+    }
+  }
+  const traceContext = { entries: entryPoints, definitions, callers, nextInputs, resolveTarget: (node: Node) => callTargets.get(node),
+    resolveOwner: (node: Node) => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; } };
+  const guarded = <T,>(work: () => T, fallback: T): T => { try { return work(); } catch { return fallback; } };
+  const failedCoverage = (name: string) => ({ status: "failed" as const, inputs: [], sinks: [], connectedSinks: 0, suspectedCandidates: 0,
+    diagnostics: [{ filePath: "", line: 1, code: "", kind: "unsupported" as const, message: `${name} 분석에 실패했습니다. 후보 유무를 판단하지 못했습니다.` }] });
   const analysis: RepositoryAnalysis = {
+    scannerRevision: "repository-security-3", diagnostics, technology: identifyTechnology(files, manifests), serverActions: nextInputs.actions,
     repository,
     files,
     ...graph,
@@ -297,14 +335,14 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
     httpRequests,
     databaseAccess,
     serverResponses,
-    sqlInjection: collectSqlInjection(sourceFiles, {
-      entries: entryPoints,
+    sqlInjection: guarded(() => collectSqlInjection(sourceFiles, {
+      ...traceContext,
       resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
-    }),
-    xss: collectXss(sourceFiles, {
-      entries: entryPoints, responses: serverResponses,
+    }), { version: "sqli-static-v1", findings: [], truncated: false, limitations: [], coverage: failedCoverage("SQL Injection") }),
+    xss: guarded(() => collectXss(sourceFiles, {
+      ...traceContext, responses: serverResponses,
       resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
-    }),
+    }), { version: "xss-static-v1", findings: [], truncated: false, limitations: [], coverage: failedCoverage("XSS") }),
     stats: {
       files: files.length,
       functions: files.flatMap((file) => file.functions).length,
@@ -315,12 +353,31 @@ export function analyzeSourceFiles(inputs: SourceInput[], repository = "sample-r
   };
   try {
     analysis.accessControl = collectAccessControl(sourceFiles, {
-      analysis, definitions: new Map([...ids].map(([candidate, id]) => [id, candidate.node])),
+      analysis, nextInputs, definitions: new Map([...ids].map(([candidate, id]) => [id, candidate.node])),
       resolveOwner: node => { const owner = enclosingCandidate(node, candidates); return owner ? ids.get(owner) : undefined; },
     });
   } catch {
     // This additive review must never discard the existing SQLi/XSS/graph results.
     analysis.accessControl = failedAccessControlAnalysis();
   }
+  if (analysis.accessControl.status !== "failed") {
+    if (!entryPoints.some(entry => entry.kind === "api" && entry.framework === "next-app") && !analysis.accessControl.findings.length && !nextInputs.actions.length) analysis.accessControl.status = "unsupported";
+    else if (diagnostics.length && analysis.accessControl.status === "completed") analysis.accessControl.status = "partial";
+  }
+  // Existing resolved call edges provide API context, not a new runtime/taint claim.
+  for (const finding of [...(analysis.sqlInjection?.findings ?? []), ...(analysis.xss?.findings ?? [])]) {
+    const owner = files.flatMap(file => file.functions).filter(fn => fn.filePath === finding.filePath && fn.line <= finding.line && fn.endLine >= finding.endLine)
+      .sort((a, b) => a.endLine - a.line - (b.endLine - b.line))[0];
+    const reachable = new Set<string>();
+    const walk = (id: string, depth: number) => {
+      if (depth > 4 || reachable.has(id)) return;
+      reachable.add(id);
+      for (const edge of graph.edges.filter(e => e.target === id && e.relation === "call")) walk(edge.source, depth + 1);
+    };
+    if (owner) walk(owner.id, 0);
+    finding.apiContexts = entryPoints.filter(e => e.kind === "api" && e.method && reachable.has(e.nodeId))
+      .map(e => ({ path: e.routePath, method: e.method!, filePath: e.filePath, relation: "confirmed-call-path" }));
+  }
+  for (const report of [analysis.sqlInjection, analysis.xss]) if (report?.coverage && diagnostics.length && report.coverage.status !== "failed") report.coverage.status = sourceFiles.length ? "partial" : "unsupported";
   return analysis;
 }

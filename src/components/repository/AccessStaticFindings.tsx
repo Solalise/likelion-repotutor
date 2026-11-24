@@ -4,6 +4,8 @@ import type { RepositoryAnalysis } from "@/types/analysis";
 import type { AccessCheckEvidence, SqlInjectionEvidence } from "@/types/security";
 import { useSecuritySession } from "./SecurityTestRecord";
 import { ManualSecurityTarget, type ManualSecurityKind } from "./ManualSecurityTarget";
+import { scanPresentation } from "@/lib/repository/scanPresentation";
+import { scanStatusLabels } from "@/types/scanCoverage";
 import { SourceCodeViewer } from "./SourceCodeViewer";
 
 const controls: Record<AccessCheckEvidence["control"], string> = {
@@ -21,6 +23,7 @@ export function AccessStaticFindings({ analysis, kind }: { analysis: RepositoryA
   const [selectedId, setSelectedId] = useSecuritySession<string | undefined>(`access-selection:${kind}`, () => undefined);
   const report = analysis.accessControl, findings = report?.findings.filter(f => f.type === kind) ?? [];
   const selected = findings.find(f => f.id === selectedId) ?? findings[0];
+  const status = scanPresentation(analysis, kind).status;
   const title = kind === "IDOR" ? "IDOR" : "권한 검증";
   const file = selected && analysis.files.find(f => f.path === selected.filePath);
   const start = selected ? Math.max(1, selected.line - 4) : 1;
@@ -29,8 +32,8 @@ export function AccessStaticFindings({ analysis, kind }: { analysis: RepositoryA
     <h3>{title} · 취약점 의심 후보</h3>
     <p>정적 분석 근거와 사용자의 HTTP 관찰·판단은 별도입니다. 실제 실행과 취약점은 미검증이며, 검사 코드 존재나 후보 없음으로 안전성을 보장하지 않습니다.</p>
     {!report ? <p role="status">이 분석에는 접근 제어 정보가 없습니다. 저장소를 다시 분석하세요. 아래 수동 등록은 계속 사용할 수 있습니다.</p> : <>
-      <p role="status">분석 상태: {report.status === "failed" ? "실패 · 기존 SQLi/XSS 결과 유지" : report.status === "partial" || analysis.collection?.partial ? "일부 범위 미확인" : "지원 범위 분석 완료"} · 의심 후보 {findings.length}개{report.truncated ? " · 분석 예산 도달" : ""}</p>
-      {!findings.length && <p>수집·지원 범위에서 후보를 찾지 못했습니다. 분석하지 못한 코드의 접근 정책은 수동 확인하세요.</p>}
+      <p role="status">분석 상태: {scanStatusLabels[status]}{report.status === "failed" ? " · 기존 SQLi/XSS 결과 유지" : ""} · 의심 후보 {findings.length}개{report.truncated ? " · 분석 예산 도달" : ""}</p>
+      {!findings.length && <p>{status === "failed" ? "분석 실패: 후보 유무를 판단하지 못했습니다. 수동 검사 등록은 계속 사용할 수 있습니다." : status === "unsupported" ? "지원하는 API·DB 관계가 없습니다. 접근 정책을 분석하지 못했습니다. 수동으로 확인하세요." : "수집·지원 범위에서 후보를 찾지 못했습니다. 분석하지 못한 코드의 접근 정책은 수동 확인하세요."}</p>}
       <div className="call-list" role="group" aria-label={`${title} 후보 선택`}>{findings.map(f => <button key={f.id} type="button" className="secondary-action" aria-pressed={selected?.id === f.id} onClick={() => setSelectedId(f.id)}>{f.filePath}:{f.line} · {f.functionName} · 취약점 의심 후보</button>)}</div>
       {selected && <article aria-label={`${title} 정적 후보 상세`}>
         <h4>{selected.functionName} · {selected.filePath}:{selected.line}</h4>

@@ -46,7 +46,7 @@ const connection = {
 };
 const installation = { id: 7, suspended_at: null, permissions: { contents: "read" } };
 const repository = { id: 21, full_name: "org/private", permissions: { pull: true } };
-const analysis = { repository: "org/private", nodes: [], edges: [], entryPoints: [], stats: {}, collection: { commitSha: "sha" } };
+const analysis = { repository: "org/private", files: [], nodes: [], edges: [], entryPoints: [], stats: { files: 0, functions: 0, relations: 0 }, collection: { commitSha: "sha" } };
 function params(id = "own-connection") { return { params: Promise.resolve({ connectionId: id }) }; }
 function request() { return new Request("http://localhost/api/repositories/own-connection/learn", {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ selection: { type: "function", id: "fn" } }),

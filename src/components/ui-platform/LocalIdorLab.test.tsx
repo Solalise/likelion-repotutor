@@ -6,8 +6,8 @@ import { practiceTopics } from "./PracticeDashboard";
 
 it("links the main dashboard to both local training entries", () => {
   const html = renderToStaticMarkup(<DashboardUI />);
-  expect(html).toContain('href="http://127.0.0.1:4400/?lab=idor" target="_blank" rel="noopener noreferrer"');
-  expect(html).toContain('href="http://127.0.0.1:4400/?lab=sqli" target="_blank" rel="noopener noreferrer"');
+  expect(html).toContain('href="http://127.0.0.1:4400/?lab=idor&amp;mode=guided" target="_blank" rel="noopener noreferrer"');
+  expect(html).toContain('href="http://127.0.0.1:4400/?lab=sqli&amp;mode=guided" target="_blank" rel="noopener noreferrer"');
 });
 it("opens all four guided/free labs safely in new tabs and shows independent activation status", () => {
   const html = renderToStaticMarkup(<PracticeUI />);
