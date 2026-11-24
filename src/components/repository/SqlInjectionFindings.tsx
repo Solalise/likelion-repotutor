@@ -60,7 +60,7 @@ export function SqlInjectionFindings({ analysis, connectionId, archived = false 
       <p role="status">입력 흐름 관찰 {report.findings.filter(item => item.relationship === "input-flow-observed" && !(item.type === "XSS" && item.disposition === "protected")).length}개 · 의심 후보 {report.findings.filter(item => item.relationship === "suspected" && !(item.type === "XSS" && item.disposition === "protected")).length}개{kind === "XSS" ? ` · 안전 처리 관찰 ${analysis.xss?.findings.filter(item => item.disposition === "protected").length ?? 0}개` : ""}{report.truncated ? " · 출력 지점 100개 표시 제한 도달" : ""}</p>
       {!report.findings.length && <p>{scanPresentation(analysis, kind).status === "failed" ? "분석 실패: 후보 유무를 판단하지 못했습니다." : scanPresentation(analysis, kind).status === "unsupported" ? "이 유형은 현재 코드/기술 스택에서 분석 범위 밖입니다. 지원 범위와 기술 스택 안내를 확인하세요." : "현재 지원하는 패턴과 수집 범위에서 후보를 찾지 못했습니다. 저장소가 안전하다는 의미는 아닙니다."}</p>}
       <div className="call-list" role="group" aria-label={`${title} 분석 항목 선택`}>
-        {report.findings.map(finding => <button className="secondary-action" type="button" key={finding.id}
+        {report.findings.map((finding, i) => <button className="secondary-action" type="button" key={`${i}:${finding.id}`}
           aria-pressed={selected?.id === finding.id} onClick={() => setSelectedId(finding.id)}>
           {finding.filePath}:{finding.line} · {finding.type === "XSS" && finding.disposition === "protected" ? "안전 처리 관찰" : finding.relationship === "input-flow-observed" ? "입력 흐름 관찰" : "의심 후보"}{finding.type === "XSS" && finding.disposition === "protected" ? "" : ` · 위험도 ${levels[finding.severity]}`}
         </button>)}
@@ -72,14 +72,14 @@ export function SqlInjectionFindings({ analysis, connectionId, archived = false 
           <div><dt>분석 확신 수준</dt><dd>{levels[selected.confidence]}</dd></div>
           <div><dt>{selected.type === "XSS" ? "HTML 출력 지점" : "SQL 실행 지점"}</dt><dd><code>{selected.sink}</code>{selected.type === "SQL_INJECTION" ? ` · ${selected.clientLibrary ?? "클라이언트 출처 미확정"}` : ""}</dd></div>
           <div><dt>입력 연결</dt><dd>{selected.relationship === "input-flow-observed" ? `입력 → 지역 값 → ${selected.type === "XSS" ? "HTML 출력" : "SQL 인수"}의 정적 연결 관찰` : "입력 또는 출력/실행 연결에 미확정 구간이 있음"}</dd></div>
-          <div><dt>확정 호출 경로의 API</dt><dd>{selected.apiContexts?.length ? selected.apiContexts.map(api => <p key={`${api.filePath}:${api.method}`}>{api.method} {api.path} · {api.filePath} (정적 호출 관계 · 실행 미검증)</p>) : "지원 범위에서 API 연결 미확인"}</dd></div>
+          <div><dt>확정 호출 경로의 API</dt><dd>{selected.apiContexts?.length ? selected.apiContexts.map((api, i) => <p key={`${i}:${api.filePath}:${api.method}`} >{api.method} {api.path} · {api.filePath} (정적 호출 관계 · 실행 미검증)</p>) : "지원 범위에서 API 연결 미확인"}</dd></div>
           {selected.type === "XSS" && <>
             <div><dt>출력 환경</dt><dd>{selected.environment === "client" ? "클라이언트 DOM/React" : selected.environment === "server" ? "서버 HTML 응답" : "클라이언트/서버 또는 출력 의미 미확정"}</dd></div>
             <div><dt>보호 처리</dt><dd>{selected.protection === "sanitized" ? "HTML 정화 관찰" : selected.protection === "escaped" ? "HTML 텍스트 이스케이프 관찰" : "전체 출력의 안전성 미확정"}</dd></div>
           </>}
         </dl>
         <h4>관련 코드 위치</h4>
-        <SourceCodeViewer key={selected.id} sourceCode={source ?? selected.code} startLine={source ? firstLine : selected.line} highlightLine={selected.line} />
+        <SourceCodeViewer key={selected.id} sourceCode={source || selected.code} startLine={source ? firstLine : selected.line} highlightLine={selected.line} />
         {selected.type === "XSS" && <><h4>입력 출처</h4>{selected.inputSources.length ? <ul>{selected.inputSources.map((item, index) => <li key={index}>{item.description} · {item.filePath}:{item.line}<pre><code>{item.code}</code></pre></li>)}</ul> : <p>지원하는 입력 출처를 확인하지 못했습니다.</p>}</>}
         <h4>탐지 근거와 입력·{selected.type === "XSS" ? "HTML" : "SQL"} 관계</h4>
         <ol>{selected.evidence.map((item, index) => <li key={`${item.filePath}:${item.line}:${index}`}>
@@ -87,7 +87,7 @@ export function SqlInjectionFindings({ analysis, connectionId, archived = false 
         </li>)}</ol>
         <h4>{selected.type === "XSS" && selected.disposition === "protected" ? "안전 처리 분류 근거" : "취약할 수 있는 이유"}</h4><p>{selected.reason}</p>
         <h4>안전한 수정 방법</h4><p>{selected.remediation}</p>
-        <h4>추가 확인 사항</h4><ul>{selected.limitations.map(item => <li key={item}>{item}</li>)}</ul>
+        <h4>추가 확인 사항</h4><ul>{selected.limitations.map((item, i) => <li key={`${i}:${item}`}>{item}</li>)}</ul>
         <p>이 정적 분석 항목은 실제 실행 여부나 SQLi 성공을 판정하지 않습니다. HTTP 관찰 결과와 사용자 판단은 아래 검사 흐름에서 별도로 관리합니다.</p>
         <details key={selected.id}>
           <summary>검사 결과 수동 기록 · 수정 및 재검증</summary>
@@ -95,7 +95,7 @@ export function SqlInjectionFindings({ analysis, connectionId, archived = false 
             codeLocation={`${selected.filePath}:${selected.line}–${selected.endLine}`} />
         </details>
       </article>}
-      <details><summary>분석 지원 범위와 한계</summary><ul>{report.limitations.map(item => <li key={item}>{item}</li>)}</ul></details>
+      <details><summary>분석 지원 범위와 한계</summary><ul>{report.limitations.map((item, i) => <li key={`${i}:${item}`}>{item}</li>)}</ul></details>
     </>}
     {manualKinds.map(manualKind => <div key={JSON.stringify([connectionId, analysis.repository, analysis.collection?.commitSha, manualKind])} hidden={!archived && kind !== manualKind}>
       <details><summary>자동 후보와 별도로 수동 검사 등록</summary><ManualSecurityTarget kind={manualKind} /></details>

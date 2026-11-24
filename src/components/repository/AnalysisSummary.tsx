@@ -37,8 +37,8 @@ export function AnalysisSummary({ analysis }: { analysis: RepositoryAnalysis }) 
     {collection?.partial && <p role="status">일부 완료: 수집 제한으로 빠진 파일이 있습니다.</p>}
     <details><summary>검사·제외 파일과 수집 제한 확인</summary>
       <p>JS/TS · 파일당 256KiB · 최대 200개 / 소스 8MiB · 압축 15MiB / 해제 50MiB. 분석 가능 파일은 언어·생성 파일·크기 필터를 통과한 파일입니다. 파싱 오류 파일도 검사 시도 수에 포함됩니다.</p>
-      {manifest ? <ul>{manifest.map(file => <li key={file.path}><code>{file.path}</code> · {file.bytes} bytes · {inspected.has(file.path) ? "검사" : file.reason ? reasons[file.reason] : "AST 입력 제외"}</li>)}</ul>
-        : <><p>이전 결과에는 전체 수집 목록이 없습니다. 다시 분석하면 제외 사유를 확인할 수 있습니다.</p><ul>{analysis.files.map(file => <li key={file.path}>{file.path} · 검사</li>)}</ul></>}
+      {manifest ? <ul>{manifest.map((file, i) => <li key={`${i}:${file.path}`}><code>{file.path}</code> · {file.bytes} bytes · {inspected.has(file.path) ? "검사" : file.reason ? reasons[file.reason] : "AST 입력 제외"}</li>)}</ul>
+        : <><p>이전 결과에는 전체 수집 목록이 없습니다. 다시 분석하면 제외 사유를 확인할 수 있습니다.</p><ul>{analysis.files.map((file, i) => <li key={`${i}:${file.path}`}>{file.path} · 검사</li>)}</ul></>}
     </details>
     {(securityDiagnostics.length > 0 || securityRelations.length > 0) && <details><summary>보안 관련 진단 ({securityDiagnostics.length + securityRelations.length}개)</summary>
       {securityDiagnostics.length ? <ul>{securityDiagnostics.map((d, i) => <li key={i}>{d.kind} · {d.filePath}:{d.line} · {d.message}<pre><code>{d.code}</code></pre></li>)}</ul> : <p>별도 보안 진단 없음</p>}
@@ -48,7 +48,7 @@ export function AnalysisSummary({ analysis }: { analysis: RepositoryAnalysis }) 
       <ul>{diagnostics.map((d, i) => <li key={i}>{d.filePath}:{d.line} · {d.message}<pre><code>{d.code}</code></pre></li>)}</ul>
       <p>기본 태그 {unresolved.filter(r => r.diagnosticKind === "native-tag").length}개 · JS 내장 {unresolved.filter(r => r.diagnosticKind === "builtin").length}개 · React Hook {unresolved.filter(r => r.diagnosticKind === "react-hook").length}개 · 외부 라이브러리 {unresolved.filter(r => r.diagnosticKind === "external-library").length}개 · 내부 미확정 {internal.length}개</p>
       <ul>{analysis.technology?.evidence.map((e, i) => <li key={i}>{e.package} · {e.kind} · {e.source}</li>)}</ul>
-      <ul>{analysis.technology?.notes.map(note => <li key={note}>{note}</li>)}</ul>
+      <ul>{analysis.technology?.notes.map((note, i) => <li key={`${i}:${note}`}>{note}</li>)}</ul>
       <p>미해결 관계 {analysis.stats.unresolvedRelations ?? 0}개 · 연결되지 않은 API 요청 {analysis.stats.unmatchedApiRequests ?? 0}개</p>
       <ul>{unresolved.map((r, i) => <li key={i}>{r.filePath}:{r.line} · {r.name} · {r.diagnosticKind ?? "internal-unresolved"}</li>)}</ul>
     </details>

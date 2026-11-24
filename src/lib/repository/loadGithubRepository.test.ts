@@ -61,6 +61,28 @@ beforeEach(() => {
   delete process.env.GITHUB_TOKEN;
 });
 
+it("refreshes the branch commit for explicit reanalysis inside the freshness window", async () => {
+  let currentSha = SHA;
+  const nextSha = "b".repeat(40), calls: string[] = [];
+  const base = repositoryFetcher([{ path: "app/page.ts", content: "export const value = 1;" }], []);
+  const fetcher: typeof fetch = async (input, init) => {
+    const url = String(input); calls.push(url);
+    if (url.endsWith("/commits/main")) return jsonResponse({ sha: currentSha });
+    if (url.endsWith(`/tar.gz/${nextSha}`)) return base(`https://codeload.github.com/acme/project/tar.gz/${SHA}`, init);
+    return base(input, init);
+  };
+  await loadGithubRepository("https://github.com/acme/project", fetcher, "installation:42");
+  currentSha = nextSha;
+  const next = await loadGithubRepository("https://github.com/acme/project", fetcher, "installation:42", { refresh: true });
+  expect(next.collection.commitSha).toBe(nextSha);
+  expect(calls.filter(url => url.endsWith("/commits/main"))).toHaveLength(2);
+  expect(calls).toContain(`https://codeload.github.com/acme/project/tar.gz/${nextSha}`);
+  const before = calls.length;
+  const same = await loadGithubRepository("https://github.com/acme/project", fetcher, "installation:42", { refresh: true });
+  expect(same.collection).toMatchObject({ commitSha: nextSha, cached: true });
+  expect(calls.slice(before)).toEqual(["https://api.github.com/repos/acme/project", "https://api.github.com/repos/acme/project/commits/main"]);
+});
+
 it("collects package metadata separately from AST sources", async () => {
   const result = await loadGithubRepository("https://github.com/acme/project", repositoryFetcher([{ path: "package.json", content: JSON.stringify({ dependencies: { next: "1", mongoose: "1" } }) }, { path: "app/actions.ts", content: "export const x=1;" }], []));
   expect(result.collection.packageManifests).toEqual([{ path: "package.json", dependencies: ["next", "mongoose"] }]);

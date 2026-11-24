@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { requireRepositoryAccess, repositoryAccessResponse, repositoryJson } from "@/lib/github/repositoryAccess";
 import { getGithubAnalysisCache, githubAnalysisCacheKey } from "@/lib/repository/githubAnalysisCache";
 import { generateSecurityGuides } from "@/lib/ai/securityReviewGuide";
+import type { Prisma } from "@prisma/client";
+import { restoreAnalysis, storedGuide } from "@/lib/repository/persistedAnalysis";
 
 export const runtime = "nodejs";
 export async function POST(request: Request, context: { params: Promise<{ connectionId: string }> }) {
@@ -17,13 +19,27 @@ export async function POST(request: Request, context: { params: Promise<{ connec
   const { connectionId } = await context.params;
   try {
     const connection = await requireRepositoryAccess(userId, connectionId);
-    const run = await db.analysisRun.findFirst({ where: { requestedByUserId: userId, repositoryId: connection.repositoryId, commitSha, status: "COMPLETED" } });
+    const run = await db.analysisRun.findFirst({ where: { requestedByUserId: userId, repositoryId: connection.repositoryId, source: "CONNECTED_REPOSITORY", commitSha, status: "COMPLETED" }, orderBy: { completedAt: "desc" } });
     if (!run) return repositoryJson({ message: "완료된 분석 기록이 필요합니다." }, { status: 409 });
+    const restored = restoreAnalysis(run, connection.repository.fullName);
+    if (run.reviewGuide && restored?.savedReviewGuides) {
+      await requireRepositoryAccess(userId, connectionId);
+      return repositoryJson({ ...restored.savedReviewGuides, cached: true, commitSha, repository: restored.repository });
+    }
     const key = githubAnalysisCacheKey(`installation:${connection.installation.installationId}`, connection.repository.fullName, commitSha);
     const analysis = getGithubAnalysisCache(key);
-    if (!analysis) return repositoryJson({ message: "분석 캐시가 만료되어 AI 가이드를 생성하지 못했습니다. 저장소를 다시 분석하세요." }, { status: 409 });
+    if (!analysis) {
+      if (restored?.savedReviewGuides) {
+        await requireRepositoryAccess(userId, connectionId);
+        return repositoryJson({ ...restored.savedReviewGuides, commitSha, repository: restored.repository });
+      }
+      return repositoryJson({ message: "저장된 분석 근거가 없습니다. 저장소를 분석하세요." }, { status: 409 });
+    }
     const bundle = await generateSecurityGuides(analysis, `${userId}:${connectionId}`);
     await requireRepositoryAccess(userId, connectionId);
-    return repositoryJson({ ...bundle, commitSha, repository: analysis.repository });
+    const safeBundle = storedGuide(bundle);
+    // generateSecurityGuides returns AI text only after the existing server validator succeeds.
+    if (bundle.origin === "ai" && run.analysisResult) await db.analysisRun.update({ where: { id: run.id }, data: { reviewGuide: JSON.parse(JSON.stringify(safeBundle)) as Prisma.InputJsonValue } });
+    return repositoryJson({ ...safeBundle, commitSha, repository: analysis.repository });
   } catch (error) { return repositoryAccessResponse(error); }
 }

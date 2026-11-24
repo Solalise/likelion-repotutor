@@ -15,7 +15,7 @@ function canonical(value: unknown): unknown {
 }
 
 export function serviceAnalysisIdentity(analysis: RepositoryAnalysis): string {
-  const { collection, ...content } = analysis;
+  const { collection, analyzedAt: _analyzedAt, ...content } = analysis;
   return JSON.stringify(canonical({ ...content, commitSha: collection?.commitSha ?? null }));
 }
 

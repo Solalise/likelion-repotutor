@@ -202,6 +202,8 @@ model AnalysisRun {
   source            AnalysisSource
   status            AnalysisStatus
   stats             Json?
+  analysisResult    Json?          @map("analysis_result")
+  reviewGuide       Json?          @map("review_guide")
   errorCode         String?        @map("error_code")
   errorMessage      String?        @db.Text @map("error_message")
   startedAt         DateTime       @default(now()) @map("started_at")

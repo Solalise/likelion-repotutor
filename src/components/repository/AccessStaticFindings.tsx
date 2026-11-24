@@ -34,7 +34,7 @@ export function AccessStaticFindings({ analysis, kind }: { analysis: RepositoryA
     {!report ? <p role="status">이 분석에는 접근 제어 정보가 없습니다. 저장소를 다시 분석하세요. 아래 수동 등록은 계속 사용할 수 있습니다.</p> : <>
       <p role="status">분석 상태: {scanStatusLabels[status]}{report.status === "failed" ? " · 기존 SQLi/XSS 결과 유지" : ""} · 의심 후보 {findings.length}개{report.truncated ? " · 분석 예산 도달" : ""}</p>
       {!findings.length && <p>{status === "failed" ? "분석 실패: 후보 유무를 판단하지 못했습니다. 수동 검사 등록은 계속 사용할 수 있습니다." : status === "unsupported" ? "지원하는 API·DB 관계가 없습니다. 접근 정책을 분석하지 못했습니다. 수동으로 확인하세요." : "수집·지원 범위에서 후보를 찾지 못했습니다. 분석하지 못한 코드의 접근 정책은 수동 확인하세요."}</p>}
-      <div className="call-list" role="group" aria-label={`${title} 후보 선택`}>{findings.map(f => <button key={f.id} type="button" className="secondary-action" aria-pressed={selected?.id === f.id} onClick={() => setSelectedId(f.id)}>{f.filePath}:{f.line} · {f.functionName} · 취약점 의심 후보</button>)}</div>
+      <div className="call-list" role="group" aria-label={`${title} 후보 선택`}>{findings.map((f, i) => <button key={`${i}:${f.id}`} type="button" className="secondary-action" aria-pressed={selected?.id === f.id} onClick={() => setSelectedId(f.id)}>{f.filePath}:{f.line} · {f.functionName} · 취약점 의심 후보</button>)}</div>
       {selected && <article aria-label={`${title} 정적 후보 상세`}>
         <h4>{selected.functionName} · {selected.filePath}:{selected.line}</h4>
         <dl className="repository-metadata">
@@ -47,13 +47,13 @@ export function AccessStaticFindings({ analysis, kind }: { analysis: RepositoryA
         <h4>의심 근거</h4><p>{selected.reason}</p><EvidenceList items={selected.evidence} />
         <h4>확인된 호출 경로</h4>{selected.callPath.length ? <EvidenceList items={selected.callPath} /> : <p>직접 진입점이거나 확정된 추가 호출 경로가 없습니다.</p>}
         <h4>인증·인가 검사 코드</h4>{selected.checks.length ? <ul>{selected.checks.map((c,i) => <li key={i}>{kinds[c.kind]} · {c.relation === "confirmed" ? "구문 관계 확인" : "추정 관계"} · {controls[c.control]}<EvidenceList items={[c]} /></li>)}</ul> : <p>관련 검사를 확정하지 못했습니다. 외부 함수·미들웨어·RLS 검사가 없다는 뜻은 아닙니다.</p>}
-        <h4>분석하지 못한 부분</h4><ul>{selected.limitations.map(l => <li key={l}>{l}</li>)}</ul>
-        <h4>직접 확인할 사항</h4><ul>{selected.manualChecks.map(l => <li key={l}>{l}</li>)}</ul>
+        <h4>분석하지 못한 부분</h4><ul>{selected.limitations.map((l, i) => <li key={`${i}:${l}`}>{l}</li>)}</ul>
+        <h4>직접 확인할 사항</h4><ul>{selected.manualChecks.map((l, i) => <li key={`${i}:${l}`}>{l}</li>)}</ul>
         <details><summary>{kind === "IDOR" ? "계정 A/B·리소스 비교 대상 확인" : "역할·작업 비교 대상 확인"}</summary>
           <ManualSecurityTarget key={selected.id} kind={kind} candidate={selected} />
         </details>
       </article>}
-      <details><summary>분석 경계 및 전체 제한</summary><EvidenceList items={report.boundaries} /><ul>{report.limitations.map(l => <li key={l}>{l}</li>)}</ul></details>
+      <details><summary>분석 경계 및 전체 제한</summary><EvidenceList items={report.boundaries} /><ul>{report.limitations.map((l, i) => <li key={`${i}:${l}`}>{l}</li>)}</ul></details>
     </>}
   </section>;
 }

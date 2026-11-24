@@ -116,6 +116,8 @@ export interface RepositoryCollection {
 }
 
 export interface RepositoryAnalysis {
+  analyzedAt?: string;
+  savedReviewGuides?: import("@/lib/security-lab/reviewGuide").GuideBundle;
   technology?: import("./technology").TechnologyStack;
   serverActions?: Array<{ filePath: string; line: number; name: string }>;
   diagnostics?: import("./scanCoverage").ScanDiagnostic[];

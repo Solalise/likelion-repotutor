@@ -24,7 +24,7 @@ export function extensionSession(analysis: RepositoryAnalysis, environment: Depl
   return { protocol: "vulnlab-review-v1", id: JSON.stringify([environment.connectionId, analysis.collection.commitSha, environment.deploymentVersion]),
     project: analysis.repository, commit: analysis.collection.commitSha, site: environment.deployment.vercelUrl,
     stack: [...(analysis.technology?.frameworks ?? []), ...(analysis.technology?.databases ?? []), ...(analysis.technology?.persistence ?? [])], guides,
-    guideBundle: { guides: presentGuideBundle({ guides: buildReviewGuides(analysis), origin: "fallback" }).guides, origin: "fallback" as "fallback" | "ai", reason: "기본 가이드" },
+    guideBundle: analysis.savedReviewGuides ?? { guides: presentGuideBundle({ guides: buildReviewGuides(analysis), origin: "fallback" }).guides, origin: "fallback" as "fallback" | "ai", reason: "기본 가이드" },
     recordProgress: { current: [] as SecurityRecordKind[], previous: [] as { commit: string; environmentVersion: number; count: number }[], loaded: false, limited: false, error: "" } };
 }
 export type ExtensionSession = ReturnType<typeof extensionSession>;

@@ -430,7 +430,7 @@ async function downloadArchive(coordinates: GithubRepositoryCoordinates, sha: st
   } finally { clearTimeout(timeout); }
 }
 
-async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordinates, fetcher: typeof fetch, cacheNamespace: string): Promise<GithubRepositoryLoadResult> {
+async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordinates, fetcher: typeof fetch, cacheNamespace: string, refresh = false): Promise<GithubRepositoryLoadResult> {
   const startedAt = Date.now();
   const deadline = startedAt + GITHUB_COLLECTION_LIMITS.timeoutMs;
   const now = Date.now();
@@ -438,11 +438,11 @@ async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordin
   let metadata = repositoryCache.get(repositoryCacheKey);
   let apiRequestCount = 0;
   let archiveHeadSha: string | undefined;
-  if (metadata && now - metadata.checkedAt < GITHUB_COLLECTION_LIMITS.freshnessTtlMs) {
+  if (!refresh && metadata && now - metadata.checkedAt < GITHUB_COLLECTION_LIMITS.freshnessTtlMs) {
     const cached = getCachedSources(`${repositoryCacheKey}@${metadata.commitSha}`, now);
     if (cached) return cachedResult(cached, startedAt, 0);
   }
-  if (!metadata || now - metadata.metadataAt >= GITHUB_COLLECTION_LIMITS.cacheTtlMs) {
+  if (refresh || !metadata || now - metadata.metadataAt >= GITHUB_COLLECTION_LIMITS.cacheTtlMs) {
     apiRequestCount += 1;
     try {
       const repository = await githubJson<GithubRepositoryResponse>(apiUrl(`/repos/${coordinates.owner}/${coordinates.repo}`), deadline, fetcher);
@@ -495,12 +495,12 @@ async function loadGithubRepositoryUncached(coordinates: GithubRepositoryCoordin
   return result;
 }
 
-export async function loadGithubRepository(repositoryUrl: string, fetcher: typeof fetch = fetch, cacheNamespace = "public"): Promise<GithubRepositoryLoadResult> {
+export async function loadGithubRepository(repositoryUrl: string, fetcher: typeof fetch = fetch, cacheNamespace = "public", options: { refresh?: boolean } = {}): Promise<GithubRepositoryLoadResult> {
   const coordinates = parseGithubRepositoryUrl(repositoryUrl);
-  const inFlightKey = `${cacheNamespace}:${coordinates.fullName}`;
+  const inFlightKey = `${cacheNamespace}:${coordinates.fullName}${options.refresh ? ":refresh" : ""}`;
   const existing = inFlight.get(inFlightKey);
   if (existing) return cachedResult(await existing, Date.now(), 0);
-  const pending = loadGithubRepositoryUncached(coordinates, fetcher, cacheNamespace);
+  const pending = loadGithubRepositoryUncached(coordinates, fetcher, cacheNamespace, options.refresh);
   inFlight.set(inFlightKey, pending);
   try { return await pending; }
   finally { if (inFlight.get(inFlightKey) === pending) inFlight.delete(inFlightKey); }

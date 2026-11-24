@@ -46,7 +46,7 @@ async function checkBasicFlow(registered: boolean) {
   expect(markup).toContain("분석 완료");
   expect(markup).not.toContain("SECRET_FINDING_PATH"); expect(markup).toContain("분석 결과 조회");
   expect(markup).toContain("프로젝트별 보안 검증 가이드");
-  expect(markup).toContain("정적 후보가 없어도 검토 가능");
+  expect(markup).toContain("후보 없이도 검토 가능");
   expect(markup).not.toContain('href="/practice"');
   expect(markup).not.toContain('href="/security-lab/project"');
   mocks.access.mockRejectedValue(new Error("denied"));

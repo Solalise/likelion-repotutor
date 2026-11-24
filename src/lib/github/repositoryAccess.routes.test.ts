@@ -1,20 +1,23 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   user: vi.fn(), connection: vi.fn(), revoke: vi.fn(), token: vi.fn(), json: vi.fn(),
   installationToken: vi.fn(), load: vi.fn(), analyze: vi.fn(), cache: vi.fn(), storeCache: vi.fn(),
-  createRun: vi.fn(), updateRun: vi.fn(), latestRun: vi.fn(), learningRecord: vi.fn(), saveLearning: vi.fn(),
+  createRun: vi.fn(), updateRun: vi.fn(), failRun: vi.fn(), updateConnection: vi.fn(), transaction: vi.fn(), latestRun: vi.fn(), learningRecord: vi.fn(), saveLearning: vi.fn(),
   context: vi.fn(), generate: vi.fn(), validate: vi.fn(), rate: vi.fn(),
   queryRaw: vi.fn(), countRuns: vi.fn(),
 }));
 vi.mock("@/lib/auth/currentUser", () => ({ requireUserId: mocks.user }));
 vi.mock("@/lib/db", () => {
-  const tx = { $queryRaw: mocks.queryRaw, analysisRun: { count: mocks.countRuns, create: mocks.createRun } };
+  const tx = { $queryRaw: mocks.queryRaw, analysisRun: { count: mocks.countRuns, create: mocks.createRun, update: mocks.updateRun }, userRepository: { update: mocks.updateConnection } };
   return { db: {
-  userRepository: { findFirst: mocks.connection, updateMany: mocks.revoke, update: vi.fn() },
-  analysisRun: { create: mocks.createRun, update: mocks.updateRun, findFirst: mocks.latestRun },
+  userRepository: { findFirst: mocks.connection, updateMany: mocks.revoke, update: mocks.updateConnection },
+  analysisRun: { create: mocks.createRun, update: mocks.updateRun, updateMany: mocks.failRun, findFirst: mocks.latestRun },
   learningRecord: { findUnique: mocks.learningRecord, upsert: mocks.saveLearning },
-  $transaction: (work: Promise<unknown>[] | ((transaction: typeof tx) => Promise<unknown>)) => Array.isArray(work) ? Promise.all(work) : work(tx),
+  $transaction: (work: Promise<unknown>[] | ((transaction: typeof tx) => Promise<unknown>), options?: unknown) => {
+    mocks.transaction(options);
+    return Array.isArray(work) ? Promise.all(work) : work(tx);
+  },
 } }; });
 vi.mock("./api", async (importOriginal) => ({
   ...await importOriginal<typeof import("./api")>(), getGitHubUserAccessToken: mocks.token, githubJson: mocks.json,
@@ -46,7 +49,7 @@ const connection = {
 };
 const installation = { id: 7, suspended_at: null, permissions: { contents: "read" } };
 const repository = { id: 21, full_name: "org/private", permissions: { pull: true } };
-const analysis = { repository: "org/private", files: [], nodes: [], edges: [], entryPoints: [], stats: { files: 0, functions: 0, relations: 0 }, collection: { commitSha: "sha" } };
+const analysis = { repository: "org/private", source: "github", files: [], nodes: [], edges: [], entryPoints: [], stats: { files: 0, functions: 0, relations: 0 }, collection: { commitSha: "sha" } };
 function params(id = "own-connection") { return { params: Promise.resolve({ connectionId: id }) }; }
 function request() { return new Request("http://localhost/api/repositories/own-connection/learn", {
   method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ selection: { type: "function", id: "fn" } }),
@@ -59,10 +62,21 @@ it("returns access review metadata and records only summary counts in the existi
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({accessControl});
   expect(mocks.updateRun).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({stats:expect.objectContaining({accessControl:{version:"access-control-static-v1",status:"partial",idorCandidates:1,authorizationCandidates:1,boundaries:1,truncated:false}})})}));
+  expect(mocks.updateRun).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "run" }, data: expect.objectContaining({ analysisResult: expect.objectContaining({ version: 1, analysis: expect.objectContaining({ accessControl }) }) }) }));
+});
+
+it("marks only the new run failed without overwriting a previous successful snapshot", async () => {
+  mocks.createRun.mockResolvedValueOnce({ id: "new-run" });
+  mocks.load.mockRejectedValueOnce(new Error("source unavailable"));
+  expect((await GET(new Request("http://localhost/analyze"), params())).status).toBe(502);
+  expect(mocks.failRun).toHaveBeenCalledExactlyOnceWith({ where: { id: "new-run", status: "RUNNING" }, data: expect.objectContaining({ status: "FAILED" }) });
+  expect(mocks.failRun.mock.calls[0][0].data).not.toHaveProperty("analysisResult");
 });
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.spyOn(console, "info").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
   mocks.queryRaw.mockImplementation(async (sql: TemplateStringsArray, ...values: unknown[]) => {
     if (sql.join("?").includes("FOR UPDATE")) return values[0] === "user-a" ? [{ id: "user-a" }] : [];
     if (sql.join("?").includes("clock_timestamp")) return [{ now: new Date() }];
@@ -86,6 +100,48 @@ beforeEach(() => {
   mocks.rate.mockReturnValue({ allowed: true });
   mocks.generate.mockResolvedValue({ explanation: "generated explanation", model: "test", usage: {} });
   mocks.saveLearning.mockResolvedValue({ updatedAt: new Date() });
+});
+afterEach(() => vi.restoreAllMocks());
+
+it("uses a 30 second atomic save, writes each row once and records payload sizes and query timings", async () => {
+  const response = await GET(new Request("http://localhost/analyze"), params());
+  expect(response.status).toBe(200);
+  expect(mocks.load).toHaveBeenCalledWith(connection.repository.htmlUrl, undefined, "installation:7", { refresh: true });
+  expect(mocks.transaction).toHaveBeenLastCalledWith({ maxWait: 5000, timeout: 30000 });
+  expect(mocks.updateRun).toHaveBeenCalledTimes(1);
+  expect(mocks.updateRun.mock.calls[0][0].select).toEqual({ id: true });
+  expect(mocks.updateConnection).toHaveBeenCalledExactlyOnceWith({ where: { id: connection.id }, data: { lastAccessedAt: expect.any(Date) }, select: { id: true } });
+  const storedData = mocks.updateRun.mock.calls[0][0].data;
+  expect(console.info).toHaveBeenCalledWith("[repository-analysis.save]", expect.objectContaining({
+    analysisResultBytes: Buffer.byteLength(JSON.stringify(storedData.analysisResult), "utf8"),
+    statsBytes: Buffer.byteLength(JSON.stringify(storedData.stats), "utf8"),
+    preparationMs: expect.any(Number), analysisRunMs: expect.any(Number), userRepositoryMs: expect.any(Number), transactionMs: expect.any(Number), committed: true,
+  }));
+  expect(mocks.failRun).not.toHaveBeenCalled();
+});
+
+it.each(["analysisRun", "userRepository"])("returns safe errors when the %s save fails, preserving previous results", async step => {
+  const secretError = Object.assign(new Error("Prisma db.analysisRun.update D:/server/private/path expired transaction token=PRIVATE"), { code: "P2028" });
+  (step === "analysisRun" ? mocks.updateRun : mocks.updateConnection).mockRejectedValueOnce(secretError);
+  const response = await GET(new Request("http://localhost/analyze"), params());
+  expect(response.status).toBe(502);
+  const body = await response.text();
+  expect(body).toContain("이전에 저장된 성공 결과는 유지됩니다");
+  expect(body).not.toMatch(/Prisma|D:\/server|P2028|PRIVATE|expired/);
+  expect(mocks.failRun).toHaveBeenCalledExactlyOnceWith({ where: { id: "run", status: "RUNNING" }, data: expect.objectContaining({ status: "FAILED", errorCode: "P2028" }) });
+  expect(mocks.failRun.mock.calls[0][0].data).not.toHaveProperty("analysisResult");
+  expect(mocks.failRun.mock.calls[0][0].data.errorMessage).not.toContain("Prisma");
+  expect(console.info).toHaveBeenCalledWith("[repository-analysis.save]", expect.objectContaining({ committed: false, errorCode: "P2028", analysisRunMs: expect.any(Number) }));
+  if (step === "analysisRun") expect(mocks.updateConnection).not.toHaveBeenCalled();
+});
+
+it("still returns a safe JSON error if recording the failed status also fails", async () => {
+  mocks.updateRun.mockRejectedValueOnce(new Error("expired transaction D:/server/private"));
+  mocks.failRun.mockRejectedValueOnce(new Error("Prisma unavailable"));
+  const response = await GET(new Request("http://localhost/analyze"), params());
+  expect(response.status).toBe(502);
+  expect(await response.text()).not.toMatch(/Prisma|D:\/server|expired/);
+  expect(console.warn).toHaveBeenCalledWith("[repository-analysis.failure-status]", { runId: "run", errorCode: undefined });
 });
 
 for (const [name, invoke] of [

@@ -121,13 +121,18 @@ function ReviewWorkspace({ analysis, connectionId, environment, archived }: { an
 
 export function ReviewGuide({ analysis, kind }: { analysis: RepositoryAnalysis; kind: SecurityRecordKind }) {
   const guide = reviewGuides[kind], evidence = projectGuideEvidence(analysis, kind);
+  const savedGuide = analysis.savedReviewGuides?.guides.find(item => item.kind === kind);
   return <section aria-label={`${securityRecordLabels[kind]} 프로젝트별 검증 가이드`}>
     <h3>{securityRecordLabels[kind]} 프로젝트별 검증 가이드</h3><p>{guide.concept}</p>
+    {savedGuide && <details><summary>저장된 검토 가이드{analysis.savedReviewGuides?.origin === "ai" ? " · 서버 검증된 AI 참고 설명" : " · 기본 안내"}</summary>
+      {savedGuide.steps.map((step, i) => <div key={`${i}:${step.id}`}><h4>{step.action}</h4><p>{step.explanation}</p></div>)}
+      {savedGuide.sources.map((source, i) => <p key={`${i}:${source.id}`}>{source.location} · {source.reason}</p>)}
+    </details>}
     <h4>프로젝트에서 확인한 기능·코드와 분석 근거</h4>
     {!evidence.findings.length && <p>지원 범위에서 정적 후보를 확인하지 못했습니다. 관련 기능의 부재나 서비스 안전성을 뜻하지 않습니다. 아래 일반 검토 절차는 계속 이용할 수 있습니다.</p>}
-    {evidence.findings.slice(0, 10).map(finding => <details key={finding.id}><summary>{finding.filePath}:{finding.line} · 시스템 정적 분석 근거 (실행 미검증)</summary>
+    {evidence.findings.slice(0, 10).map((finding, i) => <details key={`${i}:${finding.id}`}><summary>{finding.filePath}:{finding.line} · 시스템 정적 분석 근거 (실행 미검증)</summary>
       <SourceCodeViewer sourceCode={finding.code} startLine={finding.line} highlightLine={finding.line} /><p>{finding.reason}</p>
-      {finding.apiContexts?.map(api => <p key={`${api.filePath}:${api.method}`}>관찰된 API: {api.method} {api.path} · {api.filePath} (정적 호출 관계·실행 미검증)</p>)}
+      {finding.apiContexts?.map((api, i) => <p key={`${i}:${api.filePath}:${api.method}`}>관찰된 API: {api.method} {api.path} · {api.filePath} (정적 호출 관계·실행 미검증)</p>)}
       {"api" in finding && finding.api && <p>관찰된 API: {finding.api.method} {finding.api.path} · {finding.api.filePath}</p>}
       <ul>{finding.evidence.map((item, i) => <li key={i}>{item.filePath}:{item.line} · {item.description}<pre><code>{item.code}</code></pre></li>)}</ul>
       {"checks" in finding && <ul>{finding.checks.map((check, i) => <li key={i}>{check.kind} · {check.control} · {check.filePath}:{check.line}<pre><code>{check.code}</code></pre></li>)}</ul>}
@@ -139,6 +144,6 @@ export function ReviewGuide({ analysis, kind }: { analysis: RepositoryAnalysis; 
     <h4>소유권 확인된 격리 환경에서의 방어 검증 절차</h4><ol>{guide.procedure.map(step => <li key={step}>{step}</li>)}</ol>
     <h4>결과 기록 방법</h4><p>기대와 실제 관찰, 확인한 코드, 근거와 한계를 적으세요. 확인되지 않은 원인은 추정으로 표시하고, 검증할 수 없으면 판정 불가로 남기세요. 해당 없음도 이유가 필요합니다.</p>
     <h4>관련 보안 처리 방식</h4><p>{guide.defense}</p>
-    <details><summary>이 프로젝트의 분석 지원 범위·한계</summary><ul>{evidence.limitations.map(limit => <li key={limit}>{limit}</li>)}</ul></details>
+    <details><summary>이 프로젝트의 분석 지원 범위·한계</summary><ul>{evidence.limitations.map((limit, i) => <li key={`${i}:${limit}`}>{limit}</li>)}</ul></details>
   </section>;
 }
